@@ -3,6 +3,7 @@ import type { Auth } from 'firebase/auth';
 import type { Firestore } from 'firebase/firestore';
 import type { Functions } from 'firebase/functions';
 import type { FirebaseStorage } from 'firebase/storage';
+import { deploymentConfiguration } from '@/lib/deployment';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -15,9 +16,7 @@ const firebaseConfig = {
 
 const appCheckSiteKey = import.meta.env.VITE_FIREBASE_APP_CHECK_SITE_KEY;
 
-export const isFirebaseConfigured = Object.values(firebaseConfig).every(
-  (value) => typeof value === 'string' && value.length > 0,
-) && (!import.meta.env.PROD || (typeof appCheckSiteKey === 'string' && appCheckSiteKey.length > 0));
+export const isFirebaseConfigured = deploymentConfiguration.firebaseConfigured;
 
 export let firebaseApp: FirebaseApp | undefined;
 export let auth: Auth | undefined;

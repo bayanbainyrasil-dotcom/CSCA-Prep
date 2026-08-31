@@ -32,6 +32,7 @@ Fill `.env.local` from **Firebase console → Project settings → Your apps →
 The required browser variables are:
 
 ```dotenv
+VITE_DEPLOYMENT_MODE=firebase
 VITE_FIREBASE_API_KEY=
 VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
 VITE_FIREBASE_PROJECT_ID=your-project-id
@@ -40,6 +41,10 @@ VITE_FIREBASE_MESSAGING_SENDER_ID=
 VITE_FIREBASE_APP_ID=
 VITE_FIREBASE_APP_CHECK_SITE_KEY=
 ```
+
+Vercel builds are fail-closed: if any Firebase client identifier or the
+production App Check key is absent, the build stops instead of falling back to
+the local demo. GitHub Pages explicitly uses `VITE_DEPLOYMENT_MODE=local-demo`.
 
 Firebase web configuration identifies the project; it is not an authorization boundary. Firestore/Storage rules, callable authorization, App Check, and restricted API-key settings provide the actual protection.
 
@@ -54,7 +59,7 @@ firebase functions:secrets:set ADMIN_BOOTSTRAP_CODE
 firebase deploy --only firestore:rules,firestore:indexes,storage,functions
 ```
 
-Enter the one-time owner setup value at the secret prompt (the requested initial value is `2007`). Secret Manager stores it outside the repository. Do not place it in `.env`, GitHub, Vercel, screenshots, or logs.
+Enter the approved one-time owner setup value only at the Secret Manager prompt. Secret Manager stores it outside the repository. Do not place it in `.env`, GitHub, Vercel, documentation, screenshots, or logs.
 
 The deployed `asia-east1` callables are `ensureUserProfile`, `bootstrapAdmin`, `setUserRole`, `exportMyData`, `exportQuestionBank`, `importQuestionBank`, and `gradeQuestion`. Admin and import operations verify authorization server-side; the client must never assign its own role.
 
@@ -86,7 +91,7 @@ The GitHub workflow intentionally performs no production deployment and needs no
 1. Import the GitHub repository into Vercel.
 2. Keep the project root as `.` and select the Vite framework preset.
 3. Set Node.js 22 in Project Settings. `vercel.json` supplies the frozen pnpm install, build command, `dist` output, SPA fallback, security headers, CSP, and service-worker cache headers.
-4. Add every `VITE_FIREBASE_*` value under **Settings → Environment Variables**. Use the production Firebase project only for the Production environment; point Preview and Development at a staging project.
+4. Add `VITE_DEPLOYMENT_MODE=firebase` and every `VITE_FIREBASE_*` value under **Settings → Environment Variables**. Use the production Firebase project only for the Production environment; point Preview and Development at a staging project.
 5. Deploy, attach the production domain, then add that exact domain to Firebase Authentication and the App Check registration.
 
 CLI deployment is also supported after `vercel link`:

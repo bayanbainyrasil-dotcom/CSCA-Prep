@@ -46,6 +46,7 @@ jobs:
       - name: Build site
         env:
           VITE_BASE_PATH: /CSCA-Prep/
+          VITE_DEPLOYMENT_MODE: local-demo
         run: pnpm build
 
       - name: Add deep-link fallback

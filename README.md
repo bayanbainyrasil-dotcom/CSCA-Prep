@@ -82,6 +82,11 @@ VITE_FIREBASE_APP_CHECK_SITE_KEY=
 VITE_USE_FIREBASE_EMULATORS=false
 ```
 
+Set `VITE_DEPLOYMENT_MODE=local-demo` only for local/demo builds. Every Vercel
+environment is treated as `firebase` and its build fails when any Firebase
+client variable or the production App Check key is missing; it cannot silently
+publish the browser-only demo.
+
 Firebase web configuration is public identification, not a secret. Never put a service-account key, bootstrap code, App Check debug token, or private API credential in a `VITE_` variable because Vite embeds it in the browser bundle.
 
 Install and validate the independent Functions package:
@@ -149,7 +154,7 @@ The bundled demo seed is never automatically copied into production.
 `vercel.json` defines the frozen install, Vite build, `dist` output, SPA fallback, security headers, cache policy, and service-worker update headers.
 
 1. Import the repository into Vercel with project root `.` and Node.js 22.
-2. Add every `VITE_FIREBASE_*` variable. Use a staging Firebase project for Preview/Development and production Firebase only for Production.
+2. Add `VITE_DEPLOYMENT_MODE=firebase` and every `VITE_FIREBASE_*` variable. Use a staging Firebase project for Preview/Development and production Firebase only for Production.
 3. Deploy and add the final hostname to Firebase Authentication and App Check.
 
 ```sh
