@@ -67,7 +67,7 @@ export default function OnboardingPage() {
           {step === 1 ? <ChoiceGrid value={data.mathLevel} choices={[['foundation', '8–9 class, much forgotten'], ['basic', 'Basic algebra is familiar'], ['intermediate', 'Ready for mixed problems']]} onChange={(value) => setData({ ...data, mathLevel: value as OnboardingInput['mathLevel'] })} /> : null}
           {step === 2 ? <ChoiceGrid value={data.physicsLevel} choices={[['new', 'Almost from zero'], ['foundation', 'Units and simple motion'], ['basic', 'Mechanics basics'], ['intermediate', 'Ready for mixed physics']]} onChange={(value) => setData({ ...data, physicsLevel: value as OnboardingInput['physicsLevel'] })} /> : null}
           {step === 3 ? <ChoiceGrid value={data.preferredLanguage} choices={[['bilingual', 'English + Russian support'], ['en', 'English explanations'], ['ru', 'Russian explanations']]} onChange={(value) => setData({ ...data, preferredLanguage: value as OnboardingInput['preferredLanguage'] })} /> : null}
-          {step === 4 ? <ChoiceGrid value={String(data.dailyAvailableMinutes)} choices={[['45', '45 minutes'], ['60', '60 minutes'], ['90', '90 minutes'], ['120', '120 minutes']]} onChange={(value) => setData({ ...data, dailyAvailableMinutes: Number(value) })} /> : null}
+          {step === 4 ? <ChoiceGrid value={String(data.dailyAvailableMinutes)} choices={[['45', '45 minutes'], ['60', '60 minutes'], ['90', '90 minutes'], ['120', '2 hours'], ['180', '3 hours']]} onChange={(value) => setData({ ...data, dailyAvailableMinutes: Number(value) })} /> : null}
           {error ? <p role="alert" className="mt-4 text-sm font-medium text-destructive">{error}</p> : null}
         </div>
       </div>

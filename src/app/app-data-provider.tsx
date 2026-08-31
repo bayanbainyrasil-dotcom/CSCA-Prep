@@ -3,6 +3,7 @@ import { nanoid } from 'nanoid';
 import { z } from 'zod';
 import { getSeedContent } from '@/data';
 import {
+  DailyPlanSchema,
   FormulaSchema,
   LessonSchema,
   TopicSchema,
@@ -20,6 +21,7 @@ import { LocalFirstRepository } from '@/lib/persistence/repository';
 import { SyncEngine } from '@/lib/persistence/syncEngine';
 import { useAppStore } from '@/stores';
 import { buildAdaptiveDailyPlan } from '@/lib/adaptive';
+import { dateKeyInTimezone } from '@/lib/date';
 
 const DeviceIdSchema = z.string().regex(/^device-[A-Za-z0-9_-]{8,40}$/);
 const DEVICE_KEY = 'csca-device-id-v1';
@@ -53,27 +55,30 @@ function createProfile(input: SessionUser): UserProfile {
   });
 }
 
-function localDateKey(timezone: string): string {
-  const parts = new Intl.DateTimeFormat('en', {
-    timeZone: timezone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(new Date());
-  const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? '00';
-  return `${value('year')}-${value('month')}-${value('day')}`;
+function stableBlockId(kind: string, topicIds: string[]) {
+  const source = `${kind}:${topicIds.join(':') || 'general'}`;
+  let hash = 5381;
+  for (const character of source) hash = ((hash << 5) + hash) ^ character.charCodeAt(0);
+  return `plan-${kind}-${(hash >>> 0).toString(36)}`;
 }
 
-async function loadLocal(repository: LocalFirstRepository, profile: UserProfile) {
+async function loadLocal(repository: LocalFirstRepository, profile: UserProfile, isCurrent = () => true) {
   const types: SyncEntityType[] = ['attempt', 'mistake', 'mastery', 'daily-plan', 'mock-attempt', 'vocabulary-progress', 'formula-progress', 'note', 'bookmark'];
   const values = await Promise.all(types.map((type) => repository.list(type)));
+  if (!isCurrent()) return;
   const byType = Object.fromEntries(types.map((type, index) => [type, values[index] ?? []]));
-  const plans = byType['daily-plan'] ?? [];
-  const today = localDateKey(profile.timezone);
-  const todayPlan = plans
-    .filter((item) => (item as { date?: string }).date === today)
-    .sort((left, right) => String((right as { updatedAt?: string }).updatedAt).localeCompare(String((left as { updatedAt?: string }).updatedAt)))
-    .at(0) ?? null;
+  const plans = (byType['daily-plan'] ?? []).flatMap((item) => {
+    const parsed = DailyPlanSchema.safeParse(item);
+    return parsed.success ? [parsed.data] : [];
+  });
+  const today = dateKeyInTimezone(new Date(), profile.timezone);
+  const plansForToday = plans
+    .filter((item) => item.date === today)
+    .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt));
+  const todayPlan = plansForToday.find((item) => (
+    item.timezone === profile.timezone &&
+    item.targetMinutes === profile.settings.dailyStudyMinutes
+  )) ?? null;
   useAppStore.getState().hydrate({
     profile,
     attempts: byType.attempt,
@@ -96,16 +101,23 @@ async function loadLocal(repository: LocalFirstRepository, profile: UserProfile)
       masteries: Object.values(state.masteries),
       dueEnglishReviewCount: state.vocabulary.length,
     });
-    const stableBlockId = (kind: string, topicIds: string[]) => {
-      const source = `${kind}:${topicIds.join(':') || 'general'}`;
-      let hash = 5381;
-      for (const character of source) hash = ((hash << 5) + hash) ^ character.charCodeAt(0);
-      return `plan-${kind}-${(hash >>> 0).toString(36)}`;
-    };
+    const previousPlan = plansForToday.at(0);
+    const previousBlocks = new Map(
+      (previousPlan?.blocks ?? []).map((block) => [block.id, block]),
+    );
     const plan = {
       ...generated,
-      blocks: generated.blocks.map((block) => ({ ...block, id: stableBlockId(block.kind, block.topicIds) })),
+      version: (previousPlan?.version ?? 0) + 1,
+      createdAt: previousPlan?.createdAt ?? generated.createdAt,
+      blocks: generated.blocks.map((block) => {
+        const id = stableBlockId(block.kind, block.topicIds);
+        const previous = previousBlocks.get(id);
+        return previous?.status === 'completed'
+          ? { ...block, id, status: previous.status, completedAt: previous.completedAt }
+          : { ...block, id };
+      }),
     };
+    if (!isCurrent()) return;
     await state.setDailyPlan(plan, true);
   }
 }
@@ -171,6 +183,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     let stopSync: (() => void) | undefined;
     let stopQueuedGradeFlush: (() => void) | undefined;
+    let stopCalendarRefresh: (() => void) | undefined;
     let readyForBackgroundHydration = false;
     const database = getCscaDatabase();
     const repository = new LocalFirstRepository(database, user.uid, getDeviceId());
@@ -219,7 +232,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         engine = new SyncEngine(database, remote, user.uid, getDeviceId(), {
           onStatusChange: (snapshot) => {
             useAppStore.getState().setSyncStatus(snapshot);
-            if (snapshot.status === 'saved' && !cancelled && readyForBackgroundHydration) void loadLocal(repository, profile);
+            if (snapshot.status === 'saved' && !cancelled && readyForBackgroundHydration) {
+              void loadLocal(repository, profile, () => !cancelled);
+            }
           },
         });
       }
@@ -274,7 +289,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         window.addEventListener('online', onOnline);
         stopQueuedGradeFlush = () => window.removeEventListener('online', onOnline);
       }
-      await loadLocal(repository, profile);
+      await loadLocal(repository, profile, () => !cancelled);
+      let activeDate = dateKeyInTimezone(new Date(), profile.timezone);
+      let calendarRefreshRunning = false;
+      const refreshCalendar = async () => {
+        if (cancelled || calendarRefreshRunning) return;
+        const nextDate = dateKeyInTimezone(new Date(), profile.timezone);
+        if (nextDate === activeDate) return;
+        activeDate = nextDate;
+        calendarRefreshRunning = true;
+        try {
+          await loadLocal(repository, profile, () => !cancelled);
+        } finally {
+          calendarRefreshRunning = false;
+        }
+      };
+      const onVisibilityChange = () => {
+        if (document.visibilityState === 'visible') void refreshCalendar();
+      };
+      const onFocus = () => { void refreshCalendar(); };
+      const interval = window.setInterval(() => void refreshCalendar(), 30_000);
+      window.addEventListener('focus', onFocus);
+      document.addEventListener('visibilitychange', onVisibilityChange);
+      stopCalendarRefresh = () => {
+        window.clearInterval(interval);
+        window.removeEventListener('focus', onFocus);
+        document.removeEventListener('visibilitychange', onVisibilityChange);
+      };
       readyForBackgroundHydration = true;
       if (engine && !cancelled) stopSync = engine.start({ intervalMs: 30_000 });
     };
@@ -284,6 +325,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       stopSync?.();
       stopQueuedGradeFlush?.();
+      stopCalendarRefresh?.();
       useAppStore.getState().configurePersistence(null);
       useAppStore.getState().resetUserState();
     };

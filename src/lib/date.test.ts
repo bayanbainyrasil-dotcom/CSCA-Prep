@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calendarDayDifference, dateKeyInTimezone, daysUntilDate, greetingFor, preparationDay } from './date';
+import { calendarDayDifference, dateKeyInTimezone, daysUntilDate, greetingFor, localDateTimeLabels, preparationDay } from './date';
 
 describe('calendar and greeting helpers', () => {
   it('uses calendar days without daylight-saving drift', () => {
@@ -11,6 +11,25 @@ describe('calendar and greeting helpers', () => {
     const instant = new Date('2026-08-31T19:30:00.000Z');
     expect(dateKeyInTimezone(instant, 'Asia/Qyzylorda')).toBe('2026-09-01');
     expect(dateKeyInTimezone(instant, 'America/New_York')).toBe('2026-08-31');
+  });
+
+  it('shows an unambiguous local date, time, and IANA timezone while travelling', () => {
+    const instant = new Date('2026-08-31T19:30:00.000Z');
+    expect(localDateTimeLabels(instant, 'Asia/Shanghai')).toEqual({
+      date: 'Tue, Sep 1, 2026',
+      time: '03:30',
+      zone: 'Asia/Shanghai',
+    });
+    expect(localDateTimeLabels(instant, 'America/New_York')).toEqual({
+      date: 'Mon, Aug 31, 2026',
+      time: '15:30',
+      zone: 'America/New_York',
+    });
+    expect(localDateTimeLabels(instant, 'Australia/Sydney')).toEqual({
+      date: 'Tue, Sep 1, 2026',
+      time: '05:30',
+      zone: 'Australia/Sydney',
+    });
   });
 
   it('shows the correct greeting in the learner timezone', () => {

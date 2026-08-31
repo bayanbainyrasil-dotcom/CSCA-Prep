@@ -1,6 +1,7 @@
 import { ArrowRight, BookOpen, Brain, CheckCircle2, ChevronRight, Clock3, Flame, Languages, Play, Target, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { PageHeading } from '@/components/layout/page-heading';
+import { LocalTimeStatus } from '@/components/system/local-time-status';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -54,7 +55,7 @@ export default function DashboardPage() {
         eyebrow={`${weekdayFor(today, timezone)} · Day ${dayNumber} / 84`}
         title={`${greetingFor(today, timezone)}, ${user?.name.split(' ')[0] ?? 'Learner'}`}
         description={dailyPlan?.adaptiveReasons[0] ?? 'Your plan will appear as soon as your saved progress and study topics finish loading.'}
-        actions={<Badge variant={daysUntilExam === null || daysUntilExam < 0 ? 'warning' : 'success'}>{countdownLabel}</Badge>}
+        actions={<div className="flex flex-wrap items-center justify-end gap-2"><LocalTimeStatus compact timezone={timezone} /><Badge variant={daysUntilExam === null || daysUntilExam < 0 ? 'warning' : 'success'}>{countdownLabel}</Badge></div>}
       />
 
       <div className="content-grid">

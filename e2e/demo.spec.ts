@@ -1,4 +1,32 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+
+async function storedDailyPlan(page: Page) {
+  return page.evaluate(() => new Promise<{ date: string; timezone: string; targetMinutes: number } | null>((resolve, reject) => {
+    const openRequest = indexedDB.open('csca-prep-local-v1');
+    openRequest.onerror = () => reject(openRequest.error ?? new Error('Could not open the local study database.'));
+    openRequest.onsuccess = () => {
+      const transaction = openRequest.result.transaction('entities', 'readonly');
+      const readRequest = transaction.objectStore('entities').getAll();
+      readRequest.onerror = () => reject(readRequest.error ?? new Error('Could not read the saved daily plan.'));
+      readRequest.onsuccess = () => {
+        const records = readRequest.result as Array<{
+          entityType?: string;
+          data?: { date?: string; timezone?: string; targetMinutes?: number };
+        }>;
+        const deviceZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const plan = records.find((record) => (
+          record.entityType === 'daily-plan' && record.data?.timezone === deviceZone
+        ))?.data;
+        resolve(
+          plan?.date && plan.timezone && typeof plan.targetMinutes === 'number'
+            ? { date: plan.date, timezone: plan.timezone, targetMinutes: plan.targetMinutes }
+            : null,
+        );
+      };
+    };
+  }));
+}
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -34,11 +62,46 @@ test('dashboard loads with real zero-state metrics and the current day', async (
   await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Nurasyl/i })).toBeVisible();
   await expect(page.getByText(/Day 1 \/ 84/i)).toBeVisible();
   await expect(page.getByText(/Demo progress/i)).toHaveCount(0);
+  await expect(page.getByTestId('device-local-time')).toBeVisible();
   await expect(page.getByLabel('Internal CSCA readiness score 0 percent')).toBeVisible();
   await expect(page.getByRole('link', { name: /Start today’s session/i })).toHaveAttribute(
     'href',
     '/today',
   );
+});
+
+test('device timezone follows travel and survives an app reload', async ({ page, context }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Timezone travel is covered once on desktop.');
+  const browserSession = await context.newCDPSession(page);
+  await browserSession.send('Emulation.setTimezoneOverride', { timezoneId: 'Asia/Shanghai' });
+  await page.goto('/');
+  await expect(page.getByTestId('device-local-time')).toContainText('Asia/Shanghai');
+
+  await browserSession.send('Emulation.setTimezoneOverride', { timezoneId: 'America/New_York' });
+  await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+  await expect(page.getByTestId('device-local-time')).toContainText('America/New_York');
+  await expect.poll(() => page.evaluate(() => {
+    const saved = localStorage.getItem('csca-local-session-v2');
+    return saved ? (JSON.parse(saved) as { timezone?: string }).timezone : null;
+  })).toBe('America/New_York');
+  const expectedDate = await page.evaluate(() => {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: 'America/New_York',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).formatToParts(new Date());
+    const value = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value;
+    return `${value('year')}-${value('month')}-${value('day')}`;
+  });
+  await expect.poll(() => storedDailyPlan(page)).toMatchObject({
+    date: expectedDate,
+    timezone: 'America/New_York',
+    targetMinutes: 90,
+  });
+
+  await page.reload();
+  await expect(page.getByTestId('device-local-time')).toContainText('America/New_York');
 });
 
 test('lazy search opens and routes to a matching study topic', async ({ page }, testInfo) => {
@@ -134,11 +197,13 @@ test('first run asks for the real exam date and keeps it after reload', async ({
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
   await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: '3 hours' }).click();
   await page.getByRole('button', { name: 'Take diagnostic test' }).click();
   await expect(page).toHaveURL(/\/diagnostic$/);
 
   await page.goto('/settings');
   await expect(page.getByLabel('Target CSCA date')).toHaveValue(target);
+  await expect(page.getByLabel('Daily study target')).toHaveValue('180');
   await page.reload();
   await expect(page.getByLabel('Target CSCA date')).toHaveValue(target);
   const updatedTarget = await page.evaluate(() => {
@@ -151,6 +216,8 @@ test('first run asks for the real exam date and keeps it after reload', async ({
   await expect(page.getByText('Settings saved')).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Target CSCA date')).toHaveValue(updatedTarget);
+  await page.goto('/');
+  await expect(page.getByText('Today’s plan · 180 min')).toBeVisible();
 });
 
 test('mobile primary navigation reaches practice without opening a menu', async ({

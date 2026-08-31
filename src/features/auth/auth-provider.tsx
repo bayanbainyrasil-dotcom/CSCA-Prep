@@ -11,7 +11,7 @@ import type { User } from 'firebase/auth';
 import { z } from 'zod';
 import type { UserProfile } from '@/domain';
 import { auth, firebaseReady, firestore, functions, isFirebaseConfigured } from '@/lib/firebase';
-import { dateKeyInTimezone } from '@/lib/date';
+import { dateKeyInTimezone, deviceTimezone } from '@/lib/date';
 
 export interface SessionUser {
   uid: string;
@@ -36,6 +36,7 @@ interface AuthContextValue {
   signIn: () => Promise<void>;
   signOutUser: () => Promise<void>;
   completeOnboarding: (input: OnboardingInput) => Promise<void>;
+  updateSessionProfile: (profile: UserProfile) => void;
 }
 
 export interface OnboardingInput {
@@ -86,7 +87,7 @@ export function createLocalSession(): SessionUser {
     email: '',
     role: 'user',
     onboardingCompleted: false,
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    timezone: deviceTimezone(),
     targetDate: null,
     preferredLanguage: 'en-ru',
     profileVersion: 1,
@@ -102,7 +103,11 @@ export function persistLocalSession(session: SessionUser): void {
 }
 
 export function persistLocalProfile(profile: UserProfile): void {
-  persistLocalSession({
+  persistLocalSession(sessionFromProfile(profile));
+}
+
+function sessionFromProfile(profile: UserProfile): SessionUser {
+  return {
     uid: profile.uid,
     name: profile.name,
     email: profile.email ?? '',
@@ -116,7 +121,7 @@ export function persistLocalProfile(profile: UserProfile): void {
     settings: profile.settings,
     createdAt: profile.createdAt,
     lastActiveAt: profile.lastActiveAt,
-  });
+  };
 }
 
 function readLocalSession(): SessionUser {
@@ -124,7 +129,11 @@ function readLocalSession(): SessionUser {
     try {
       const raw = localStorage.getItem(LOCAL_SESSION_KEY);
       const parsed = raw ? sessionUserSchema.safeParse(JSON.parse(raw) as unknown) : null;
-      if (parsed?.success) return parsed.data;
+      if (parsed?.success) {
+        const refreshed = { ...parsed.data, timezone: deviceTimezone(), lastActiveAt: new Date().toISOString() };
+        persistLocalSession(refreshed);
+        return refreshed;
+      }
     } catch {
       // A corrupt cache is replaced with a safe first-run profile below.
     }
@@ -160,12 +169,13 @@ async function mapFirebaseUser(firebaseUser: User): Promise<SessionUser> {
     import('firebase/functions'),
   ]);
   const profileRef = doc(firestore, 'users', firebaseUser.uid);
+  const detectedTimezone = deviceTimezone();
   let existing;
   try {
     if (typeof navigator === 'undefined' || navigator.onLine) {
       const ensureProfile = httpsCallable(functions, 'ensureUserProfile');
       await ensureProfile({
-        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        timezone: detectedTimezone,
         targetExam: 'CSCA',
       });
       existing = await getDoc(profileRef);
@@ -194,7 +204,7 @@ async function mapFirebaseUser(firebaseUser: User): Promise<SessionUser> {
     ...(firebaseUser.photoURL ? { photoURL: firebaseUser.photoURL } : {}),
     role: isAdmin ? 'admin' : 'user',
     onboardingCompleted,
-    timezone: access.success ? (access.data.timezone ?? 'UTC') : 'UTC',
+    timezone: detectedTimezone,
     targetDate: access.success ? toLocalDate(access.data.targetDate) : null,
     preferredLanguage: access.success ? (access.data.preferredLanguage ?? 'en-ru') : 'en-ru',
     profileVersion: access.success ? (access.data.version ?? 1) : 1,
@@ -225,7 +235,10 @@ function readCachedSession(firebaseUser: User): SessionUser | null {
       createdAt: z.string(),
       lastActiveAt: z.string(),
     }).strict().safeParse(JSON.parse(raw) as unknown);
-    return parsed.success ? parsed.data : null;
+    if (!parsed.success) return null;
+    const refreshed = { ...parsed.data, timezone: deviceTimezone(), lastActiveAt: new Date().toISOString() };
+    localStorage.setItem(`${SESSION_CACHE_PREFIX}${firebaseUser.uid}`, JSON.stringify(refreshed));
+    return refreshed;
   } catch {
     return null;
   }
@@ -263,6 +276,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    let lastSyncedTimezone: string | null = isFirebaseConfigured ? null : user.timezone;
+    const syncCloudTimezone = (timezone: string) => {
+      const cloudFunctions = functions;
+      if (!isFirebaseConfigured || !cloudFunctions || !navigator.onLine || lastSyncedTimezone === timezone) return;
+      lastSyncedTimezone = timezone;
+      void import('firebase/functions')
+        .then(({ httpsCallable }) => httpsCallable(cloudFunctions, 'ensureUserProfile')({ timezone, targetExam: 'CSCA' }))
+        .catch(() => { lastSyncedTimezone = null; });
+    };
+    const refreshTimezone = () => {
+      const timezone = deviceTimezone();
+      if (timezone === user.timezone) {
+        syncCloudTimezone(timezone);
+        return;
+      }
+      const next = { ...user, timezone, lastActiveAt: new Date().toISOString() };
+      if (isFirebaseConfigured) localStorage.setItem(`${SESSION_CACHE_PREFIX}${user.uid}`, JSON.stringify(next));
+      else persistLocalSession(next);
+      setUser(next);
+      syncCloudTimezone(timezone);
+    };
+    const onVisibilityChange = () => { if (document.visibilityState === 'visible') refreshTimezone(); };
+    refreshTimezone();
+    const interval = window.setInterval(refreshTimezone, 60_000);
+    window.addEventListener('focus', refreshTimezone);
+    window.addEventListener('online', refreshTimezone);
+    document.addEventListener('visibilitychange', onVisibilityChange);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('focus', refreshTimezone);
+      window.removeEventListener('online', refreshTimezone);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [user]);
+
   const signIn = useCallback(async () => {
     if (!auth) {
       if (isFirebaseConfigured) await firebaseReady;
@@ -290,7 +340,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       preferredLanguage: z.enum(['en', 'ru', 'bilingual']),
       dailyAvailableMinutes: z.number().int().min(10).max(360),
     }).strict().parse(input);
-    if (parsedInput.targetDate < dateKeyInTimezone(new Date(), user.timezone)) {
+    const timezone = deviceTimezone();
+    if (parsedInput.targetDate < dateKeyInTimezone(new Date(), timezone)) {
       throw new Error('Choose today or a future date from your exam registration.');
     }
     const preferredLanguage = parsedInput.preferredLanguage === 'bilingual' ? 'en-ru' : parsedInput.preferredLanguage;
@@ -298,6 +349,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { httpsCallable } = await import('firebase/functions');
       const ensureProfile = httpsCallable(functions, 'ensureUserProfile');
       await ensureProfile({
+        timezone,
         targetDate: new Date(`${parsedInput.targetDate}T00:00:00.000Z`).toISOString(),
         preferredLanguage,
         onboarding: {
@@ -314,6 +366,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const next: SessionUser = {
         ...current,
         onboardingCompleted: true,
+        timezone,
         targetDate: parsedInput.targetDate,
         preferredLanguage,
         settings: {
@@ -330,6 +383,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, [user]);
 
+  const updateSessionProfile = useCallback((profile: UserProfile) => {
+    const next = sessionFromProfile(profile);
+    if (isFirebaseConfigured) localStorage.setItem(`${SESSION_CACHE_PREFIX}${profile.uid}`, JSON.stringify(next));
+    else persistLocalSession(next);
+    setUser((current) => current?.uid === profile.uid ? next : current);
+  }, []);
+
   const signOutUser = useCallback(async () => {
     if (!auth) {
       setUser(readLocalSession());
@@ -343,8 +403,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, isDemo: !isFirebaseConfigured, signIn, signOutUser, completeOnboarding }),
-    [completeOnboarding, loading, signIn, signOutUser, user],
+    () => ({ user, loading, isDemo: !isFirebaseConfigured, signIn, signOutUser, completeOnboarding, updateSessionProfile }),
+    [completeOnboarding, loading, signIn, signOutUser, updateSessionProfile, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

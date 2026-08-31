@@ -9,6 +9,10 @@ function safeTimezone(timezone: string): string {
   }
 }
 
+export function deviceTimezone(): string {
+  return safeTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
+}
+
 export function dateKeyInTimezone(date = new Date(), timezone = 'UTC'): string {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: safeTimezone(timezone),
@@ -65,4 +69,24 @@ export function greetingFor(date: Date, timezone: string): 'Good morning' | 'Goo
 
 export function weekdayFor(date: Date, timezone: string): string {
   return new Intl.DateTimeFormat('en', { timeZone: safeTimezone(timezone), weekday: 'long' }).format(date);
+}
+
+export function localDateTimeLabels(date: Date, timezone: string): { date: string; time: string; zone: string } {
+  const zone = safeTimezone(timezone);
+  return {
+    date: new Intl.DateTimeFormat('en', {
+      timeZone: zone,
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    }).format(date),
+    time: new Intl.DateTimeFormat('en', {
+      timeZone: zone,
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(date),
+    zone,
+  };
 }
