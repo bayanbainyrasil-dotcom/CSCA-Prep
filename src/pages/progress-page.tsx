@@ -4,21 +4,9 @@ import { Area, AreaChart, Bar, BarChart, CartesianGrid, Legend, ResponsiveContai
 import { PageHeading } from '@/components/layout/page-heading';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import { useAuth } from '@/features/auth/auth-provider';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores';
 import type { Attempt } from '@/domain';
-
-const demoHistory = [
-  { date: 'Aug 1', iso: '2026-08-01', math: 42, physics: 18, readiness: 30, speed: 34 },
-  { date: 'Aug 6', iso: '2026-08-06', math: 47, physics: 23, readiness: 35, speed: 38 },
-  { date: 'Aug 11', iso: '2026-08-11', math: 51, physics: 27, readiness: 40, speed: 41 },
-  { date: 'Aug 16', iso: '2026-08-16', math: 55, physics: 32, readiness: 45, speed: 45 },
-  { date: 'Aug 21', iso: '2026-08-21', math: 59, physics: 36, readiness: 51, speed: 49 },
-  { date: 'Aug 26', iso: '2026-08-26', math: 63, physics: 41, readiness: 57, speed: 54 },
-];
-const demoTopics = [['Functions', 82], ['Logarithms', 64], ['Trigonometry', 51], ['Derivatives', 43], ['Kinematics', 78], ['Newton’s laws', 71], ['Electricity', 38], ['Thermodynamics', 22]] as const;
-const demoErrors = [{ name: 'Physics knowledge', value: 36 }, { name: 'English comprehension', value: 18 }, { name: 'Calculation', value: 15 }, { name: 'Time', value: 14 }, { name: 'Careless', value: 17 }];
 
 function accuracy(attempts: Attempt[], subject: Attempt['subject']) {
   const items = attempts.filter((item) => item.subject === subject);
@@ -46,22 +34,21 @@ function buildHistory(attempts: Attempt[]) {
 export default function ProgressPage() {
   const [range, setRange] = useState<'7d' | '30d' | 'all'>('30d');
   const [referenceNow] = useState(() => Date.now());
-  const { isDemo } = useAuth();
   const metrics = useAppStore((state) => state.metrics);
   const attempts = useAppStore((state) => state.attempts);
   const masteries = useAppStore((state) => state.masteries);
   const topicRecords = useAppStore((state) => state.topics);
-  const allHistory = useMemo(() => isDemo ? demoHistory : buildHistory(attempts), [attempts, isDemo]);
+  const allHistory = useMemo(() => buildHistory(attempts), [attempts]);
   const history = useMemo(() => {
-    if (isDemo || range === 'all') return allHistory;
+    if (range === 'all') return allHistory;
     const cutoff = referenceNow - (range === '7d' ? 7 : 30) * 86_400_000;
     return allHistory.filter((item) => Date.parse(`${item.iso}T00:00:00`) >= cutoff);
-  }, [allHistory, isDemo, range, referenceNow]);
-  const topics = isDemo ? demoTopics : Object.values(masteries)
+  }, [allHistory, range, referenceNow]);
+  const topics = Object.values(masteries)
     .sort((left, right) => right.score - left.score)
     .slice(0, 12)
     .map((mastery) => [topicRecords.find((item) => item.id === mastery.topicId)?.title.en ?? mastery.topicId, Math.round(mastery.score)] as const);
-  const errors = isDemo ? demoErrors : [
+  const errors = [
     { name: 'English comprehension', value: metrics.lossReasons['english-comprehension'] },
     { name: 'Concept', value: metrics.lossReasons.concept },
     { name: 'Formula', value: metrics.lossReasons.formula },
@@ -70,16 +57,12 @@ export default function ProgressPage() {
     { name: 'Time', value: metrics.lossReasons.time },
     { name: 'Guessed', value: metrics.lossReasons.guessed },
   ].filter((item) => item.value > 0);
-  const cards = isDemo
-    ? [[Brain, '63%', 'Mathematics', '+8 this month', 'text-primary'], [Activity, '41%', 'Physics', '+14 this month', 'text-amber-700 dark:text-physics'], [Languages, '72%', 'English comprehension', '+6 this month', 'text-accent'], [Clock3, '54%', 'Exam speed', '+9 this month', 'text-success']] as const
-    : [[Brain, `${metrics.mathematicsReadiness}%`, 'Mathematics', 'Live', 'text-primary'], [Activity, `${metrics.physicsReadiness}%`, 'Physics', 'Live', 'text-amber-700 dark:text-physics'], [Languages, `${metrics.englishComprehension}%`, 'English comprehension', 'Live', 'text-accent'], [Clock3, `${metrics.examSpeed}%`, 'Exam speed', 'Live', 'text-success']] as const;
-  const studyRecord = isDemo
-    ? [['Current streak', '9 days'], ['Longest streak', '14 days'], ['Completed days', '37'], ['Hours studied', '26.4 h'], ['Questions solved', '684']]
-    : [['Current streak', `${metrics.currentStreak} days`], ['Longest streak', `${metrics.longestStreak} days`], ['Completed days', String(metrics.completedDays)], ['Hours studied', `${metrics.hoursStudied} h`], ['Questions solved', String(metrics.questionsSolved)]];
+  const cards = [[Brain, `${metrics.mathematicsReadiness}%`, 'Mathematics', `${metrics.questionsSolved} answers`, 'text-primary'], [Activity, `${metrics.physicsReadiness}%`, 'Physics', `${metrics.questionsSolved} answers`, 'text-amber-700 dark:text-physics'], [Languages, `${metrics.englishComprehension}%`, 'English comprehension', `${metrics.questionsSolved} answers`, 'text-accent'], [Clock3, `${metrics.examSpeed}%`, 'Exam speed', `${metrics.questionsSolved} answers`, 'text-success']] as const;
+  const studyRecord = [['Current streak', `${metrics.currentStreak} days`], ['Longest streak', `${metrics.longestStreak} days`], ['Completed days', String(metrics.completedDays)], ['Hours studied', `${metrics.hoursStudied} h`], ['Questions solved', String(metrics.questionsSolved)]];
 
   return <div>
-    <PageHeading eyebrow="Progress intelligence" title="Measure retrieval, not time spent." description="Mastery combines repeated accuracy, speed, confidence, difficulty and spaced review. Scores shown here are internal planning metrics." actions={<Badge variant={isDemo ? 'warning' : 'success'}>{isDemo ? 'Demo analytics' : 'Your live data'}</Badge>} />
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([Icon, value, label, delta, color]) => <Card key={label}><CardContent className="p-5"><div className="flex items-start justify-between"><Icon className={`h-5 w-5 ${color}`} /><Badge variant={isDemo ? 'success' : 'outline'}>{delta}</Badge></div><p className="mt-5 font-display text-3xl font-semibold tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></CardContent></Card>)}</div>
+    <PageHeading eyebrow="Progress intelligence" title="Measure retrieval, not time spent." description="Mastery combines repeated accuracy, speed, confidence, difficulty and spaced review. Scores shown here are internal planning metrics." actions={<Badge variant="success">Your recorded data</Badge>} />
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{cards.map(([Icon, value, label, delta, color]) => <Card key={label}><CardContent className="p-5"><div className="flex items-start justify-between"><Icon className={`h-5 w-5 ${color}`} /><Badge variant="outline">{delta}</Badge></div><p className="mt-5 font-display text-3xl font-semibold tracking-tight">{value}</p><p className="mt-1 text-xs text-muted-foreground">{label}</p></CardContent></Card>)}</div>
     <div className="content-grid mt-5">
       <Card className="lg:col-span-8"><CardContent className="p-5 sm:p-6"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="data-label">Readiness history</p><h2 className="mt-1 font-display text-xl font-semibold tracking-tight">Knowledge becomes faster through retrieval</h2></div><div className="flex rounded-xl bg-secondary p-1">{([['7d', '7 days'], ['30d', '30 days'], ['all', 'All time']] as const).map(([value, label]) => <button key={value} onClick={() => setRange(value)} className={cn('rounded-lg px-3 py-1.5 text-xs font-bold', range === value ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground')}>{label}</button>)}</div></div>{history.length ? <div className="mt-6 h-72"><ResponsiveContainer width="100%" height="100%"><AreaChart data={history}><defs><linearGradient id="ready" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.28} /><stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} /></linearGradient></defs><CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" /><YAxis domain={[0, 100]} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" /><Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 14 }} /><Legend /><Area type="monotone" dataKey="readiness" name="Readiness" stroke="hsl(var(--primary))" fill="url(#ready)" strokeWidth={2.5} /><Area type="monotone" dataKey="speed" name="Speed" stroke="hsl(var(--success))" fill="transparent" strokeWidth={2} /></AreaChart></ResponsiveContainer></div> : <EmptyMetric text="Complete your first practice questions to start a real readiness history." />}</CardContent></Card>
       <Card className="lg:col-span-4"><CardContent className="p-5 sm:p-6"><div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-success" /><h2 className="font-display text-lg font-semibold">Study record</h2></div><div className="mt-5 space-y-4">{studyRecord.map(([label, value]) => <div key={label} className="flex items-center justify-between border-b pb-3 last:border-0"><span className="text-sm text-muted-foreground">{label}</span><strong className="font-mono text-sm">{value}</strong></div>)}</div></CardContent></Card>

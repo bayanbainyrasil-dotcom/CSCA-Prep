@@ -1,7 +1,7 @@
 import type { ParameterizedQuestionTemplate, TemplateParameter } from "../lib/adaptive";
 
 const VERIFIED_TEMPLATE_NOTE =
-  "Demo content generated from a deterministic, code-reviewed template. It is original CSCA-style practice, not an official CSCA question.";
+  "Original CSCA-style practice generated from a deterministic, code-reviewed template. It is not an official CSCA question.";
 
 function integer(random: () => number, minimum: number, maximum: number): number {
   return minimum + Math.floor(random() * (maximum - minimum + 1));

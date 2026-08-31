@@ -7,20 +7,27 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { roadmapWeeks } from '@/data/curriculum';
+import { preparationDay } from '@/lib/date';
 import { cn } from '@/lib/utils';
-import { useAuth } from '@/features/auth/auth-provider';
 import { useAppStore } from '@/stores';
 
 type DayState = 'completed' | 'active' | 'upcoming' | 'overdue';
 
 export default function RoadmapPage() {
-  const { isDemo } = useAuth();
   const completedDays = useAppStore((state) => state.metrics.completedDays);
-  const currentDay = isDemo ? 18 : Math.max(1, Math.min(84, completedDays + 1));
+  const profile = useAppStore((state) => state.profile);
+  const dailyPlan = useAppStore((state) => state.dailyPlan);
+  const currentDay = preparationDay(profile?.createdAt ?? new Date().toISOString(), new Date(), profile?.timezone ?? 'UTC');
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [intensity, setIntensity] = useState<'steady' | 'lighter' | 'intensive'>('steady');
   const days = useMemo(() => Array.from({ length: 84 }, (_, index) => index + 1), []);
-  const stateFor = (day: number): DayState => day < currentDay ? (isDemo && day === 15 ? 'overdue' : day <= completedDays || isDemo ? 'completed' : 'overdue') : day === currentDay ? 'active' : 'upcoming';
+  const stateFor = (day: number): DayState => day < currentDay ? (day <= completedDays ? 'completed' : 'overdue') : day === currentDay ? 'active' : 'upcoming';
+  const selectedWeek = selectedDay === null ? null : roadmapWeeks.find((week) => week.week === Math.ceil(selectedDay / 7));
+  const selectedPlanItems: Array<[string, string, string]> = selectedDay === currentDay && dailyPlan
+    ? dailyPlan.blocks.map((block) => [block.subject ?? block.kind, block.title, `${block.targetMinutes} min`])
+    : selectedWeek
+      ? [['Week focus', selectedWeek.focus, 'Adaptive'], ['Mathematics', selectedWeek.math, 'Planned'], ['Physics', selectedWeek.physics, 'Planned']]
+      : [];
 
   return (
     <div>
@@ -32,7 +39,7 @@ export default function RoadmapPage() {
       />
 
       <div className="mb-6 grid gap-3 sm:grid-cols-3">
-        {[[`${isDemo ? 17 : completedDays} days`, 'Completed', 'text-success'], ['Today', `Day ${currentDay}`, 'text-primary'], [`${84 - currentDay} days`, 'Remaining', 'text-muted-foreground']].map(([value, label, color]) => (
+        {[[`${completedDays} days`, 'Completed', 'text-success'], ['Today', `Day ${currentDay}`, 'text-primary'], [`${84 - currentDay} days`, 'Remaining', 'text-muted-foreground']].map(([value, label, color]) => (
           <Card key={label}><CardContent className="p-4 sm:p-5"><p className={`font-display text-2xl font-semibold tracking-tight ${color}`}>{value}</p><p className="mt-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{label}</p></CardContent></Card>
         ))}
       </div>
@@ -45,7 +52,7 @@ export default function RoadmapPage() {
             <Card key={week.week} className={current ? 'border-primary/40 shadow-[0_0_0_1px_hsl(var(--primary)/.08)]' : ''}>
               <CardContent className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[220px_1fr] lg:items-center">
                 <div>
-                  <div className="flex items-center gap-2"><span className="data-label">Week {week.week}</span>{current ? <Badge>Current</Badge> : week.week < 3 ? <Badge variant="success">Complete</Badge> : null}</div>
+                  <div className="flex items-center gap-2"><span className="data-label">Week {week.week}</span>{current ? <Badge>Current</Badge> : weekDays.every((day) => day <= completedDays) ? <Badge variant="success">Complete</Badge> : null}</div>
                   <h2 className="mt-2 font-display text-lg font-semibold tracking-tight">{week.focus}</h2>
                   <p className="mt-1 text-xs text-muted-foreground">Math: {week.math}<br />Physics: {week.physics}</p>
                 </div>
@@ -79,13 +86,7 @@ export default function RoadmapPage() {
       <Dialog open={selectedDay !== null} onOpenChange={(open) => { if (!open) setSelectedDay(null); }}>
         <DialogContent title={`Day ${selectedDay ?? ''}`} description={selectedDay === currentDay ? 'Today’s adaptive session' : 'Planned learning sequence'}>
           <div className="space-y-2">
-            {[
-              ['Mental math', 'Powers and roots', '5 min'],
-              ['Mathematics', 'Quadratic functions', '20 min'],
-              ['Physics', 'Newton’s laws', '25 min'],
-              ['English', 'Force and motion terms', '10 min'],
-              ['Review', 'Spaced repetition', '8 questions'],
-            ].map(([area, title, duration]) => (
+            {selectedPlanItems.map(([area, title, duration]) => (
               <div key={area} className="flex items-center gap-3 rounded-xl border p-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-secondary"><CalendarDays className="h-3.5 w-3.5" /></span><div className="min-w-0 flex-1"><p className="text-[0.65rem] font-bold uppercase tracking-wider text-muted-foreground">{area}</p><p className="truncate text-sm font-semibold">{title}</p></div><span className="flex items-center gap-1 text-xs text-muted-foreground"><Clock3 className="h-3 w-3" />{duration}</span></div>
             ))}
           </div>

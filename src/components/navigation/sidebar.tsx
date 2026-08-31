@@ -3,11 +3,16 @@ import { Search, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { preparationDay } from '@/lib/date';
+import { useAppStore } from '@/stores';
 import { adminNav, primaryNav } from './nav-items';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const { user, isDemo } = useAuth();
+  const profile = useAppStore((state) => state.profile);
+  const currentDay = preparationDay(profile?.createdAt ?? user?.createdAt ?? new Date().toISOString(), new Date(), profile?.timezone ?? user?.timezone ?? 'UTC');
+  const phase = currentDay <= 28 ? 'Foundation sprint' : currentDay <= 56 ? 'Mixed consolidation' : 'Exam-speed phase';
   const navItems = user?.role === 'admin' ? [...primaryNav, adminNav] : primaryNav;
 
   return (
@@ -47,10 +52,10 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
       <div className="mt-4 rounded-xl border bg-background/70 p-3.5">
         <div className="mb-2 flex items-center justify-between">
           <span className="data-label">Current phase</span>
-          {isDemo ? <Badge variant="warning">Demo</Badge> : <Badge variant="success">Live</Badge>}
+          {isDemo ? <Badge variant="outline">On device</Badge> : <Badge variant="success">Synced</Badge>}
         </div>
-        <p className="text-sm font-semibold">Foundation sprint</p>
-        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Day 18 of 84 · Build the base before exam speed.</p>
+        <p className="text-sm font-semibold">{phase}</p>
+        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">Day {currentDay} of 84 · Your plan follows recorded progress.</p>
       </div>
     </aside>
   );

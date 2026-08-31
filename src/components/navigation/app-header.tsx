@@ -45,7 +45,7 @@ export function AppHeader({ onSearch }: { onSearch: () => void }) {
             <DropdownMenu.Content align="end" sideOffset={8} className="z-50 min-w-56 rounded-xl border bg-card p-1.5 shadow-float">
               <div className="px-3 py-2">
                 <p className="text-sm font-semibold">{user?.name}</p>
-                <p className="truncate text-xs text-muted-foreground">{isDemo ? 'Local demo profile' : user?.email}</p>
+                <p className="truncate text-xs text-muted-foreground">{isDemo ? 'Saved on this device' : user?.email}</p>
               </div>
               <DropdownMenu.Separator className="my-1 h-px bg-border" />
               <DropdownMenu.Item asChild><Link to="/settings" className="block cursor-pointer rounded-lg px-3 py-2 text-sm outline-none hover:bg-secondary">Settings</Link></DropdownMenu.Item>

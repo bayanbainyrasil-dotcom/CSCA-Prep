@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { useAuth } from '@/features/auth/auth-provider';
+import { preparationDay } from '@/lib/date';
 import { useAppStore } from '@/stores';
 import type { DailyPlanBlock } from '@/domain';
 
@@ -19,8 +19,7 @@ const iconFor = (block: DailyPlanBlock) => {
 };
 
 export default function TodayPage() {
-  const { isDemo } = useAuth();
-  const completedDays = useAppStore((state) => state.metrics.completedDays);
+  const profile = useAppStore((state) => state.profile);
   const plan = useAppStore((state) => state.dailyPlan);
   const lessons = useAppStore((state) => state.lessons);
   const completeBlock = useAppStore((state) => state.completeDailyPlanBlock);
@@ -31,6 +30,7 @@ export default function TodayPage() {
 
   const completed = plan.blocks.filter((block) => block.status === 'completed').length;
   const progress = Math.round((completed / plan.blocks.length) * 100);
+  const currentDay = preparationDay(profile?.createdAt ?? new Date().toISOString(), new Date(), profile?.timezone ?? 'UTC');
   const next = plan.blocks.find((block) => block.status !== 'completed');
   const pathFor = (block: DailyPlanBlock) => {
     if (block.kind === 'mental-math') return '/mental-math';
@@ -53,7 +53,7 @@ export default function TodayPage() {
 
   return (
     <div>
-      <PageHeading eyebrow={`Today · Day ${isDemo ? 18 : Math.min(84, completedDays + 1)}`} title="One session. Deliberate next steps." description="The order is rebuilt from published topics, current mastery, review dates and your daily time target." actions={<Badge variant={progress === 100 ? 'success' : isDemo ? 'warning' : 'default'}>{isDemo ? `Demo plan · ${progress}%` : `${progress}% complete`}</Badge>} />
+      <PageHeading eyebrow={`Today · Day ${currentDay}`} title="One session. Deliberate next steps." description="The order is rebuilt from available topics, current mastery, review dates and your daily time target." actions={<Badge variant={progress === 100 ? 'success' : 'default'}>{progress}% complete</Badge>} />
       <div className="content-grid">
         <section className="lg:col-span-8">
           <Card><CardContent className="p-5 sm:p-6">

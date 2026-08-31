@@ -206,7 +206,7 @@ export default function PracticeSessionPage() {
     };
     try {
       if (question.demo) {
-        if (!question.correctAnswer || !question.explanation || !question.shortSolution) throw new Error('This demo question is missing its verified answer.');
+        if (!question.correctAnswer || !question.explanation || !question.shortSolution) throw new Error('This built-in question is missing its verified answer.');
         const correct = answer === question.correctAnswer;
         const nextFeedback: Feedback = { correct, correctAnswer: question.correctAnswer, explanation: question.explanation, shortSolution: question.shortSolution };
         const attempt = AttemptSchema.parse({
@@ -336,7 +336,7 @@ export default function PracticeSessionPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <div className="mb-4 flex items-center justify-between gap-3"><Button variant="ghost" asChild><Link to="/practice"><ArrowLeft className="h-4 w-4" />Exit</Link></Button><div className="flex items-center gap-2">{question.demo ? <Badge variant="warning">Demo question</Badge> : <Badge variant="success">Secure grading</Badge>}<span className="flex items-center gap-1.5 font-mono text-xs font-semibold text-muted-foreground"><Clock3 className="h-3.5 w-3.5" />{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span></div></div>
+      <div className="mb-4 flex items-center justify-between gap-3"><Button variant="ghost" asChild><Link to="/practice"><ArrowLeft className="h-4 w-4" />Exit</Link></Button><div className="flex items-center gap-2">{question.demo ? <Badge variant="outline">Original practice</Badge> : <Badge variant="success">Secure grading</Badge>}<span className="flex items-center gap-1.5 font-mono text-xs font-semibold text-muted-foreground"><Clock3 className="h-3.5 w-3.5" />{Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, '0')}</span></div></div>
       <div className="mb-5"><div className="mb-2 flex justify-between text-xs font-semibold"><span>{mode.replace('-', ' ')}</span><span>{index + 1} / {questions.length}</span></div><Progress value={progress} label={`Question ${index + 1} of ${questions.length}`} /></div>
       <Card><CardContent className="p-5 sm:p-7 lg:p-8">
         <div className="flex flex-wrap items-center gap-2"><Badge variant="outline">{question.subject}</Badge><Badge variant="outline">Difficulty {question.difficulty}</Badge><span className="text-xs text-muted-foreground">Target {question.estimatedTime}s</span></div>

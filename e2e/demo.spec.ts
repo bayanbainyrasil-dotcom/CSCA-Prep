@@ -1,12 +1,40 @@
 import { expect, test } from '@playwright/test';
 
-test('demo dashboard loads with its readiness context', async ({ page }) => {
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    const key = 'csca-local-session-v2';
+    if (window.location.search.includes('fresh=1')) {
+      localStorage.removeItem(key);
+      return;
+    }
+    if (localStorage.getItem(key)) return;
+    const now = new Date();
+    const target = new Date(now.getTime() + 84 * 86_400_000).toISOString().slice(0, 10);
+    localStorage.setItem(key, JSON.stringify({
+      uid: 'demo-local-user',
+      name: 'Nurasyl',
+      email: '',
+      role: 'user',
+      onboardingCompleted: true,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      targetDate: target,
+      preferredLanguage: 'en-ru',
+      profileVersion: 1,
+      settings: {},
+      createdAt: now.toISOString(),
+      lastActiveAt: now.toISOString(),
+    }));
+  });
+});
+
+test('dashboard loads with real zero-state metrics and the current day', async ({ page }) => {
   await page.goto('/');
   await page.waitForLoadState('networkidle');
 
-  await expect(page.getByRole('heading', { name: /Good evening, Nurasyl/i })).toBeVisible();
-  await expect(page.getByText('Demo progress')).toBeVisible();
-  await expect(page.getByLabel('Internal CSCA readiness score 57 percent')).toBeVisible();
+  await expect(page.getByRole('heading', { name: /Good (morning|afternoon|evening), Nurasyl/i })).toBeVisible();
+  await expect(page.getByText(/Day 1 \/ 84/i)).toBeVisible();
+  await expect(page.getByText(/Demo progress/i)).toHaveCount(0);
+  await expect(page.getByLabel('Internal CSCA readiness score 0 percent')).toBeVisible();
   await expect(page.getByRole('link', { name: /Start today’s session/i })).toHaveAttribute(
     'href',
     '/today',
@@ -24,7 +52,7 @@ test('lazy search opens and routes to a matching study topic', async ({ page }, 
   await page.getByRole('option', { name: 'Newton’s laws' }).click();
 
   await expect(page).toHaveURL(/\/physics\?topic=newton-laws$/);
-  await expect(page.getByRole('link', { name: /Newton’s laws/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Newton['’]s Laws/i })).toBeVisible();
 });
 
 test('practice preserves the understand-answer-confidence-feedback sequence', async ({
@@ -79,16 +107,50 @@ test('an active mock restores its answer and flag after a reload', async ({ page
   await expect(page.getByRole('button', { name: 'Question 1, answered, flagged' })).toBeVisible();
 });
 
-test('demo mode does not expose administrator controls', async ({ page }, testInfo) => {
+test('on-device mode does not expose administrator controls', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop', 'Authorization route is covered once on desktop.');
   await page.goto('/admin');
   await page.waitForLoadState('networkidle');
 
-  await expect(page.getByRole('heading', { name: 'Admin is disabled in local demo mode' }))
+  await expect(page.getByRole('heading', { name: 'Cloud administration is unavailable' }))
     .toBeVisible();
-  await expect(page.getByText('No client-side password or demo bypass is available.'))
+  await expect(page.getByText('No client-side password or administrator bypass is available.'))
     .toBeVisible();
   await expect(page.getByLabel('Initial setup code')).toHaveCount(0);
+});
+
+test('first run asks for the real exam date and keeps it after reload', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'iphone', 'The first-run phone flow is covered once on iPhone.');
+  await page.goto('/onboarding?fresh=1');
+  const dateInput = page.getByLabel('Target CSCA date');
+  await expect(dateInput).toHaveValue('');
+  const target = await page.evaluate(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 45);
+    return date.toISOString().slice(0, 10);
+  });
+  await dateInput.fill(target);
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Continue' }).click();
+  await page.getByRole('button', { name: 'Take diagnostic test' }).click();
+  await expect(page).toHaveURL(/\/diagnostic$/);
+
+  await page.goto('/settings');
+  await expect(page.getByLabel('Target CSCA date')).toHaveValue(target);
+  await page.reload();
+  await expect(page.getByLabel('Target CSCA date')).toHaveValue(target);
+  const updatedTarget = await page.evaluate(() => {
+    const date = new Date();
+    date.setDate(date.getDate() + 60);
+    return date.toISOString().slice(0, 10);
+  });
+  await page.getByLabel('Target CSCA date').fill(updatedTarget);
+  await page.getByRole('button', { name: 'Save settings' }).click();
+  await expect(page.getByText('Settings saved')).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel('Target CSCA date')).toHaveValue(updatedTarget);
 });
 
 test('mobile primary navigation reaches practice without opening a menu', async ({

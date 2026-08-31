@@ -18,7 +18,7 @@ import {
 } from "./questionTemplates";
 
 export const DEMO_CONTENT_DISCLAIMER =
-  "Demo — original practice content for product evaluation. It is not an official CSCA question bank and is not endorsed by the exam provider.";
+  "Original CSCA-style practice created for this app. It is not an official CSCA question bank and is not endorsed by the exam provider.";
 
 const SEED_TIMESTAMP = "2025-01-01T00:00:00.000Z";
 const SEED_AUTHOR = "csca-prep-demo-seed";

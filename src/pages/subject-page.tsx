@@ -8,11 +8,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/field';
 import { Progress } from '@/components/ui/progress';
-import { mathTopics, physicsTopics } from '@/data/curriculum';
 import { useAuth } from '@/features/auth/auth-provider';
 import { useAppStore } from '@/stores';
-
-const demoMastery = [86, 74, 69, 63, 48, 42, 51, 33, 22];
 
 interface TopicCard {
   id: string;
@@ -30,26 +27,18 @@ export default function SubjectPage({ subject }: { subject: 'mathematics' | 'phy
   const lessons = useAppStore((state) => state.lessons);
   const reduced = useReducedMotion();
   const isMath = subject === 'mathematics';
-  const demoTopics = isMath ? mathTopics : physicsTopics;
   const cards = useMemo<TopicCard[]>(() => {
-    if (isDemo) return demoTopics.map((title, index) => ({
-      id: title.toLowerCase().replaceAll(/[^a-z0-9]+/g, '-'),
-      title,
-      order: index + 1,
-      mastery: demoMastery[index] ?? 0,
-      ...(title === (isMath ? 'Functions' : 'Newton’s laws') ? { lessonId: isMath ? 'quadratic-functions' : 'newtons-laws' } : {}),
-    }));
     return topicRecords
-      .filter((topic) => topic.subject === subject && topic.status === 'published' && !topic.demo)
+      .filter((topic) => topic.subject === subject && topic.status === 'published' && (isDemo || !topic.demo))
       .sort((left, right) => left.order - right.order)
       .map((topic) => ({
         id: topic.id,
         title: topic.title.en,
         order: topic.order,
         mastery: Math.round(Object.values(masteries).find((item) => item.topicId === topic.id)?.score ?? 0),
-        lessonId: lessons.find((lesson) => lesson.topicId === topic.id && lesson.status === 'published' && !lesson.demo)?.id,
+        lessonId: lessons.find((lesson) => lesson.topicId === topic.id && lesson.status === 'published' && (isDemo || !lesson.demo))?.id,
       }));
-  }, [demoTopics, isDemo, isMath, lessons, masteries, subject, topicRecords]);
+  }, [isDemo, lessons, masteries, subject, topicRecords]);
   const filtered = useMemo(() => cards.filter((topic) => topic.title.toLowerCase().includes(query.toLowerCase())), [cards, query]);
   const nextTopic = cards.reduce<TopicCard | undefined>((best, topic) => !best || topic.mastery < best.mastery ? topic : best, undefined);
   const pathFor = (topic: TopicCard) => topic.lessonId
@@ -59,10 +48,10 @@ export default function SubjectPage({ subject }: { subject: 'mathematics' | 'phy
   return (
     <div>
       <PageHeading
-        eyebrow={`${isMath ? 'Mathematics' : 'Physics'} · ${cards.length} ${isDemo ? 'roadmap' : 'published'} topics`}
+        eyebrow={`${isMath ? 'Mathematics' : 'Physics'} · ${cards.length} ${isDemo ? 'built-in' : 'published'} topics`}
         title={isMath ? 'Build methods you can retrieve fast.' : 'See the model before using the formula.'}
         description={isMath ? 'From forgotten foundations to CSCA-speed problem solving, with mastery earned across repeated attempts.' : 'Learn each physical idea in Russian, recognize its English exam language, then solve it under time.'}
-        actions={<div className="flex items-center gap-2">{isDemo ? <Badge variant="warning">Demo mastery</Badge> : <Badge variant="success">Published content</Badge>}{nextTopic ? <Button asChild><Link to={pathFor(nextTopic)}><BookOpen className="h-4 w-4" /> Continue</Link></Button> : null}</div>}
+        actions={<div className="flex items-center gap-2">{isDemo ? <Badge variant="outline">Built-in curriculum</Badge> : <Badge variant="success">Published content</Badge>}{nextTopic ? <Button asChild><Link to={pathFor(nextTopic)}><BookOpen className="h-4 w-4" /> Continue</Link></Button> : null}</div>}
       />
 
       {nextTopic ? <Card className={`mb-6 overflow-hidden border-0 ${isMath ? 'bg-primary text-primary-foreground' : 'bg-foreground text-background'}`}>

@@ -13,7 +13,7 @@ import {
   type SyncEntityType,
   type UserProfile,
 } from '@/domain';
-import { useAuth } from '@/features/auth/auth-provider';
+import { persistLocalProfile, useAuth, type SessionUser } from '@/features/auth/auth-provider';
 import { firestore, functions } from '@/lib/firebase';
 import { getCscaDatabase } from '@/lib/persistence/database';
 import { LocalFirstRepository } from '@/lib/persistence/repository';
@@ -32,23 +32,23 @@ export function getDeviceId() {
   return value;
 }
 
-function createProfile(input: { uid: string; name: string; email: string; role: 'user' | 'admin'; onboardingCompleted: boolean }): UserProfile {
+function createProfile(input: SessionUser): UserProfile {
   const now = new Date().toISOString();
   return UserProfileSchema.parse({
     uid: input.uid,
     name: input.name,
     email: input.email || null,
-    photoURL: null,
-    createdAt: 'createdAt' in input && typeof input.createdAt === 'string' ? input.createdAt : now,
-    lastActiveAt: 'lastActiveAt' in input && typeof input.lastActiveAt === 'string' ? input.lastActiveAt : now,
+    photoURL: input.photoURL ?? null,
+    createdAt: input.createdAt,
+    lastActiveAt: input.lastActiveAt,
     role: input.role,
-    timezone: 'timezone' in input && typeof input.timezone === 'string' ? input.timezone : (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'),
+    timezone: input.timezone,
     targetExam: 'CSCA',
-    targetDate: 'targetDate' in input && (typeof input.targetDate === 'string' || input.targetDate === null) ? input.targetDate : null,
-    preferredLanguage: 'preferredLanguage' in input && typeof input.preferredLanguage === 'string' ? input.preferredLanguage : 'en-ru',
+    targetDate: input.targetDate,
+    preferredLanguage: input.preferredLanguage,
     onboardingCompleted: input.onboardingCompleted,
-    settings: UserSettingsSchema.parse('settings' in input && input.settings && typeof input.settings === 'object' ? input.settings : {}),
-    version: 'profileVersion' in input && typeof input.profileVersion === 'number' ? input.profileVersion : 1,
+    settings: UserSettingsSchema.parse(input.settings),
+    version: input.profileVersion,
     updatedAt: now,
   });
 }
@@ -228,7 +228,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         save: (type, entity, options) => repository.save(type, entity, options),
         remove: (type, id, options) => repository.remove(type, id, options),
         saveProfile: async (nextProfile) => {
-          if (!functions || isDemo) return;
+          if (isDemo) {
+            persistLocalProfile(nextProfile);
+            return;
+          }
+          if (!functions) return;
           const { httpsCallable } = await import('firebase/functions');
           const ensureProfile = httpsCallable(functions, 'ensureUserProfile');
           await ensureProfile({

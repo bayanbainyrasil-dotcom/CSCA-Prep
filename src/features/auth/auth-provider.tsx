@@ -9,7 +9,9 @@ import {
 } from 'react';
 import type { User } from 'firebase/auth';
 import { z } from 'zod';
+import type { UserProfile } from '@/domain';
 import { auth, firebaseReady, firestore, functions, isFirebaseConfigured } from '@/lib/firebase';
+import { dateKeyInTimezone } from '@/lib/date';
 
 export interface SessionUser {
   uid: string;
@@ -58,21 +60,79 @@ const profileAccessSchema = z.object({
 }).passthrough();
 const AuthContext = createContext<AuthContextValue | null>(null);
 const SESSION_CACHE_PREFIX = 'csca-session-v1-';
+export const LOCAL_SESSION_KEY = 'csca-local-session-v2';
 
-const demoUser: SessionUser = {
-  uid: 'demo-local-user',
-  name: 'Nurasyl',
-  email: 'demo@local.invalid',
-  role: 'user',
-  onboardingCompleted: true,
-  timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-  targetDate: '2026-12-05',
-  preferredLanguage: 'en-ru',
-  profileVersion: 1,
-  settings: {},
-  createdAt: '2026-08-12T00:00:00.000Z',
-  lastActiveAt: new Date().toISOString(),
-};
+const sessionUserSchema = z.object({
+  uid: z.string().min(1),
+  name: z.string().min(1),
+  email: z.string(),
+  photoURL: z.string().optional(),
+  role: roleSchema,
+  onboardingCompleted: z.boolean(),
+  timezone: z.string(),
+  targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
+  preferredLanguage: z.enum(['en', 'ru', 'en-ru', 'zh']),
+  profileVersion: z.number().int().positive(),
+  settings: z.record(z.string(), z.unknown()),
+  createdAt: z.string(),
+  lastActiveAt: z.string(),
+}).strict();
+
+export function createLocalSession(): SessionUser {
+  const now = new Date().toISOString();
+  return {
+    uid: 'demo-local-user',
+    name: 'Nurasyl',
+    email: '',
+    role: 'user',
+    onboardingCompleted: false,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+    targetDate: null,
+    preferredLanguage: 'en-ru',
+    profileVersion: 1,
+    settings: {},
+    createdAt: now,
+    lastActiveAt: now,
+  };
+}
+
+export function persistLocalSession(session: SessionUser): void {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(LOCAL_SESSION_KEY, JSON.stringify(sessionUserSchema.parse(session)));
+}
+
+export function persistLocalProfile(profile: UserProfile): void {
+  persistLocalSession({
+    uid: profile.uid,
+    name: profile.name,
+    email: profile.email ?? '',
+    ...(profile.photoURL ? { photoURL: profile.photoURL } : {}),
+    role: profile.role,
+    onboardingCompleted: profile.onboardingCompleted,
+    timezone: profile.timezone,
+    targetDate: profile.targetDate,
+    preferredLanguage: profile.preferredLanguage,
+    profileVersion: profile.version,
+    settings: profile.settings,
+    createdAt: profile.createdAt,
+    lastActiveAt: profile.lastActiveAt,
+  });
+}
+
+function readLocalSession(): SessionUser {
+  if (typeof localStorage !== 'undefined') {
+    try {
+      const raw = localStorage.getItem(LOCAL_SESSION_KEY);
+      const parsed = raw ? sessionUserSchema.safeParse(JSON.parse(raw) as unknown) : null;
+      if (parsed?.success) return parsed.data;
+    } catch {
+      // A corrupt cache is replaced with a safe first-run profile below.
+    }
+  }
+  const session = createLocalSession();
+  persistLocalSession(session);
+  return session;
+}
 
 function toLocalDate(value: unknown): string | null {
   if (typeof value === 'string' && Number.isFinite(Date.parse(value))) return new Date(value).toISOString().slice(0, 10);
@@ -172,7 +232,7 @@ function readCachedSession(firebaseUser: User): SessionUser | null {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<SessionUser | null>(isFirebaseConfigured ? null : demoUser);
+  const [user, setUser] = useState<SessionUser | null>(() => isFirebaseConfigured ? null : readLocalSession());
   const [loading, setLoading] = useState(isFirebaseConfigured);
 
   useEffect(() => {
@@ -208,7 +268,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (isFirebaseConfigured) await firebaseReady;
     }
     if (!auth) {
-      setUser(demoUser);
+      setUser(readLocalSession());
       return;
     }
     const { GoogleAuthProvider, signInWithPopup, signInWithRedirect } = await import('firebase/auth');
@@ -223,33 +283,56 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const completeOnboarding = useCallback(async (input: OnboardingInput) => {
     if (!user) throw new Error('Sign in before completing onboarding.');
-    const preferredLanguage = input.preferredLanguage === 'bilingual' ? 'en-ru' : input.preferredLanguage;
+    const parsedInput = z.object({
+      targetDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      mathLevel: z.enum(['foundation', 'basic', 'intermediate']),
+      physicsLevel: z.enum(['new', 'foundation', 'basic', 'intermediate']),
+      preferredLanguage: z.enum(['en', 'ru', 'bilingual']),
+      dailyAvailableMinutes: z.number().int().min(10).max(360),
+    }).strict().parse(input);
+    if (parsedInput.targetDate < dateKeyInTimezone(new Date(), user.timezone)) {
+      throw new Error('Choose today or a future date from your exam registration.');
+    }
+    const preferredLanguage = parsedInput.preferredLanguage === 'bilingual' ? 'en-ru' : parsedInput.preferredLanguage;
     if (functions) {
       const { httpsCallable } = await import('firebase/functions');
       const ensureProfile = httpsCallable(functions, 'ensureUserProfile');
       await ensureProfile({
-        targetDate: new Date(`${input.targetDate}T00:00:00.000Z`).toISOString(),
+        targetDate: new Date(`${parsedInput.targetDate}T00:00:00.000Z`).toISOString(),
         preferredLanguage,
         onboarding: {
-          mathLevel: input.mathLevel,
-          physicsLevel: input.physicsLevel,
-          dailyAvailableMinutes: input.dailyAvailableMinutes,
+          mathLevel: parsedInput.mathLevel,
+          physicsLevel: parsedInput.physicsLevel,
+          dailyAvailableMinutes: parsedInput.dailyAvailableMinutes,
           completed: true,
         },
       });
     }
-    setUser((current) => current ? {
-      ...current,
-      onboardingCompleted: true,
-      targetDate: input.targetDate,
-      preferredLanguage,
-      profileVersion: current.profileVersion + 1,
-    } : current);
+    setUser((current) => {
+      if (!current) return current;
+      const now = new Date().toISOString();
+      const next: SessionUser = {
+        ...current,
+        onboardingCompleted: true,
+        targetDate: parsedInput.targetDate,
+        preferredLanguage,
+        settings: {
+          ...current.settings,
+          dailyStudyMinutes: parsedInput.dailyAvailableMinutes,
+          explanationLanguage: preferredLanguage,
+        },
+        profileVersion: current.profileVersion + 1,
+        createdAt: current.onboardingCompleted ? current.createdAt : now,
+        lastActiveAt: now,
+      };
+      if (!isFirebaseConfigured) persistLocalSession(next);
+      return next;
+    });
   }, [user]);
 
   const signOutUser = useCallback(async () => {
     if (!auth) {
-      setUser(demoUser);
+      setUser(readLocalSession());
       return;
     }
     const { useAppStore } = await import('@/stores');
