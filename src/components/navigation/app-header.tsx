@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ChevronDown, Moon, Search, Sun } from 'lucide-react';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { SyncIndicator } from '@/components/system/sync-indicator';
 import { useAuth } from '@/features/auth/auth-provider';
@@ -47,7 +48,7 @@ export function AppHeader({ onSearch }: { onSearch: () => void }) {
                 <p className="truncate text-xs text-muted-foreground">{isDemo ? 'Local demo profile' : user?.email}</p>
               </div>
               <DropdownMenu.Separator className="my-1 h-px bg-border" />
-              <DropdownMenu.Item asChild><a href="/settings" className="block cursor-pointer rounded-lg px-3 py-2 text-sm outline-none hover:bg-secondary">Settings</a></DropdownMenu.Item>
+              <DropdownMenu.Item asChild><Link to="/settings" className="block cursor-pointer rounded-lg px-3 py-2 text-sm outline-none hover:bg-secondary">Settings</Link></DropdownMenu.Item>
               {!isDemo ? (
                 <DropdownMenu.Item disabled={pending} onSelect={() => void signOut()} className="cursor-pointer rounded-lg px-3 py-2 text-sm outline-none hover:bg-secondary">Sign out</DropdownMenu.Item>
               ) : null}

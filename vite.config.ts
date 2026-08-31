@@ -3,8 +3,12 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { fileURLToPath, URL } from 'node:url';
 
-export default defineConfig({
-  plugins: [
+export default defineConfig(() => {
+  const base = process.env.VITE_BASE_PATH ?? '/';
+
+  return {
+    base,
+    plugins: [
     react(),
     VitePWA({
       registerType: 'prompt',
@@ -17,18 +21,18 @@ export default defineConfig({
         background_color: '#f5f7fb',
         display: 'standalone',
         orientation: 'any',
-        start_url: '/',
-        scope: '/',
+        start_url: base,
+        scope: base,
         categories: ['education', 'productivity'],
         icons: [
-          { src: '/icons/pwa-192.png', sizes: '192x192', type: 'image/png' },
-          { src: '/icons/pwa-512.png', sizes: '512x512', type: 'image/png' },
-          { src: '/icons/pwa-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: `${base}icons/pwa-192.png`, sizes: '192x192', type: 'image/png' },
+          { src: `${base}icons/pwa-512.png`, sizes: '512x512', type: 'image/png' },
+          { src: `${base}icons/pwa-maskable-512.png`, sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
         cleanupOutdatedCaches: true,
-        navigateFallback: '/index.html',
+        navigateFallback: `${base}index.html`,
         navigateFallbackDenylist: [/^\/__/],
         // Keep installation light: route JavaScript and fonts are cached on first use,
         // while the HTML shell, styles, icons, and offline fallback are precached.
@@ -59,12 +63,13 @@ export default defineConfig({
       },
       devOptions: { enabled: false },
     }),
-  ],
-  resolve: {
-    alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
-  },
-  build: {
-    sourcemap: false,
-    cssCodeSplit: true,
-  },
+    ],
+    resolve: {
+      alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
+    },
+    build: {
+      sourcemap: false,
+      cssCodeSplit: true,
+    },
+  };
 });
