@@ -1,0 +1,401 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && (request.auth.token.admin == true || request.auth.token.role == 'admin');
+    }
+
+    function resetNotInProgress(uid) {
+      return !exists(/databases/$(database)/documents/_resetLocks/$(uid));
+    }
+
+    function validId(value) {
+      return value is string && value.size() > 0 && value.size() <= 128;
+    }
+
+    function isMutableSyncCollection(collectionId) {
+      return collectionId in [
+        'progress',
+        'topicMastery',
+        'studySessions',
+        'dailyPlans',
+        'mistakes',
+        'bookmarks',
+        'notes',
+        'examAttempts',
+        'vocabularyProgress',
+        'formulaProgress',
+        'syncState'
+      ];
+    }
+
+    function isAppendOnlyCollection(collectionId) {
+      return collectionId in ['attempts', 'diagnostics'];
+    }
+
+    function mayTombstone(collectionId) {
+      return collectionId in ['bookmarks', 'notes'];
+    }
+
+    function validSyncPayload(data, collectionId) {
+      return (
+          data.operation == 'upsert'
+          && ('payload' in data)
+          && data.payload is map
+          && data.payload.keys().size() <= 128
+        ) || (
+          data.operation == 'delete'
+          && mayTombstone(collectionId)
+          && (!('payload' in data) || data.payload == null)
+        );
+    }
+
+    function validSyncEnvelope(uid, collectionId, documentId) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'entityType',
+          'entityId',
+          'ownerId',
+          'operation',
+          'version',
+          'updatedAt',
+          'mutationId',
+          'serverUpdatedAt'
+        ])
+        && data.keys().hasOnly([
+          'entityType',
+          'entityId',
+          'ownerId',
+          'operation',
+          'version',
+          'updatedAt',
+          'mutationId',
+          'payload',
+          'serverUpdatedAt'
+        ])
+        && validId(data.entityType)
+        && data.entityId == documentId
+        && data.ownerId == uid
+        && data.operation in ['upsert', 'delete']
+        && data.version is int
+        && data.version >= 1
+        && data.updatedAt is string
+        && data.updatedAt.size() >= 20
+        && data.updatedAt.size() <= 40
+        && validId(data.mutationId)
+        && data.serverUpdatedAt == request.time
+        && validSyncPayload(data, collectionId);
+    }
+
+    function validSyncCreate(uid, collectionId, documentId) {
+      return validSyncEnvelope(uid, collectionId, documentId)
+        && request.resource.data.version == 1;
+    }
+
+    function validSyncUpdate(uid, collectionId, documentId) {
+      return validSyncEnvelope(uid, collectionId, documentId)
+        && request.resource.data.version == resource.data.version + 1
+        && request.resource.data.entityType == resource.data.entityType
+        && request.resource.data.entityId == resource.data.entityId
+        && request.resource.data.ownerId == resource.data.ownerId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'operation',
+          'version',
+          'updatedAt',
+          'mutationId',
+          'payload',
+          'serverUpdatedAt'
+        ]);
+    }
+
+    function existingExamIsOpen(uid, examAttemptId) {
+      let path = /databases/$(database)/documents/users/$(uid)/examAttempts/$(examAttemptId);
+      return exists(path)
+        && get(path).data.operation == 'upsert'
+        && (!('status' in get(path).data.payload)
+          || !(get(path).data.payload.status in ['submitted', 'completed', 'graded']));
+    }
+
+    function mutableExamIsOpen(collectionId) {
+      return collectionId != 'examAttempts'
+        || !('payload' in resource.data)
+        || !('status' in resource.data.payload)
+        || !(resource.data.payload.status in ['submitted', 'completed', 'graded']);
+    }
+
+    function clientAttemptHasNoTrustedResult() {
+      return request.resource.data.operation == 'upsert'
+        && !request.resource.data.payload.keys().hasAny([
+          'correct',
+          'isCorrect',
+          'correctAnswer',
+          'score',
+          'masteryDelta',
+          'gradedAt'
+        ]);
+    }
+
+    function clientDiagnosticHasNoTrustedResult() {
+      return request.resource.data.operation == 'upsert'
+        && !request.resource.data.payload.keys().hasAny([
+          'baseline',
+          'score',
+          'strengths',
+          'weaknesses',
+          'gradedAt'
+        ]);
+    }
+
+    function validProfileShape(data) {
+      return data.keys().hasOnly([
+          'uid',
+          'name',
+          'email',
+          'photoURL',
+          'createdAt',
+          'lastActiveAt',
+          'role',
+          'roleVersion',
+          'timezone',
+          'targetExam',
+          'targetDate',
+          'preferredLanguage',
+          'settings',
+          'onboarding',
+          'version',
+          'updatedAt'
+        ])
+        && data.name is string
+        && data.name.size() > 0
+        && data.name.size() <= 120
+        && data.email is string
+        && data.email.size() <= 320
+        && (data.photoURL == null || (data.photoURL is string && data.photoURL.size() <= 2048))
+        && data.timezone is string
+        && data.timezone.size() > 0
+        && data.timezone.size() <= 64
+        && data.targetExam is string
+        && data.targetExam.size() > 0
+        && data.targetExam.size() <= 80
+        && (data.targetDate == null || data.targetDate is timestamp)
+        && data.preferredLanguage in ['en', 'ru', 'en-ru', 'zh']
+        && data.settings is map
+        && data.settings.keys().size() <= 32
+        && data.onboarding is map
+        && data.onboarding.keys().size() <= 16
+        && data.version is int
+        && data.version >= 1;
+    }
+
+    function validProfileCreate(uid) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'uid', 'name', 'email', 'createdAt', 'lastActiveAt', 'role',
+          'roleVersion', 'timezone', 'targetExam', 'preferredLanguage',
+          'settings', 'onboarding', 'version', 'updatedAt'
+        ])
+        && validProfileShape(data)
+        && data.uid == uid
+        && data.email == request.auth.token.email
+        && data.role == 'user'
+        && data.roleVersion == 0
+        && data.version == 1
+        && data.createdAt == request.time
+        && data.lastActiveAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validProfileUpdate() {
+      let data = request.resource.data;
+      return validProfileShape(data)
+        && data.uid == resource.data.uid
+        && data.email == resource.data.email
+        && data.role == resource.data.role
+        && data.roleVersion == resource.data.roleVersion
+        && data.createdAt == resource.data.createdAt
+        && data.version == resource.data.version + 1
+        && data.lastActiveAt == request.time
+        && data.updatedAt == request.time
+        && data.diff(resource.data).affectedKeys().hasOnly([
+          'name',
+          'photoURL',
+          'lastActiveAt',
+          'timezone',
+          'targetExam',
+          'targetDate',
+          'preferredLanguage',
+          'settings',
+          'onboarding',
+          'version',
+          'updatedAt'
+        ]);
+    }
+
+    function validContentStatus(status) {
+      return status in ['draft', 'published', 'archived'];
+    }
+
+    function validContentCreate() {
+      let data = request.resource.data;
+      return validContentStatus(data.status)
+        && data.version == 1
+        && data.createdBy == request.auth.uid
+        && data.updatedBy == request.auth.uid
+        && data.createdAt == request.time
+        && data.updatedAt == request.time;
+    }
+
+    function validContentUpdate() {
+      let data = request.resource.data;
+      return validContentStatus(data.status)
+        && data.version == resource.data.version + 1
+        && data.createdBy == resource.data.createdBy
+        && data.createdAt == resource.data.createdAt
+        && data.updatedBy == request.auth.uid
+        && data.updatedAt == request.time;
+    }
+
+    match /users/{uid} {
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(uid) && validProfileCreate(uid);
+      allow update: if isOwner(uid) && validProfileUpdate();
+      allow delete: if false;
+
+      match /{collectionId}/{documentId} {
+        allow read: if (isOwner(uid) || isAdmin())
+          && (isMutableSyncCollection(collectionId) || isAppendOnlyCollection(collectionId));
+        allow create: if isOwner(uid)
+          && resetNotInProgress(uid)
+          && validSyncCreate(uid, collectionId, documentId)
+          && (
+            (isMutableSyncCollection(collectionId) && collectionId != 'topicMastery')
+            || (collectionId == 'attempts' && clientAttemptHasNoTrustedResult())
+            || (collectionId == 'diagnostics' && clientDiagnosticHasNoTrustedResult())
+          );
+        allow update: if isOwner(uid)
+          && resetNotInProgress(uid)
+          && isMutableSyncCollection(collectionId)
+          && collectionId != 'topicMastery'
+          && mutableExamIsOpen(collectionId)
+          && validSyncUpdate(uid, collectionId, documentId);
+        allow delete: if false;
+      }
+
+      match /examAttempts/{examAttemptId}/answers/{answerId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid)
+          && resetNotInProgress(uid)
+          && existingExamIsOpen(uid, examAttemptId)
+          && validSyncCreate(uid, 'answers', answerId)
+          && request.resource.data.operation == 'upsert';
+        allow update: if isOwner(uid)
+          && resetNotInProgress(uid)
+          && existingExamIsOpen(uid, examAttemptId)
+          && validSyncUpdate(uid, 'answers', answerId)
+          && request.resource.data.operation == 'upsert';
+        allow delete: if false;
+      }
+
+      match /{nested=**} {
+        allow read, write: if false;
+      }
+    }
+
+    match /questions/{questionId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.status == 'published');
+      allow create: if isAdmin()
+        && validContentCreate()
+        && !request.resource.data.keys().hasAny([
+          'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes'
+        ]);
+      allow update: if isAdmin()
+        && validContentUpdate()
+        && !request.resource.data.keys().hasAny([
+          'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes'
+        ]);
+      allow delete: if isAdmin();
+    }
+
+    match /questionSolutions/{questionId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /{contentCollection}/{contentId} {
+      allow read: if contentCollection in [
+          'subjects',
+          'topics',
+          'lessons',
+          'questionTemplates',
+          'examTemplates',
+          'vocabulary',
+          'formulas'
+        ]
+        && (isAdmin() || (signedIn() && resource.data.status == 'published'));
+      allow create: if isAdmin()
+        && contentCollection in [
+          'subjects',
+          'topics',
+          'lessons',
+          'questionTemplates',
+          'examTemplates',
+          'vocabulary',
+          'formulas'
+        ]
+        && validContentCreate();
+      allow update: if isAdmin()
+        && contentCollection in [
+          'subjects',
+          'topics',
+          'lessons',
+          'questionTemplates',
+          'examTemplates',
+          'vocabulary',
+          'formulas'
+        ]
+        && validContentUpdate();
+      allow delete: if isAdmin()
+        && contentCollection in [
+          'subjects',
+          'topics',
+          'lessons',
+          'questionTemplates',
+          'examTemplates',
+          'vocabulary',
+          'formulas'
+        ];
+    }
+
+    match /appConfig/{configId} {
+      allow read: if isAdmin()
+        || (signedIn() && resource.data.visibility == 'public');
+      allow create: if isAdmin()
+        && request.resource.data.visibility in ['public', 'admin']
+        && validContentCreate();
+      allow update: if isAdmin()
+        && request.resource.data.visibility in ['public', 'admin']
+        && validContentUpdate();
+      allow delete: if isAdmin();
+    }
+
+    match /analyticsDaily/{documentId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

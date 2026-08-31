@@ -1,0 +1,50 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+functions/lib/
+functions/node_modules/
+*.tsbuildinfo
+
+# Local environment files (keep the documented template)
+.env
+.env.*
+!.env.example
+functions/.env
+functions/.env.*
+!functions/.env.example
+functions/.secret.local
+functions/.secret.*.local
+
+# Test output
+coverage/
+playwright-report/
+test-results/
+blob-report/
+
+# Local audit reports and packaged deliverables
+work/
+outputs/
+
+# Firebase and Vercel local state
+.firebase/
+.firebaserc.local
+firebase-debug.log*
+firestore-debug.log*
+ui-debug.log*
+.vercel/
+
+# Editor and operating-system files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+
+# Logs and package-manager caches
+*.log
+.pnpm-store/
+.npm/

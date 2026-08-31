@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">CSCA Prep app icon</title>
+  <desc id="description">The letters CSCA with a precise cyan energy mark on a deep navy field.</desc>
+  <defs>
+    <linearGradient id="background" x1="108" y1="72" x2="918" y2="950" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#172654"/>
+      <stop offset="0.55" stop-color="#101A3A"/>
+      <stop offset="1" stop-color="#080D20"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="281" y1="0" x2="748" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#58E6D9"/>
+      <stop offset="1" stop-color="#62A8FF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(512 414) rotate(90) scale(420)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D8DA3" stop-opacity="0.23"/>
+      <stop offset="1" stop-color="#101A3A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#background)"/>
+  <rect x="38" y="38" width="948" height="948" rx="208" fill="none" stroke="#FFFFFF" stroke-opacity="0.08" stroke-width="4"/>
+  <circle cx="512" cy="424" r="388" fill="url(#glow)"/>
+  <path d="M285 694H739" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M627 215L510 398H606L489 594L520 449H423L544 215H627Z" fill="url(#accent)"/>
+  <text x="512" y="823" fill="#F8FAFF" font-family="Arial, Helvetica, sans-serif" font-size="172" font-weight="800" letter-spacing="16" text-anchor="middle">CSCA</text>
+</svg>

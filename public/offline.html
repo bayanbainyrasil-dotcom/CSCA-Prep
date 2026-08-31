@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#101a3a" />
+    <title>Offline · CSCA Prep</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #080d20;
+        color: #f7f9ff;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        min-height: 100dvh;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right))
+          max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+        background:
+          radial-gradient(circle at 50% 18%, rgba(58, 190, 205, 0.18), transparent 38%),
+          linear-gradient(150deg, #101a3a 0%, #080d20 72%);
+      }
+
+      main {
+        width: 100%;
+        max-width: 540px;
+        padding: clamp(28px, 7vw, 48px);
+        border: 1px solid rgba(255, 255, 255, 0.11);
+        border-radius: 28px;
+        background: rgba(13, 21, 47, 0.88);
+        box-shadow: 0 28px 80px rgba(0, 0, 0, 0.32);
+        text-align: center;
+      }
+
+      .mark {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 24px;
+        display: grid;
+        place-items: center;
+        border-radius: 18px;
+        background: linear-gradient(145deg, #173159, #101a3a);
+        border: 1px solid rgba(98, 210, 225, 0.28);
+        color: #58e6d9;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(1.75rem, 7vw, 2.45rem);
+        letter-spacing: -0.04em;
+      }
+
+      p {
+        margin: 16px auto 0;
+        max-width: 40ch;
+        color: #b9c3dc;
+        line-height: 1.65;
+      }
+
+      .status {
+        margin-top: 24px;
+        padding: 12px 16px;
+        border-radius: 14px;
+        background: rgba(88, 230, 217, 0.08);
+        color: #a8fff5;
+        font-size: 0.9rem;
+      }
+
+      a {
+        min-height: 48px;
+        margin-top: 28px;
+        padding: 0 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 14px;
+        background: #58e6d9;
+        color: #071521;
+        font-weight: 750;
+        text-decoration: none;
+      }
+
+      a:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="mark" aria-hidden="true">
+        <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+          <path d="M13.5 2.8 6.9 13h5.4l-1.8 8.2L17.1 11h-5.4l1.8-8.2Z" fill="currentColor" />
+        </svg>
+      </div>
+      <h1>You’re offline</h1>
+      <p>
+        Previously loaded lessons and your active session remain available in CSCA Prep. New progress is kept on this
+        device and will sync when the connection returns.
+      </p>
+      <div class="status" role="status">Offline — progress stays on this device</div>
+      <a href="/">Try again</a>
+    </main>
+  </body>
+</html>

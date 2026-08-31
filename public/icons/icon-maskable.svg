@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title description">
+  <title id="title">CSCA Prep maskable app icon</title>
+  <desc id="description">The CSCA energy mark kept inside the safe area for adaptive icon masks.</desc>
+  <defs>
+    <linearGradient id="background" x1="108" y1="72" x2="918" y2="950" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#172654"/>
+      <stop offset="0.55" stop-color="#101A3A"/>
+      <stop offset="1" stop-color="#080D20"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="318" y1="0" x2="706" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#58E6D9"/>
+      <stop offset="1" stop-color="#62A8FF"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientTransform="translate(512 448) rotate(90) scale(358)" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#1D8DA3" stop-opacity="0.23"/>
+      <stop offset="1" stop-color="#101A3A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#background)"/>
+  <circle cx="512" cy="448" r="358" fill="url(#glow)"/>
+  <path d="M318 688H706" stroke="url(#accent)" stroke-width="16" stroke-linecap="round"/>
+  <path d="M609 252L515 398H592L498 555L523 439H445L542 252H609Z" fill="url(#accent)"/>
+  <text x="512" y="790" fill="#F8FAFF" font-family="Arial, Helvetica, sans-serif" font-size="142" font-weight="800" letter-spacing="14" text-anchor="middle">CSCA</text>
+</svg>

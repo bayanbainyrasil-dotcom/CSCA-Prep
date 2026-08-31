@@ -1,0 +1,113 @@
+@import '@fontsource-variable/manrope';
+@import '@fontsource-variable/space-grotesk';
+@import '@fontsource/ibm-plex-mono/500.css';
+@import 'katex/dist/katex.min.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 220 33% 97%;
+    --foreground: 224 39% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 224 39% 13%;
+    --primary: 234 84% 63%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 225 31% 94%;
+    --secondary-foreground: 224 39% 18%;
+    --muted: 220 25% 94%;
+    --muted-foreground: 221 13% 45%;
+    --accent: 174 67% 42%;
+    --accent-foreground: 176 88% 10%;
+    --destructive: 2 66% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 222 24% 88%;
+    --input: 222 24% 88%;
+    --ring: 234 84% 63%;
+    --physics: 36 94% 59%;
+    --success: 156 58% 39%;
+    --radius: 1.35rem;
+  }
+
+  .dark {
+    color-scheme: dark;
+    --background: 226 41% 8%;
+    --foreground: 220 30% 96%;
+    --card: 225 34% 12%;
+    --card-foreground: 220 30% 96%;
+    --primary: 233 91% 69%;
+    --primary-foreground: 230 45% 10%;
+    --secondary: 224 28% 17%;
+    --secondary-foreground: 220 30% 94%;
+    --muted: 224 27% 16%;
+    --muted-foreground: 220 14% 65%;
+    --accent: 174 65% 48%;
+    --accent-foreground: 176 90% 8%;
+    --destructive: 2 63% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 224 24% 21%;
+    --input: 224 24% 21%;
+    --ring: 233 91% 69%;
+    --physics: 36 92% 60%;
+    --success: 156 60% 49%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply min-h-screen bg-background font-sans text-foreground antialiased;
+    margin: 0;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(circle at 8% -10%, hsl(var(--primary) / 0.08), transparent 26rem),
+      radial-gradient(circle at 100% 5%, hsl(var(--accent) / 0.06), transparent 24rem);
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    @apply outline-none;
+  }
+
+  :focus-visible {
+    @apply ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.22);
+  }
+}
+
+@layer components {
+  .safe-top { padding-top: max(1rem, env(safe-area-inset-top)); }
+  .safe-bottom { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+  .content-grid { @apply grid gap-4 lg:grid-cols-12 lg:gap-6; }
+  .data-label { @apply font-mono text-[0.67rem] font-medium uppercase tracking-[0.15em] text-muted-foreground; }
+  .glass-panel { @apply border border-white/30 bg-card/80 backdrop-blur-xl dark:border-white/[0.06]; }
+  .tap-target { min-height: 44px; min-width: 44px; }
+  .scrollbar-none { scrollbar-width: none; }
+  .scrollbar-none::-webkit-scrollbar { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

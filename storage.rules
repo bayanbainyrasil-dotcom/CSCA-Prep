@@ -1,0 +1,61 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && (request.auth.token.admin == true || request.auth.token.role == 'admin');
+    }
+
+    function safePersonalType() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)')
+        || request.resource.contentType == 'application/pdf'
+        || request.resource.contentType == 'application/json'
+        || request.resource.contentType == 'text/plain';
+    }
+
+    function safeContentType() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|gif)')
+        || request.resource.contentType.matches('video/(mp4|webm)')
+        || request.resource.contentType.matches('audio/(mpeg|mp4|wav)')
+        || request.resource.contentType == 'application/pdf';
+    }
+
+    match /users/{uid}/{allPaths=**} {
+      allow read: if isOwner(uid) || isAdmin();
+      allow create, update: if isOwner(uid)
+        && request.resource.size <= 5 * 1024 * 1024
+        && safePersonalType();
+      allow delete: if isOwner(uid);
+    }
+
+    match /content/{allPaths=**} {
+      allow read: if signedIn();
+      allow create, update: if isAdmin()
+        && request.resource.size <= 25 * 1024 * 1024
+        && safeContentType();
+      allow delete: if isAdmin();
+    }
+
+    match /exports/{uid}/{fileName} {
+      allow read, delete: if isOwner(uid);
+      allow create, update: if false;
+    }
+
+    match /backups/{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
