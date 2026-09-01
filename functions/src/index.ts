@@ -45,6 +45,14 @@ export {
   submitMockExam,
 } from "./mock-callables";
 
+// Curriculum blueprint administration and the exam publication gate.
+export {
+  getBlueprintCoverage,
+  publishMockExam,
+  setContentVerification,
+  upsertBlueprintCell,
+} from "./blueprint-callables";
+
 const standardCallableOptions = {
   enforceAppCheck: true,
   cors: true,

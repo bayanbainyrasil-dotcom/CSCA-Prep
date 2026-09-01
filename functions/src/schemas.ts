@@ -149,6 +149,24 @@ export const QuestionSchema = z
     demo: z.boolean().default(false),
     templateId: identifier.optional(),
     templateParameters: TemplateParametersSchema.optional(),
+    /**
+     * Blueprint linkage. Verification fields are deliberately absent: an import
+     * cannot declare itself reviewed. Only `setContentVerification` writes those,
+     * and it stamps the reviewer and the time on the server.
+     */
+    cellId: identifier.optional(),
+    questionType: z
+      .enum([
+        "concept-recognition",
+        "single-step-calculation",
+        "multi-step-calculation",
+        "formula-selection",
+        "unit-conversion",
+        "graph-reading",
+        "estimation",
+        "word-problem",
+      ])
+      .optional(),
   })
   .strict()
   .superRefine((question, context) => {
@@ -287,6 +305,121 @@ export const FinalizeDiagnosticSchema = z
         code: z.ZodIssueCode.custom,
         path: ["attemptIds"],
         message: "Diagnostic attempt IDs must be unique.",
+      });
+    }
+  });
+
+const blueprintCellCore = {
+  subject: z.enum(["mathematics", "physics"]),
+  module: safeText(120),
+  topicId: identifier,
+  topic: safeText(200),
+  skillId: identifier,
+  skill: safeText(200),
+  microSkillId: identifier,
+  microSkill: safeText(200),
+  prerequisiteCellIds: z.array(identifier).max(20),
+  difficultyLevels: z.array(z.number().int().min(1).max(5)).min(1).max(5),
+  questionTypes: z
+    .array(
+      z.enum([
+        "concept-recognition",
+        "single-step-calculation",
+        "multi-step-calculation",
+        "formula-selection",
+        "unit-conversion",
+        "graph-reading",
+        "estimation",
+        "word-problem",
+      ]),
+    )
+    .min(1)
+    .max(8),
+  minimumItems: z.number().int().min(1).max(50),
+  supportedLanguages: z.array(z.enum(["en", "ru", "zh"])).min(1).max(3),
+  allowedExamModes: z.array(z.enum(["diagnostic", "practice", "mock"])).min(1).max(3),
+  sourceType: z.enum([
+    "official-outline",
+    "original-csca-style",
+    "template-generated",
+    "diagnostic",
+  ]),
+  sourceReference: z.string().trim().max(500),
+  knownLimitations: z.string().trim().max(2_000),
+};
+
+/**
+ * Administrators author the requirement. They cannot author its verification:
+ * `verificationStatus`, `reviewer` and `reviewedAt` are absent here and are
+ * written only by `setContentVerification`, which stamps them server-side.
+ */
+export const UpsertBlueprintCellSchema = z
+  .object({ cellId: identifier, ...blueprintCellCore })
+  .strict()
+  .superRefine((cell, context) => {
+    if (cell.prerequisiteCellIds.includes(cell.cellId)) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["prerequisiteCellIds"],
+        message: "A cell cannot be its own prerequisite.",
+      });
+    }
+    if (new Set(cell.difficultyLevels).size !== cell.difficultyLevels.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["difficultyLevels"],
+        message: "Difficulty levels must not repeat.",
+      });
+    }
+  });
+
+export const SetContentVerificationSchema = z
+  .object({
+    target: z.enum(["blueprint-cell", "question"]),
+    targetId: identifier,
+    /**
+     * `reviewer-verified` is the only status that certifies content. The reviewer
+     * identity and the review time are taken from the authenticated caller and the
+     * server clock, never from this payload.
+     */
+    verificationStatus: z.enum([
+      "demo",
+      "draft",
+      "unverified",
+      "author-checked",
+      "reviewer-verified",
+    ]),
+    sourceReference: z.string().trim().max(500).optional(),
+    note: safeText(1_000).optional(),
+  })
+  .strict();
+
+export const BlueprintCoverageSchema = z
+  .object({
+    subject: z.enum(["mathematics", "physics"]).optional(),
+    mode: z.enum(["diagnostic", "practice", "mock"]).optional(),
+  })
+  .strict();
+
+export const PublishMockExamSchema = z
+  .object({
+    mockExamId: identifier,
+    title: safeText(200),
+    subject: z.enum(["mathematics", "physics"]),
+    cellIds: z.array(identifier).min(1).max(200),
+    questionCount: z.number().int().min(1).max(100),
+    durationMinutes: z.number().int().min(1).max(240),
+    instructions: safeText(10_000),
+    language: z.enum(["en", "ru", "zh"]).default("en"),
+    seed: identifier,
+  })
+  .strict()
+  .superRefine((input, context) => {
+    if (new Set(input.cellIds).size !== input.cellIds.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["cellIds"],
+        message: "Blueprint cell IDs must be unique.",
       });
     }
   });

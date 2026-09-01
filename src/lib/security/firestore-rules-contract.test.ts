@@ -30,6 +30,14 @@ const CONTRACT_FRAGMENTS = {
   'syncs the study plan through the same versioned envelope as other progress': [
     "'studyPlans',",
   ],
+  'keeps the blueprint and its verification server-owned': [
+    "match /blueprintCells/{cellId} {\n      allow read: if signedIn();\n      allow write: if false;",
+    "'verificationStatus', 'reviewer', 'reviewedAt'",
+  ],
+  'lets a mock be published only through the gated callable': [
+    "match /examTemplates/{examTemplateId} {",
+    "allow write: if false;",
+  ],
   'keeps private solutions unreadable from any client': [
     'match /questionSolutions/{questionId} {\n      allow read: if isAdmin();\n      allow write: if false;',
   ],

@@ -446,12 +446,14 @@ service cloud.firestore {
       allow create: if isAdmin()
         && validContentCreate()
         && !request.resource.data.keys().hasAny([
-          'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes'
+          'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes',
+          'verificationStatus', 'reviewer', 'reviewedAt'
         ]);
       allow update: if isAdmin()
         && validContentUpdate()
         && !request.resource.data.keys().hasAny([
-          'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes'
+          'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes',
+          'verificationStatus', 'reviewer', 'reviewedAt'
         ]);
       allow delete: if isAdmin();
     }
@@ -461,13 +463,30 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // The curriculum blueprint is readable by any signed-in learner so the app can
+    // explain what a topic requires, but only the trusted callables write it:
+    // verification status, reviewer and review date are server-stamped facts, and
+    // a client that could set them could certify its own content.
+    match /blueprintCells/{cellId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    // `examTemplates` is deliberately absent from the writable list below: a mock
+    // may only be published by `publishMockExam`, which recomputes blueprint
+    // coverage first. An administrator writing the document directly would bypass
+    // that gate, so the rules refuse it even for an administrator.
+    match /examTemplates/{examTemplateId} {
+      allow read: if isAdmin() || (signedIn() && resource.data.status == 'published');
+      allow write: if false;
+    }
+
     match /{contentCollection}/{contentId} {
       allow read: if contentCollection in [
           'subjects',
           'topics',
           'lessons',
           'questionTemplates',
-          'examTemplates',
           'vocabulary',
           'formulas'
         ]
@@ -478,7 +497,6 @@ service cloud.firestore {
           'topics',
           'lessons',
           'questionTemplates',
-          'examTemplates',
           'vocabulary',
           'formulas'
         ]
@@ -489,7 +507,6 @@ service cloud.firestore {
           'topics',
           'lessons',
           'questionTemplates',
-          'examTemplates',
           'vocabulary',
           'formulas'
         ]
@@ -500,7 +517,6 @@ service cloud.firestore {
           'topics',
           'lessons',
           'questionTemplates',
-          'examTemplates',
           'vocabulary',
           'formulas'
         ];

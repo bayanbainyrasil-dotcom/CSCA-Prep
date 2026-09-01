@@ -18,6 +18,8 @@ import type {
 } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
+import { assertExamIsPublishable } from "./blueprint-callables";
+import type { BlueprintLanguage } from "./blueprint-engine";
 import { enforceRateLimit, parseInput, requireAuth } from "./callable";
 import {
   applyAnswer,
@@ -249,23 +251,37 @@ export const startMockExam = onCall(standardCallableOptions, async (request) => 
     throw new HttpsError("not-found", "Published mock exam was not found.");
   }
 
-  const questionIds = Array.isArray(template.questionIds)
-    ? template.questionIds.filter((id: unknown): id is string => typeof id === "string")
-    : [];
   const questionCount = Number(template.questionCount ?? 0);
   const durationMinutes = Number(template.durationMinutes ?? 0);
+  const blueprintCellIds = Array.isArray(template.blueprintCellIds)
+    ? template.blueprintCellIds.filter((id: unknown): id is string => typeof id === "string")
+    : [];
+
   if (
-    questionIds.length === 0 ||
-    questionIds.length !== questionCount ||
-    new Set(questionIds).size !== questionIds.length ||
+    blueprintCellIds.length === 0 ||
+    !Number.isInteger(questionCount) ||
+    questionCount <= 0 ||
     !Number.isInteger(durationMinutes) ||
     durationMinutes <= 0
   ) {
     throw new HttpsError(
       "failed-precondition",
-      "This mock exam blueprint is incomplete and cannot be started.",
+      "This mock exam is not backed by a verified blueprint and cannot be started.",
     );
   }
+
+  // Coverage is re-checked here, not trusted from publication time: a cell whose
+  // content was archived or un-verified since must stop serving immediately, and
+  // the question list is recomposed from what is verified right now.
+  const gate = await assertExamIsPublishable({
+    subject: template.subject === "mathematics" ? "mathematics" : "physics",
+    mode: "mock",
+    cellIds: blueprintCellIds,
+    questionCount,
+    language: (typeof template.language === "string" ? template.language : "en") as BlueprintLanguage,
+    seed: typeof template.seed === "string" ? template.seed : input.mockExamId,
+  });
+  const questionIds = gate.questionIds;
 
   const prompts = await loadPrompts(questionIds);
   if (prompts.length !== questionIds.length) {
