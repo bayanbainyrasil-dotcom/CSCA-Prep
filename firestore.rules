@@ -123,7 +123,9 @@ service cloud.firestore {
       return exists(path)
         && get(path).data.operation == 'upsert'
         && get(path).data.payload is map
-        && get(path).data.payload.status == 'in-progress';
+        && get(path).data.payload.status == 'in-progress'
+        && !('questionIds' in get(path).data.payload)
+        && !('durationSeconds' in get(path).data.payload);
     }
 
     function mutableExamIsOpen(collectionId) {
@@ -206,10 +208,20 @@ service cloud.firestore {
         && request.resource.data.payload.status == 'in-progress';
     }
 
+    // An attempt created by the trusted mock engine carries a server-recorded
+    // exam order and exam window. The browser must never be able to overwrite,
+    // shorten or erase either of them, so any attempt carrying them is
+    // read-only to the client.
+    function serverOwnedExamAttempt() {
+      return resource.data.payload is map
+        && (('questionIds' in resource.data.payload) || ('durationSeconds' in resource.data.payload));
+    }
+
     function validClientExamDraftUpdate(uid, documentId) {
       let payload = request.resource.data.payload;
       let existing = resource.data.payload;
       return validClientExamDraft(uid, documentId)
+        && !serverOwnedExamAttempt()
         && payload.id == existing.id
         && payload.userId == existing.userId
         && payload.deviceId == existing.deviceId

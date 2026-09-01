@@ -20,6 +20,16 @@ const CONTRACT_FRAGMENTS = {
     "data.entityType == 'mock-answer'",
     'validClientExamAnswer(uid, answerId)',
   ],
+  'makes server-authoritative attempts read-only to the browser': [
+    "('questionIds' in resource.data.payload)",
+    "('durationSeconds' in resource.data.payload)",
+    '&& !serverOwnedExamAttempt()',
+    "!('questionIds' in get(path).data.payload)",
+    "!('durationSeconds' in get(path).data.payload)",
+  ],
+  'keeps private solutions unreadable from any client': [
+    'match /questionSolutions/{questionId} {\n      allow read: if isAdmin();\n      allow write: if false;',
+  ],
 } as const;
 
 describe('mock exam Firestore source contract', () => {

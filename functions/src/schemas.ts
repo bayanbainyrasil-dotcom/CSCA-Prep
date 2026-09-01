@@ -291,6 +291,56 @@ export const FinalizeDiagnosticSchema = z
     }
   });
 
+export const StartMockExamSchema = z
+  .object({
+    mockExamId: identifier,
+    deviceId: identifier,
+  })
+  .strict();
+
+export const SaveMockAnswerSchema = z
+  .object({
+    attemptId: identifier,
+    questionId: identifier,
+    /** `null` clears a selection; it is stored as "reached but not answered". */
+    selectedAnswer: identifier.nullable(),
+    /** Stable per user action, so a retried save cannot double-apply. */
+    mutationId: identifier,
+    currentQuestionIndex: z.number().int().min(0).max(99).optional(),
+    flaggedQuestionIds: z.array(identifier).max(100).optional(),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    const flagged = input.flaggedQuestionIds;
+    if (flagged && new Set(flagged).size !== flagged.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["flaggedQuestionIds"],
+        message: "Flagged question IDs must be unique.",
+      });
+    }
+  });
+
+export const SubmitMockExamSchema = z
+  .object({
+    attemptId: identifier,
+    /** Present so a retried submission returns the first result instead of regrading. */
+    mutationId: identifier,
+  })
+  .strict();
+
+export const ResumeMockExamSchema = z
+  .object({
+    attemptId: identifier,
+  })
+  .strict();
+
+export const ReviewMockExamSchema = z
+  .object({
+    attemptId: identifier,
+  })
+  .strict();
+
 export const ResetMyProgressSchema = z
   .object({
     confirmation: z.literal("RESET"),

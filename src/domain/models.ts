@@ -597,6 +597,14 @@ export const MockAttemptSchema = z
     startedAt: IsoDateTimeSchema,
     submittedAt: IsoDateTimeSchema.nullable(),
     result: MockResultSchema.nullable(),
+    /**
+     * Exam order snapshotted by the server when the attempt started. Present
+     * only on server-authoritative attempts; a browser-authored local demo
+     * draft omits it, which is how the two are told apart.
+     */
+    questionIds: z.array(IdSchema).max(100).optional(),
+    /** Server-owned exam window. Absent on local demo drafts. */
+    durationSeconds: z.number().int().positive().max(14_400).optional(),
     version: z.number().int().positive(),
     createdAt: IsoDateTimeSchema,
     updatedAt: IsoDateTimeSchema,
@@ -625,7 +633,31 @@ export const MockAttemptSchema = z
         message: "An in-progress mock cannot have a submission time",
       });
     }
+    if (attempt.questionIds && new Set(attempt.questionIds).size !== attempt.questionIds.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["questionIds"],
+        message: "Recorded exam order must not repeat a question",
+      });
+    }
+    if (attempt.questionIds) {
+      const recorded = new Set(attempt.questionIds);
+      if (attempt.answers.some((answer) => !recorded.has(answer.questionId))) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ["answers"],
+          message: "A server attempt cannot hold an answer outside its recorded exam order",
+        });
+      }
+    }
   });
+
+/** True for attempts created and graded by the trusted server engine. */
+export function isServerAuthoritativeMockAttempt(attempt: MockAttempt): boolean {
+  return Array.isArray(attempt.questionIds)
+    && attempt.questionIds.length > 0
+    && typeof attempt.durationSeconds === "number";
+}
 export type MockAttempt = z.infer<typeof MockAttemptSchema>;
 
 export const VocabularyEntrySchema = z

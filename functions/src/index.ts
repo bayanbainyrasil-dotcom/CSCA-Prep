@@ -8,7 +8,6 @@ import type {
 } from "firebase-admin/firestore";
 import { logger } from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
-import { setGlobalOptions } from "firebase-functions/v2";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 import {
@@ -34,15 +33,17 @@ import {
   type QuestionInput,
 } from "./schemas";
 
-const REGION = "asia-east1";
 const ADMIN_BOOTSTRAP_CODE = defineSecret("ADMIN_BOOTSTRAP_CODE");
 
-setGlobalOptions({
-  region: REGION,
-  maxInstances: 20,
-  timeoutSeconds: 60,
-  memory: "256MiB",
-});
+// Server-authoritative mock exam lifecycle. Kept in its own module so the
+// answer-key boundary stays reviewable in one place.
+export {
+  resumeMockExam,
+  reviewMockExam,
+  saveMockAnswer,
+  startMockExam,
+  submitMockExam,
+} from "./mock-callables";
 
 const standardCallableOptions = {
   enforceAppCheck: true,
