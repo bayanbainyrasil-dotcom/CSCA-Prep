@@ -1,8 +1,8 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-01 20:30 +05:00
+Last updated: 2026-09-01 20:50 +05:00
 Branch: `main`
-Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, and this documentation commit — see "Deployment Status".
+Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, `b9c1ccc`, `f08a39e`, `8111394`, `e47c9e2`, and this documentation commit — see "Deployment Status".
 Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492`
 Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
 
@@ -11,7 +11,8 @@ Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe
 Phase A is code-complete and verified locally but cannot be finished: pushing is
 externally blocked, so CI, GitHub Pages and the live asset hash cannot be confirmed.
 Work continued on Phase D (server-authoritative mock), Phase F (plan start date and missed
-days) and Phase G (real personalization and persistent trainer progress), none of which
+days) and Phase G (real personalization and persistent trainer progress) and Phase E1-E5 (the
+curriculum blueprint, its server gate and the admin coverage dashboard), none of which
 needs credentials.
 
 ## Last Completed
@@ -33,6 +34,30 @@ published site is older than `origin/main`:
 3. **Functions dev-tooling advisories.** `firebase-tools` 13.35.1 -> 15.28.2.
 
 Then Phase D, the server-authoritative mock, in two commits:
+
+Then Phase E, the curriculum blueprint, in three commits:
+
+9.  **`f08a39e` — model and validator.** `BlueprintCell` (subject, module, topic, skill,
+    micro-skill, prerequisites, difficulty levels, question types, minimum verified items,
+    languages, allowed modes, verification status, source type and reference, reviewer,
+    review date, version, timestamps) and `BlueprintQuestionRecord`. Coverage is computed
+    from the published bank and never from a stored count. `demo` and `draft` were added to
+    the verification vocabulary so generated material has an honest home, and a demo item
+    cannot be marked verified at all.
+10. **`8111394` — server gate and composer.** The logic moved to
+    `functions/src/blueprint-engine.ts` so the server and the web share one implementation.
+    `composeExam` draws from verified items cell by cell, deterministic per seed, and
+    refuses with `insufficient-verified-coverage` rather than returning a short exam.
+    New admin callables `getBlueprintCoverage`, `upsertBlueprintCell`,
+    `setContentVerification` and `publishMockExam`; verification is stamped from the
+    authenticated caller and the server clock and is audit-logged. `startMockExam` re-runs
+    the gate rather than trusting publication time. Rules: `blueprintCells` is
+    client-write-denied, `examTemplates` is write-denied even for admins so publication must
+    go through the gate, and `questions` writes refuse verification fields.
+11. **`e47c9e2` — admin coverage dashboard.** Filterable matrix with per-cell verified counts,
+    missing languages, difficulties and question types, blockers and warnings with their
+    issue codes, and orphan published questions. Nothing shows green unless the cell is
+    genuinely covered.
 
 Then Phase G, real personalization, in one commit:
 
@@ -92,7 +117,26 @@ Not blocked: Phase D is code-complete. See "Next Exact Task".
 
 ## Next Exact Task
 
-Not blocked — start here: **Phase E, the content blueprint.** This is now the single
+**Resume here.** Phase E is complete except for the content itself. The next action is
+**E6 — author the Mathematics and Physics blueprint cells.**
+
+Exact next step: create `src/data/blueprint-cells.ts` exporting a typed
+`BlueprintCell[]` seed built from the topic lists already in `src/data/curriculum.ts`
+(19 Mathematics topics, 34 Physics topics). One cell per micro-skill, each with
+`prerequisiteCellIds`, `difficultyLevels`, `questionTypes`, `minimumItems`,
+`supportedLanguages` and `allowedExamModes`. Every seeded cell must carry
+`verificationStatus: "draft"`, `reviewer: null` and `reviewedAt: null` — the seed states
+what the curriculum requires; it certifies nothing. Then add a test asserting the seed
+parses with `BlueprintCellSchema`, has no duplicate ids, no orphan prerequisites and no
+cycles (`analysePrerequisites`), and a small admin action that upserts the seed through
+`upsertBlueprintCell`.
+
+Until cells and reviewed items exist, `getBlueprintCoverage` reports every cell empty and
+both `publishMockExam` and `startMockExam` refuse with `insufficient-verified-coverage`.
+That is the intended behaviour, not a defect: no server-graded mock can run until real
+verified content exists.
+
+Superseded, for reference — the previous next task was **Phase E, the content blueprint**: This is now the single
 biggest gap between the app and a usable exam preparation tool, and it also blocks the
 production mock: `startMockExam` refuses an incomplete blueprint, so no server-graded mock
 can run until published `examTemplates` exist. First concrete step: define the
@@ -151,6 +195,13 @@ Blocked release sequence, to run the moment push access exists:
 - Shared question-bank contract compiles and behaves identically under Zod 3 and Zod 4;
   rules source-contract test is line-ending independent; repository-wide LF normalization;
   Functions dev-tooling advisories cleared.
+- **Phase E — blueprint machinery.** Cell and item model with full provenance, coverage
+  computed from the published bank, the validator (duplicate ids, orphan prerequisites,
+  cycles, subject/topic mismatch, missing languages, difficulties and question types,
+  questions with no cell, mode coverage, answer-key and difficulty skew), the
+  blueprint-driven composer, the trusted admin callables, the publication gate on both
+  publish and mock start, server-stamped and audit-logged verification, and the admin
+  coverage dashboard.
 - **Phase G — personalization and trainer progress.** Onboarding levels as a decaying prior,
   daily-minute budget respected, exam proximity shifting the mix, persistent vocabulary and
   formula review state (mastery, interval, due date, lapses, quality, correct/incorrect),
@@ -184,8 +235,11 @@ Blocked release sequence, to run the moment push access exists:
   matrix, and the admin coverage gate that blocks publishing an incomplete mock.
 - The explanation language is applied on the vocabulary trainer; lessons, practice feedback
   and formula copy still render their English fields only.
-- No published `examTemplates` blueprint exists, so the server-graded mock cannot run
-  end to end yet.
+- **No blueprint cell has been authored yet.** Every cell is therefore empty, coverage is
+  zero, and `publishMockExam` and `startMockExam` both refuse. The machinery is complete;
+  the content is not. This is the single remaining blocker for the server-graded mock.
+- The diagnostic and the built-in mock still generate from four templates and remain
+  labelled local demo.
 - Complete verified foundation curriculum and trainer/support expansions.
 - Advanced mastery, relapse, timing, scratchpad, analytics, readiness confidence.
 - Full admin editors/validators/source tooling.
@@ -195,15 +249,15 @@ Blocked release sequence, to run the moment push access exists:
 
 ## Tests
 
-Run in this session on the tree of `9a62d26`. Every line below was executed on that tree;
+Run in this session on the tree of `e47c9e2`. Every line below was executed on that tree;
 nothing is marked passing from memory.
 
 | Check | Command | Result |
 |---|---|---|
 | Root typecheck | `pnpm typecheck` | **pass** (was `TS2554` before this batch) |
 | Lint | `pnpm lint` | **pass**, 0 warnings |
-| Unit/component/contract tests | `pnpm test` | **pass**, 26 files / 195 tests (was 12 / 59) |
-| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 360.82 KiB |
+| Unit/component/contract tests | `pnpm test` | **pass**, 29 files / 250 tests (was 12 / 59) |
+| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 361.16 KiB |
 | Pages-configuration build | `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` | **pass**, 11-entry precache, 361.07 KiB |
 | Functions typecheck | `pnpm --dir functions typecheck` | **pass** |
 | Functions build | `pnpm --dir functions build` | **pass** |
@@ -275,6 +329,14 @@ Limitations of this run:
 
 ## Schema Changes
 
+- New `blueprintCells` collection: client-read, client-write-denied. `examTemplates` is now
+  write-denied for every client including administrators, because publication must run
+  through `publishMockExam`, which recomputes coverage first.
+- `QuestionSchema` gains optional `cellId` and `questionType`. It deliberately has no
+  verification fields, and the rules additionally refuse `verificationStatus`, `reviewer`
+  and `reviewedAt` on `questions` writes, so an import cannot declare itself reviewed.
+- `examTemplates` documents now also carry `blueprintCellIds`, `language` and `seed`. A
+  template without `blueprintCellIds` cannot be started — there are no such templates yet.
 - `VocabularyProgressSchema` gains optional `correctCount`, `incorrectCount` and
   `lastQuality`; `FormulaProgressSchema` gains optional `intervalDays`, `lapses`,
   `correctCount`, `incorrectCount` and `lastQuality`. All optional, so records written
@@ -401,8 +463,8 @@ Limitations of this run:
 
 Unblocked work, in order:
 
-1. Phase E — the blueprint matrix, per-cell coverage metadata, the admin coverage gate, and
-   diagnostic/mock composition driven by it. This blocks the production mock end to end.
+1. E6 — author the blueprint cells (see "Next Exact Task"), then review and verify enough
+   items for one Mathematics and one Physics mock.
 2. Extend the explanation language beyond the vocabulary trainer to lessons, practice
    feedback and formula copy, with the same stated fallback.
 3. Phase I — privacy policy, terms, retention, data export and account deletion, before any
