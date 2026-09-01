@@ -1,16 +1,16 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-01 19:20 +05:00
+Last updated: 2026-09-01 19:50 +05:00
 Branch: `main`
-Verified batch awaiting push: `a74916a`, `cdac000`, and this documentation commit — see "Deployment Status".
+Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, and this documentation commit — see "Deployment Status".
 Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492`
 Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
 
 ## Current Phase
 
-Phase A — repair the release pipeline. New feature work (server-authoritative mock,
-content blueprint, plan start date) stays paused until CI and GitHub Pages are green
-on one release commit and the live site serves that commit.
+Phase A is code-complete and verified locally but cannot be finished: pushing is
+externally blocked, so CI, GitHub Pages and the live asset hash cannot be confirmed.
+Work continued on Phase D (server-authoritative mock), which needs no credentials.
 
 ## Last Completed
 
@@ -30,27 +30,56 @@ published site is older than `origin/main`:
    variant, and `.gitattributes` checks text files out as LF on every platform.
 3. **Functions dev-tooling advisories.** `firebase-tools` 13.35.1 -> 15.28.2.
 
+Then Phase D, the server-authoritative mock, in two commits:
+
+4. **`7295134` — server engine.** `functions/src/mock-engine.ts` (pure prompt projection,
+   exam clock, grading, idempotent answer application) and `functions/src/mock-callables.ts`
+   (`startMockExam`, `resumeMockExam`, `saveMockAnswer`, `submitMockExam`, `reviewMockExam`).
+   The exam order and window are snapshotted onto the attempt at start, so editing a
+   template mid-attempt cannot change what a running attempt is graded against. A question
+   with no published solution counts as skipped, never correct. Rules now make an attempt
+   carrying `questionIds`/`durationSeconds` read-only to the browser — without that a client
+   could update an open server attempt with a payload omitting those keys and erase the
+   recorded exam order and clock.
+5. **`4917069` — production UI.** `mock-service.ts` with `.strict()` response schemas (an
+   open attempt carrying an answer key is rejected client-side), `ServerMockRunner`,
+   `ServerMockResults`, published-blueprint listing, and full state coverage: loading,
+   restoring, saving, save-failed with retry, offline, expired, submitting, restored notice
+   and readable errors derived from the error code only. The built-in template mock is
+   unchanged in behaviour and now labelled "Local demo" everywhere it appears.
+
 ## Current Task
 
-Push the verified batch and confirm GitHub CI + GitHub Pages are green, then confirm the
-live asset hash equals the hash produced by the released commit.
+Two things are open, one blocked and one not.
 
-**Blocked:** this session's git proxy refuses to push —
+Blocked: push the verified commits and confirm GitHub CI + GitHub Pages are green, then
+confirm the live asset hash equals the hash produced by the released commit.
+
+**Blocker, re-tested and still present:** the session git proxy refuses to push —
 `bayanbainyrasil-dotcom/CSCA-Prep is not in this session's authorized repository set`.
-No credential is invented and no second repository is created. Commits `a74916a` and
-`cdac000` exist locally and are fully verified; they need repository write access to land.
+No credential is invented and no second repository is created. All six commits exist
+locally and are fully verified; they need repository write access to land. Each batch is
+also exported as a `.bundle` and a `.patch` so nothing depends on this session surviving.
+
+Not blocked: Phase D is code-complete. See "Next Exact Task".
 
 ## Next Exact Task
 
-1. Push `a74916a` and `cdac000` to `origin/main`.
+Not blocked — start here: Firestore Rules emulator abuse tests (Phase C). They are the
+only remaining proof that the hardened rules behave as their source claims. They need a
+Java runtime (available) and the Firestore emulator jar (currently blocked: the download
+host `storage.googleapis.com` is outside this environment's network allowlist). If that
+stays blocked, the next unblocked item is Phase F — `planStartDate`, `currentPlanDay`,
+completed/paused days and missed-day choices, which is pure local work with tests.
+
+Blocked release sequence, to run the moment push access exists:
+
+1. Push `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069` and this commit to `origin/main`.
 2. Watch the `CI` and `Deploy to GitHub Pages` runs for the pushed head SHA and confirm both succeed.
-3. Confirm the live entry bundle is `assets/index-D04av4E_.js` (the hash the current tree
-   produces under `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo`) rather than
-   the currently served `assets/index-weX9TM2E.js`.
-4. Then, and only then, resume Phase D (server-authoritative mock): add strict
-   `startMockExam` / answer-save / `submitMockExam` schemas and callables that return
-   prompt-only question data, grade from private `questionSolutions`, and make the
-   submitted/completed/graded transition server-owned.
+3. Confirm the live entry bundle hash changes away from the currently served
+   `assets/index-weX9TM2E.js`. Rebuild the released commit with
+   `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` and compare.
+4. Bump the deprecated Pages actions and confirm the Pages run stays green.
 
 ## Evidence for the Release State
 
@@ -83,9 +112,14 @@ No credential is invented and no second repository is created. Commits `a74916a`
 - Ordinary `gradeQuestion` rejects `mock` at strict schema validation before any question or solution read.
 - Browser-authored `examAttempts` limited to exact draft data with null `submittedAt`/`result`;
   nested mock answers require an exactly `in-progress` parent.
-- **New in this batch:** shared question-bank contract compiles and behaves identically under
-  Zod 3 and Zod 4; rules source-contract test is line-ending independent; repository-wide LF
-  normalization; Functions dev-tooling advisories cleared.
+- Shared question-bank contract compiles and behaves identically under Zod 3 and Zod 4;
+  rules source-contract test is line-ending independent; repository-wide LF normalization;
+  Functions dev-tooling advisories cleared.
+- **Phase D — server-authoritative mock.** Trusted start/answer/submit/review lifecycle,
+  server-owned timing and status, grading from private solutions, idempotent mutations,
+  prompt-only question payloads, rules that make a server attempt read-only to the browser,
+  and a production UI that never computes a score. The built-in mock is retained only as a
+  clearly labelled local demo.
 
 ## Partial
 
@@ -93,14 +127,18 @@ No credential is invented and no second repository is created. Commits `a74916a`
 - Google login/profile restoration implemented but never verified on a real production domain or iPhone Safari.
 - All named progress entities have local/cloud sync paths; no real two-device proof.
 - Conflict resolution and daily-plan merge code exists; no dedicated automated concurrency coverage.
-- Mock: answer-key access through ordinary grading and generic trusted-result writes are closed;
-  server-authoritative start/finalization and production UI wiring remain.
+- Mock: the engine, rules and UI are complete, but nothing has been exercised against a real
+  Firebase project or emulator. The design is verified by unit, component and rule-source
+  tests only.
+- Mock content: `startMockExam` refuses an incomplete blueprint, but no published
+  `examTemplates` document exists yet, so the production path has never run end to end.
 - Learning/content/mock/admin areas have working foundations; the P1-P5 requirements are not complete.
 
 ## Not Started
 
 - Plan start date model (`planStartDate`, `currentPlanDay`, completed/paused days) and missed-day choices.
-- Skill graph, prerequisite repair engine, verified coverage dashboard, production mock engine.
+- Skill graph, prerequisite repair engine, verified coverage dashboard, exam blueprint
+  matrix, and the admin coverage gate that blocks publishing an incomplete mock.
 - Complete verified foundation curriculum and trainer/support expansions.
 - Advanced mastery, relapse, timing, scratchpad, analytics, readiness confidence.
 - Full admin editors/validators/source tooling.
@@ -110,20 +148,20 @@ No credential is invented and no second repository is created. Commits `a74916a`
 
 ## Tests
 
-Run in this session on the tree of `cdac000` (code identical to the tree this documentation commit records). Every line below was executed; nothing is
-marked passing from memory.
+Run in this session on the tree of `4917069`. Every line below was executed on that tree;
+nothing is marked passing from memory.
 
 | Check | Command | Result |
 |---|---|---|
 | Root typecheck | `pnpm typecheck` | **pass** (was `TS2554` before this batch) |
 | Lint | `pnpm lint` | **pass**, 0 warnings |
-| Unit/component/contract tests | `pnpm test` | **pass**, 14 files / 71 tests (was 12 / 59) |
-| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 360.22 KiB |
+| Unit/component/contract tests | `pnpm test` | **pass**, 20 files / 123 tests (was 12 / 59) |
+| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 360.50 KiB |
 | Pages-configuration build | `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` | **pass**, 11-entry precache, 361.07 KiB |
 | Functions typecheck | `pnpm --dir functions typecheck` | **pass** |
 | Functions build | `pnpm --dir functions build` | **pass** |
 | Playwright, desktop project | `playwright test --project=desktop` | **pass**, 11 passed / 3 skipped |
-| Playwright, iphone + ipad projects | `playwright test` | **not run** — see limitations |
+| Playwright, iphone + ipad projects | `playwright test` | **not run in WebKit** — specs exercised as Chromium emulation at the same viewports, 7 passed; see limitations |
 | Root dependency audit | `pnpm audit`, `pnpm audit --prod` | **0 known vulnerabilities** |
 | Functions dependency audit | `pnpm audit --dir functions` | 2 moderate (was 1 critical / 8 high / 5 moderate) |
 | Functions production audit | `pnpm --dir functions audit --prod` | 1 moderate, not reachable (see Known Issues) |
@@ -192,6 +230,12 @@ Limitations of this run:
 
 ## Schema Changes
 
+- `MockAttemptSchema` gains optional `questionIds` (recorded exam order) and
+  `durationSeconds` (server-owned exam window). Both are optional, so every attempt already
+  stored keeps validating and no migration is required. Their presence is what marks an
+  attempt server-authoritative (`isServerAuthoritativeMockAttempt`), and Firestore rules use
+  the same signal to make such an attempt read-only to the browser.
+- No client-writable field changed shape. The mock callables are additive.
 - `QuestionSchema.templateParameters` keys are now validated by an explicit
   `z.string().min(1).max(120)` key schema instead of the implicit key type of the removed
   one-argument `z.record` overload. Value union, the 50-parameter cap, and every other field are
@@ -215,6 +259,34 @@ Limitations of this run:
 - `functions/package.json`
 - `functions/pnpm-lock.yaml`
 
+`7295134` (server mock engine):
+
+- `functions/src/mock-engine.ts` (new)
+- `functions/src/mock-callables.ts` (new)
+- `functions/src/schemas.ts`
+- `functions/src/index.ts`
+- `functions/src/platform.ts`
+- `firestore.rules`
+- `src/domain/models.ts`
+- `src/features/mock/mock-engine.test.ts` (new)
+- `src/features/mock/mock-contract.test.ts` (new)
+- `src/lib/security/firestore-rules-contract.test.ts`
+
+`4917069` (production mock UI):
+
+- `src/features/mock/mock-service.ts` (new)
+- `src/features/mock/server-mock-runner.tsx` (new)
+- `src/features/mock/server-mock-results.tsx` (new)
+- `src/features/mock/question-navigator.tsx` (new)
+- `src/features/mock/mock-service.test.ts` (new)
+- `src/features/mock/server-mock-runner.test.tsx` (new)
+- `src/features/mock/production-bundle-contract.test.ts` (new)
+- `src/pages/mock-exam-page.test.tsx` (new)
+- `src/pages/mock-exam-page.tsx`
+- `src/pages/mock-page.tsx`
+- `src/pages/mock-results-page.tsx`
+- `src/test/routes.test.tsx`
+
 ## External Setup Required
 
 - Repository write access for this session so verified commits can be pushed.
@@ -228,12 +300,25 @@ Limitations of this run:
 
 ## Continue From Here
 
-1. Obtain repository write access, push `a74916a` and `cdac000`, and confirm both workflows go green.
-2. Confirm the live bundle hash matches the released commit's build output.
-3. Bump the deprecated Pages actions (`configure-pages`, `upload-pages-artifact`, `deploy-pages`,
-   `upload-artifact`, `dependency-review-action`) in one commit and confirm the Pages run stays green.
-4. Resume Phase D: strict server contracts for starting, saving, and finalizing a mock without
-   exposing private solutions; keep the built-in flow only in `local-demo` mode.
-5. Run Firestore Rules emulator abuse tests once a Java runtime and a Firebase test project exist.
-6. Run root and Functions typecheck/lint/tests/build after each atomic batch, and record the actual
-   commands and results here rather than a summary claim.
+Unblocked work, in order:
+
+1. Firestore Rules emulator abuse tests. Java 21 is available in this environment; the
+   emulator jar download is not (`storage.googleapis.com` is outside the network allowlist).
+   Retry wherever the jar can be fetched, or run them in CI.
+2. Phase F — `planStartDate`, `currentPlanDay`, completed/paused days, missed-day choices
+   (shift, redistribute, keep the calendar), timezone-safe day maths, migrations and tests.
+   Today the plan day still derives from profile creation.
+3. Phase G — make onboarding answers actually shape the starting plan, and remove the static
+   "Recommended", "8 due" and "Adaptive next interval" text until it is computed.
+4. Phase E — the exam blueprint matrix, so a mock can be published at all. `startMockExam`
+   already refuses an incomplete blueprint, so no production mock can run until this exists.
+
+Blocked on repository write access:
+
+5. Push the six verified commits and confirm CI and Pages go green on the pushed head.
+6. Confirm the live bundle hash matches the released commit's build output.
+7. Bump the deprecated Pages actions (`configure-pages`, `upload-pages-artifact`,
+   `deploy-pages`, `upload-artifact`, `dependency-review-action`) and confirm Pages stays green.
+
+Always: run root and Functions typecheck/lint/tests/build after each atomic batch, and record
+the actual commands and results here rather than a summary claim.
