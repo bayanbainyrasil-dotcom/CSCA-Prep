@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Bookmark, ChevronLeft, ChevronRight, Grid3X3, LogOut, Timer } from 'lucide-react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { buildMockQuestions, MockRecoverySchema, recoveryKey, resultKey, type MockRecovery, type MockSubject } from '@/features/mock/mock-data';
+import { isServerMockAvailable } from '@/features/mock/mock-service';
+import { QuestionNavigator } from '@/features/mock/question-navigator';
+import { ServerMockRunner } from '@/features/mock/server-mock-runner';
+import { getDeviceId } from '@/app/app-data-provider';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/features/auth/auth-provider';
 
@@ -19,7 +23,32 @@ function loadRecovery(ownerId: string, subject: MockSubject): MockRecovery | nul
   } catch { return null; }
 }
 
+/**
+ * Route entry. A published server-graded mock is addressed as
+ * `/mock/:subject/active?exam=<mockExamId>` and runs entirely through the
+ * trusted callables. Everything else falls back to the built-in template mock,
+ * which is a local demo: its questions and answer key are generated in the
+ * browser, so its score is a practice indicator and never an exam result.
+ */
 export default function MockExamPage() {
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  const serverExamId = searchParams.get('exam');
+
+  if (serverExamId && isServerMockAvailable()) {
+    return (
+      <ServerMockRunner
+        ownerId={user?.uid ?? 'anonymous'}
+        mockExamId={serverExamId}
+        deviceId={getDeviceId()}
+      />
+    );
+  }
+
+  return <DemoMockRunner />;
+}
+
+function DemoMockRunner() {
   const { user } = useAuth();
   const ownerId = user?.uid ?? 'anonymous';
   const params = useParams();
@@ -80,12 +109,12 @@ export default function MockExamPage() {
   };
 
   if (!started) {
-    return <div className="min-h-dvh bg-background px-4 py-8 sm:grid sm:place-items-center"><div className="mx-auto w-full max-w-2xl rounded-xl border bg-card p-6 shadow-soft sm:p-9"><div className="flex items-center justify-between gap-4"><Badge variant="outline">Original practice exam</Badge><Button variant="ghost" asChild><Link to="/mock"><LogOut className="h-4 w-4" /> Exit</Link></Button></div><p className="data-label mt-8">{subject} · 48 questions</p><h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.05em]">60-minute mock</h1><div className="mt-6 space-y-3 text-sm leading-relaxed text-muted-foreground"><p>• Questions and controls are English-only.</p><p>• No hints, translation, formula trainer or solutions.</p><p>• Each answer saves immediately. You can restore this mock after closing the browser.</p><p>• Flag questions and return to them before submitting.</p></div><div className="mt-7 rounded-xl border border-physics/30 bg-physics/[0.06] p-4 text-sm"><strong>Before you begin:</strong> find a quiet place and reserve the full hour. The timer starts when you press Start.</div><Button size="lg" className="mt-7 w-full" onClick={() => { const now=Date.now(); setStartedAt(now); setStarted(true); localStorage.setItem(recoveryKey(ownerId, subject),JSON.stringify({subject,startedAt:now,currentIndex:0,answers:{},flagged:[]})); }}>Start exam <ChevronRight className="h-4 w-4" /></Button></div></div>;
+    return <div className="min-h-dvh bg-background px-4 py-8 sm:grid sm:place-items-center"><div className="mx-auto w-full max-w-2xl rounded-xl border bg-card p-6 shadow-soft sm:p-9"><div className="flex items-center justify-between gap-4"><Badge variant="outline">Local demo</Badge><Button variant="ghost" asChild><Link to="/mock"><LogOut className="h-4 w-4" /> Exit</Link></Button></div><p className="data-label mt-8">{subject} · 48 questions</p><h1 className="mt-2 font-display text-4xl font-semibold tracking-[-0.05em]">60-minute mock</h1><div className="mt-6 space-y-3 text-sm leading-relaxed text-muted-foreground"><p>• Questions and controls are English-only.</p><p>• No hints, translation, formula trainer or solutions.</p><p>• Each answer saves immediately. You can restore this mock after closing the browser.</p><p>• Flag questions and return to them before submitting.</p></div><div className="mt-7 rounded-xl border border-physics/30 bg-physics/[0.06] p-4 text-sm"><strong>Local demo.</strong> These questions are generated in your browser from open templates and scored on this device, so the result is practice feedback rather than an exam score. Timing is kept by this device only.</div><div className="mt-3 rounded-xl border p-4 text-sm text-muted-foreground"><strong>Before you begin:</strong> find a quiet place and reserve the full hour. The timer starts when you press Start.</div><Button size="lg" className="mt-7 w-full" onClick={() => { const now=Date.now(); setStartedAt(now); setStarted(true); localStorage.setItem(recoveryKey(ownerId, subject),JSON.stringify({subject,startedAt:now,currentIndex:0,answers:{},flagged:[]})); }}>Start exam <ChevronRight className="h-4 w-4" /></Button></div></div>;
   }
 
   return (
     <div className="min-h-dvh bg-background">
-      <header className="safe-top sticky top-0 z-30 flex min-h-[68px] items-center justify-between border-b bg-card/92 px-4 backdrop-blur-xl sm:px-6"><div><p className="font-display text-sm font-semibold">CSCA {subject === 'mathematics' ? 'Mathematics' : 'Physics'}</p><p className="text-[0.65rem] text-muted-foreground">Question {currentIndex + 1} of 48</p></div><div className="flex items-center gap-2"><span className={cn('flex items-center gap-2 rounded-xl border px-3 py-2 font-mono text-sm font-semibold', remaining < 600 && 'border-physics/40 text-amber-700 dark:text-physics')}><Timer className="h-4 w-4" />{String(Math.floor(remaining / 60)).padStart(2,'0')}:{String(remaining % 60).padStart(2,'0')}</span><Button variant="outline" onClick={() => setSubmitOpen(true)}>Submit</Button></div></header>
+      <header className="safe-top sticky top-0 z-30 flex min-h-[68px] items-center justify-between border-b bg-card/92 px-4 backdrop-blur-xl sm:px-6"><div><p className="font-display text-sm font-semibold">CSCA {subject === 'mathematics' ? 'Mathematics' : 'Physics'}</p><p className="text-[0.65rem] text-muted-foreground">Question {currentIndex + 1} of 48</p></div><div className="hidden sm:block"><Badge variant="outline">Local demo</Badge></div><div className="flex items-center gap-2"><span className={cn('flex items-center gap-2 rounded-xl border px-3 py-2 font-mono text-sm font-semibold', remaining < 600 && 'border-physics/40 text-amber-700 dark:text-physics')}><Timer className="h-4 w-4" />{String(Math.floor(remaining / 60)).padStart(2,'0')}:{String(remaining % 60).padStart(2,'0')}</span><Button variant="outline" onClick={() => setSubmitOpen(true)}>Submit</Button></div></header>
       <div className="grid min-h-[calc(100dvh-68px)] lg:grid-cols-[1fr_280px]">
         <main className="mx-auto w-full max-w-4xl p-4 pb-28 sm:p-8 lg:pb-8"><div className="mb-6 flex items-center justify-between"><div className="flex gap-2"><Badge variant="outline">{question.module}</Badge><Badge variant="outline">Difficulty {question.difficulty}</Badge></div><Button variant={flagged.includes(question.id) ? 'secondary' : 'ghost'} onClick={toggleFlag}><Bookmark className={cn('h-4 w-4', flagged.includes(question.id) && 'fill-current')} /> {flagged.includes(question.id) ? 'Flagged' : 'Flag'}</Button></div><h1 className="font-display text-xl font-semibold leading-relaxed tracking-[-0.02em] sm:text-2xl">{question.question}</h1><div className="mt-7 grid gap-3 sm:grid-cols-2">{question.options.map((option, index) => <button key={option.id} onClick={() => chooseAnswer(option.id)} className={cn('min-h-16 rounded-2xl border bg-card p-4 text-left text-sm font-semibold transition-colors hover:border-primary', answers[question.id] === option.id && 'border-primary bg-primary/[0.06] ring-1 ring-primary')}><span className="mr-2 font-mono text-xs text-muted-foreground">{String.fromCharCode(65 + index)}.</span>{option.text}</button>)}</div><div className="mt-10 flex items-center justify-between border-t pt-5"><Button variant="outline" disabled={currentIndex === 0} onClick={() => goTo(currentIndex - 1)}><ChevronLeft className="h-4 w-4" /> Previous</Button><Button className="lg:hidden" variant="secondary" onClick={() => setNavigatorOpen(true)}><Grid3X3 className="h-4 w-4" /> Questions</Button><Button disabled={currentIndex === 47} onClick={() => goTo(currentIndex + 1)}>Next <ChevronRight className="h-4 w-4" /></Button></div></main>
         <aside className="hidden border-l bg-card/55 p-5 lg:block"><QuestionNavigator questions={questions} answers={answers} flagged={flagged} currentIndex={currentIndex} onSelect={goTo} /><div className="mt-6 border-t pt-5 text-xs text-muted-foreground"><div className="flex justify-between"><span>Answered</span><strong className="text-foreground">{answeredCount}</strong></div><div className="mt-2 flex justify-between"><span>Unanswered</span><strong className="text-foreground">{48 - answeredCount}</strong></div><div className="mt-2 flex justify-between"><span>Flagged</span><strong className="text-foreground">{flagged.length}</strong></div></div></aside>
@@ -94,8 +123,4 @@ export default function MockExamPage() {
       <Dialog open={submitOpen} onOpenChange={setSubmitOpen}><DialogContent title="Submit mock exam?" description="You cannot change answers after submission."><div className="rounded-xl bg-secondary p-4 text-sm"><div className="flex justify-between"><span>Answered</span><strong>{answeredCount} / 48</strong></div><div className="mt-2 flex justify-between"><span>Unanswered</span><strong>{48 - answeredCount}</strong></div><div className="mt-2 flex justify-between"><span>Flagged</span><strong>{flagged.length}</strong></div></div>{48 - answeredCount > 0 ? <p className="mt-4 flex gap-2 text-sm text-amber-700 dark:text-physics"><AlertTriangle className="h-4 w-4 shrink-0" />Some questions are unanswered.</p> : null}<div className="mt-6 flex justify-end gap-2"><Button variant="outline" onClick={() => setSubmitOpen(false)}>Keep working</Button><Button onClick={() => void submit()}>Submit exam</Button></div></DialogContent></Dialog>
     </div>
   );
-}
-
-function QuestionNavigator({ questions, answers, flagged, currentIndex, onSelect }: { questions: ReturnType<typeof buildMockQuestions>; answers: Record<string,string>; flagged: string[]; currentIndex: number; onSelect: (index:number)=>void }) {
-  return <div><p className="data-label mb-3">Questions</p><div className="grid grid-cols-8 gap-1.5 lg:grid-cols-6">{questions.map((question,index) => <button key={question.id} onClick={() => onSelect(index)} aria-label={`Question ${index + 1}${answers[question.id] ? ', answered' : ', unanswered'}${flagged.includes(question.id) ? ', flagged' : ''}`} className={cn('relative aspect-square min-h-9 rounded-lg border text-xs font-bold', index === currentIndex ? 'border-primary bg-primary text-primary-foreground' : answers[question.id] ? 'border-success/20 bg-success/10 text-success' : 'bg-card text-muted-foreground')}>{index + 1}{flagged.includes(question.id) ? <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-physics" /> : null}</button>)}</div></div>;
 }

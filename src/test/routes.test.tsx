@@ -106,12 +106,16 @@ describe('key application routes', () => {
     expect(screen.getByText(/Short solution:/i)).toBeInTheDocument();
   });
 
-  it('exposes both mock routes with honest original-content provenance', () => {
+  it('exposes both mock routes and marks them a local demo without a trusted service', () => {
     renderRoute('/mock');
 
     expect(screen.getByRole('heading', { name: 'Prove what survives under time.' }))
       .toBeInTheDocument();
-    expect(screen.getAllByText('Original practice set')).toHaveLength(2);
+    // Without a configured Firebase deployment there is no server to own timing
+    // or grading, so every built-in mock is labelled as a device-scored demo.
+    expect(screen.getAllByText('Local demo').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText(/generated in your browser from open templates/i))
+      .toBeInTheDocument();
     const examLinks = screen.getAllByRole('link', { name: /Review instructions & start/i });
     expect(examLinks.map((link) => link.getAttribute('href'))).toEqual([
       '/mock/mathematics/active',
