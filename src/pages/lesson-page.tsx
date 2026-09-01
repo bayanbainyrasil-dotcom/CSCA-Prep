@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { isBookmarked, toggleBookmark as toggleUiBookmark } from '@/features/bookmarks/storage';
 import { NewtonVisual } from '@/features/lesson/newton-visual';
 import { QuadraticVisual } from '@/features/lesson/quadratic-visual';
+import { resolveLesson } from '@/features/lesson/resolve-lesson';
 import { useAppStore } from '@/stores';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -24,8 +25,11 @@ export default function LessonPage() {
   const { user, isDemo } = useAuth();
   const ownerId = user?.uid ?? 'anonymous';
   const publishedLessons = useAppStore((state) => state.lessons);
-  const publishedLesson = isDemo ? undefined : publishedLessons.find((item) => item.id === lessonId && item.status === 'published');
-  const isMath = publishedLesson ? publishedLesson.subject === 'mathematics' : lessonId.includes('quadratic');
+  const resolution = resolveLesson(lessonId, publishedLessons, isDemo);
+  const publishedLesson = resolution?.lesson ?? undefined;
+  const isMath = publishedLesson
+    ? publishedLesson.subject === 'mathematics'
+    : resolution?.builtIn === 'quadratic';
   const [step, setStep] = useState(0);
   const [rescue, setRescue] = useState(false);
   const hydrated = useAppStore((state) => state.hydrated);
@@ -53,8 +57,8 @@ export default function LessonPage() {
     }
   };
 
-  if (!isDemo && !publishedLesson) {
-    return <div><PageHeading eyebrow="Published lessons" title="This lesson is not available." description="It may have been archived or has not been published yet." /><Button variant="outline" asChild><Link to={isMath ? '/mathematics' : '/physics'}><ArrowLeft className="h-4 w-4" />Back to topic map</Link></Button></div>;
+  if (!resolution) {
+    return <div><PageHeading eyebrow="Lessons" title="This lesson is not available." description="It may have been archived, has not been published yet, or the link is incorrect." /><Button variant="outline" asChild><Link to="/learn"><ArrowLeft className="h-4 w-4" />Back to learning hub</Link></Button></div>;
   }
 
   return (

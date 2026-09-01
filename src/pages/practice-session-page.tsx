@@ -4,7 +4,7 @@ import { nanoid } from 'nanoid';
 import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { DEMO_CONTENT_DISCLAIMER, DEMO_QUESTIONS } from '@/data/seed';
-import { AttemptSchema, PracticeModeSchema, type Attempt, type Confidence, type ErrorType, type PracticeMode, type Question } from '@/domain';
+import { AttemptSchema, GradeablePracticeModeSchema, type Attempt, type Confidence, type ErrorType, type GradeablePracticeMode, type Question } from '@/domain';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -67,9 +67,9 @@ function toSessionQuestion(question: Question): SessionQuestion | null {
   };
 }
 
-function normalizedMode(value: string | null): PracticeMode {
+function normalizedMode(value: string | null): GradeablePracticeMode {
   if (value === 'review') return 'mistakes';
-  const parsed = PracticeModeSchema.safeParse(value ?? 'practice');
+  const parsed = GradeablePracticeModeSchema.safeParse(value ?? 'practice');
   return parsed.success ? parsed.data : 'practice';
 }
 

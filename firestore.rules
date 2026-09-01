@@ -122,15 +122,125 @@ service cloud.firestore {
       let path = /databases/$(database)/documents/users/$(uid)/examAttempts/$(examAttemptId);
       return exists(path)
         && get(path).data.operation == 'upsert'
-        && (!('status' in get(path).data.payload)
-          || !(get(path).data.payload.status in ['submitted', 'completed', 'graded']));
+        && get(path).data.payload is map
+        && get(path).data.payload.status == 'in-progress';
     }
 
     function mutableExamIsOpen(collectionId) {
       return collectionId != 'examAttempts'
-        || !('payload' in resource.data)
-        || !('status' in resource.data.payload)
-        || !(resource.data.payload.status in ['submitted', 'completed', 'graded']);
+        || (resource.data.payload is map
+          && resource.data.payload.status == 'in-progress');
+    }
+
+    function validClientExamDraft(uid, documentId) {
+      let data = request.resource.data;
+      let payload = data.payload;
+      return data.operation == 'upsert'
+        && data.entityType == 'mock-attempt'
+        && payload.keys().hasAll([
+          'id',
+          'userId',
+          'deviceId',
+          'mockExamId',
+          'subject',
+          'status',
+          'answers',
+          'flaggedQuestionIds',
+          'currentQuestionIndex',
+          'remainingSeconds',
+          'startedAt',
+          'submittedAt',
+          'result',
+          'version',
+          'createdAt',
+          'updatedAt'
+        ])
+        && payload.keys().hasOnly([
+          'id',
+          'userId',
+          'deviceId',
+          'mockExamId',
+          'subject',
+          'status',
+          'answers',
+          'flaggedQuestionIds',
+          'currentQuestionIndex',
+          'remainingSeconds',
+          'startedAt',
+          'submittedAt',
+          'result',
+          'version',
+          'createdAt',
+          'updatedAt'
+        ])
+        && payload.id == documentId
+        && payload.userId == uid
+        && validId(payload.deviceId)
+        && validId(payload.mockExamId)
+        && payload.subject in ['mathematics', 'physics']
+        && payload.status in ['in-progress', 'abandoned']
+        && payload.answers is list
+        && payload.answers.size() <= 100
+        && payload.flaggedQuestionIds is list
+        && payload.flaggedQuestionIds.size() <= 100
+        && payload.currentQuestionIndex is int
+        && payload.currentQuestionIndex >= 0
+        && payload.currentQuestionIndex <= 100
+        && payload.remainingSeconds is int
+        && payload.remainingSeconds >= 0
+        && payload.remainingSeconds <= 14400
+        && payload.startedAt is string
+        && payload.startedAt.size() >= 20
+        && payload.startedAt.size() <= 40
+        && payload.submittedAt == null
+        && payload.result == null
+        && payload.version == data.version
+        && payload.createdAt is string
+        && payload.createdAt.size() >= 20
+        && payload.createdAt.size() <= 40
+        && payload.updatedAt == data.updatedAt;
+    }
+
+    function validClientExamDraftCreate(uid, documentId) {
+      return validClientExamDraft(uid, documentId)
+        && request.resource.data.payload.status == 'in-progress';
+    }
+
+    function validClientExamDraftUpdate(uid, documentId) {
+      let payload = request.resource.data.payload;
+      let existing = resource.data.payload;
+      return validClientExamDraft(uid, documentId)
+        && payload.id == existing.id
+        && payload.userId == existing.userId
+        && payload.deviceId == existing.deviceId
+        && payload.mockExamId == existing.mockExamId
+        && payload.subject == existing.subject
+        && payload.startedAt == existing.startedAt
+        && payload.createdAt == existing.createdAt
+        && payload.version == existing.version + 1;
+    }
+
+    function validClientExamAnswer(uid, answerId) {
+      let data = request.resource.data;
+      let payload = data.payload;
+      return data.operation == 'upsert'
+        && data.entityType == 'mock-answer'
+        && payload.keys().hasAll([
+          'questionId', 'selectedAnswer', 'answeredAt', 'durationSeconds'
+        ])
+        && payload.keys().hasOnly([
+          'questionId', 'selectedAnswer', 'answeredAt', 'durationSeconds'
+        ])
+        && payload.questionId == answerId
+        && (payload.selectedAnswer == null || validId(payload.selectedAnswer))
+        && (payload.answeredAt == null || (
+          payload.answeredAt is string
+          && payload.answeredAt.size() >= 20
+          && payload.answeredAt.size() <= 40
+        ))
+        && payload.durationSeconds is number
+        && payload.durationSeconds >= 0
+        && payload.durationSeconds <= 86400;
     }
 
     function clientAttemptHasNoTrustedResult() {
@@ -279,7 +389,11 @@ service cloud.firestore {
           && resetNotInProgress(uid)
           && validSyncCreate(uid, collectionId, documentId)
           && (
-            (isMutableSyncCollection(collectionId) && collectionId != 'topicMastery')
+            (isMutableSyncCollection(collectionId)
+              && collectionId != 'topicMastery'
+              && collectionId != 'examAttempts')
+            || (collectionId == 'examAttempts'
+              && validClientExamDraftCreate(uid, documentId))
             || (collectionId == 'attempts' && clientAttemptHasNoTrustedResult())
             || (collectionId == 'diagnostics' && clientDiagnosticHasNoTrustedResult())
           );
@@ -288,7 +402,9 @@ service cloud.firestore {
           && isMutableSyncCollection(collectionId)
           && collectionId != 'topicMastery'
           && mutableExamIsOpen(collectionId)
-          && validSyncUpdate(uid, collectionId, documentId);
+          && validSyncUpdate(uid, collectionId, documentId)
+          && (collectionId != 'examAttempts'
+            || validClientExamDraftUpdate(uid, documentId));
         allow delete: if false;
       }
 
@@ -298,12 +414,12 @@ service cloud.firestore {
           && resetNotInProgress(uid)
           && existingExamIsOpen(uid, examAttemptId)
           && validSyncCreate(uid, 'answers', answerId)
-          && request.resource.data.operation == 'upsert';
+          && validClientExamAnswer(uid, answerId);
         allow update: if isOwner(uid)
           && resetNotInProgress(uid)
           && existingExamIsOpen(uid, examAttemptId)
           && validSyncUpdate(uid, 'answers', answerId)
-          && request.resource.data.operation == 'upsert';
+          && validClientExamAnswer(uid, answerId);
         allow delete: if false;
       }
 

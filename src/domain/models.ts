@@ -338,6 +338,17 @@ export const PracticeModeSchema = z.enum([
 ]);
 export type PracticeMode = z.infer<typeof PracticeModeSchema>;
 
+export const GradeablePracticeModeSchema = z.enum([
+  "learn",
+  "practice",
+  "timed",
+  "weak-topics",
+  "mistakes",
+  "random",
+  "diagnostic",
+]);
+export type GradeablePracticeMode = z.infer<typeof GradeablePracticeModeSchema>;
+
 export const ConfidenceSchema = z.enum(["guess", "not-sure", "sure"]);
 export type Confidence = z.infer<typeof ConfidenceSchema>;
 

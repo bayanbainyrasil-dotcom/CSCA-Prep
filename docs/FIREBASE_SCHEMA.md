@@ -74,7 +74,7 @@ All paths below are `users/{uid}/{collection}/{entityId}`.
 | `mistakes` | Versioned | Question, reason, repetition and next review |
 | `bookmarks` | Versioned + tombstone | Target type and target ID |
 | `notes` | Versioned + tombstone | Topic ID and plain-text/structured note |
-| `examAttempts` | Versioned, sealed after submit | Template, timer, status, summary |
+| `examAttempts` | Client-editable draft; trusted submission is server-owned | Template, timer, draft answers and position |
 | `vocabularyProgress` | Versioned | SRS state and review dates |
 | `formulaProgress` | Versioned | SRS state and rearrangement mastery |
 | `diagnostics` | Append-only | Raw diagnostic responses |
@@ -82,8 +82,10 @@ All paths below are `users/{uid}/{collection}/{entityId}`.
 
 Mock responses live at
 `users/{uid}/examAttempts/{examAttemptId}/answers/{questionId}`. They can be
-created or updated only while the parent attempt is not `submitted`, `completed`,
-or `graded`.
+created or updated only while the parent attempt is exactly `in-progress`.
+Clients may write only `in-progress` or `abandoned` exam drafts with a null
+`submittedAt` and null `result`. A trusted callable must own every future
+`submitted`, `completed`, or `graded` transition and all score/result fields.
 
 ### Sync envelope
 

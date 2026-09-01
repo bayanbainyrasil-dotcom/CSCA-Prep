@@ -204,6 +204,16 @@ export const ExportQuestionBankSchema = z
   })
   .strict();
 
+export const GradeQuestionModeSchema = z.enum([
+  "learn",
+  "practice",
+  "timed",
+  "weak-topics",
+  "mistakes",
+  "random",
+  "diagnostic",
+]);
+
 export const GradeQuestionSchema = z
   .object({
     questionId: identifier,
@@ -227,16 +237,7 @@ export const GradeQuestionSchema = z
     answeredAt: z.string().datetime({ offset: true }),
     elapsedMs: z.number().int().min(0).max(7_200_000),
     idempotencyKey: identifier,
-    mode: z.enum([
-      "learn",
-      "practice",
-      "timed",
-      "weak-topics",
-      "mistakes",
-      "random",
-      "diagnostic",
-      "mock",
-    ]),
+    mode: GradeQuestionModeSchema,
   })
   .strict()
   .superRefine((input, context) => {

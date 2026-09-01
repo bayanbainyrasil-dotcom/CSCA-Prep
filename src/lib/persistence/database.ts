@@ -2,13 +2,13 @@ import Dexie, { type Table } from "dexie";
 import { z } from "zod";
 import {
   ConfidenceSchema,
+  GradeablePracticeModeSchema,
   IdSchema,
   IsoDateTimeSchema,
-  PracticeModeSchema,
   SyncEntityTypeSchema,
   SyncOperationSchema,
   type Confidence,
-  type PracticeMode,
+  type GradeablePracticeMode,
   type SyncEntityType,
   type SyncOperation,
 } from "../../domain";
@@ -91,7 +91,7 @@ export interface PendingGradeRecord {
   startedAt: string;
   answeredAt: string;
   elapsedMs: number;
-  mode: PracticeMode;
+  mode: GradeablePracticeMode;
   createdAt: string;
 }
 
@@ -177,7 +177,7 @@ export const PendingGradeRecordSchema = z
     startedAt: IsoDateTimeSchema,
     answeredAt: IsoDateTimeSchema,
     elapsedMs: z.number().int().nonnegative().max(86_400_000),
-    mode: PracticeModeSchema,
+    mode: GradeablePracticeModeSchema,
     createdAt: IsoDateTimeSchema,
   })
   .strict();

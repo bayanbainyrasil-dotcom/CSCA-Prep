@@ -209,6 +209,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const remote = createFirestoreSyncAdapter(firestore, user.uid, {
           gradeAttempt: async (attempt: Attempt) => {
             if (!attempt.selectedAnswer) throw new Error('A selected answer is required for grading.');
+            if (attempt.mode === 'mock') throw new Error('Mock attempts require trusted exam finalization.');
             const response = await gradeQuestion({
               questionId: attempt.questionId,
               selectedAnswer: attempt.selectedAnswer,

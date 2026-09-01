@@ -1,7 +1,7 @@
 import { collection, getDocs, limit, query, where } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { z } from 'zod';
-import { AttemptSchema, ErrorTypeSchema, PracticeModeSchema, type Attempt, type ErrorType, type PracticeMode } from '@/domain';
+import { AttemptSchema, ErrorTypeSchema, GradeablePracticeModeSchema, type Attempt, type ErrorType, type GradeablePracticeMode } from '@/domain';
 import { firestore, functions } from '@/lib/firebase';
 import { getCscaDatabase, PendingGradeRecordSchema, type PendingGradeRecord } from '@/lib/persistence';
 
@@ -48,7 +48,7 @@ export interface GradeQuestionInput {
   answeredAt: string;
   elapsedMs: number;
   idempotencyKey: string;
-  mode: PracticeMode;
+  mode: GradeablePracticeMode;
 }
 
 export async function loadPublishedQuestions(count = 6): Promise<PublicQuestionPrompt[]> {
@@ -66,7 +66,7 @@ export async function loadPublishedQuestions(count = 6): Promise<PublicQuestionP
 
 export async function gradePublishedQuestion(input: GradeQuestionInput) {
   if (!functions) throw new Error('Secure grading is unavailable. Check your connection and Firebase configuration.');
-  const mode = PracticeModeSchema.parse(input.mode);
+  const mode = GradeablePracticeModeSchema.parse(input.mode);
   const call = httpsCallable(functions, 'gradeQuestion');
   const response = await call({
     ...input,
