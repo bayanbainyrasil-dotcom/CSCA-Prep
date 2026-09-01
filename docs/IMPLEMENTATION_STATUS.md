@@ -1,8 +1,8 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-01 19:50 +05:00
+Last updated: 2026-09-01 20:05 +05:00
 Branch: `main`
-Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, and this documentation commit — see "Deployment Status".
+Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, and this documentation commit — see "Deployment Status".
 Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492`
 Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
 
@@ -10,7 +10,8 @@ Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe
 
 Phase A is code-complete and verified locally but cannot be finished: pushing is
 externally blocked, so CI, GitHub Pages and the live asset hash cannot be confirmed.
-Work continued on Phase D (server-authoritative mock), which needs no credentials.
+Work continued on Phase D (server-authoritative mock) and Phase F (plan start date and
+missed days), neither of which needs credentials.
 
 ## Last Completed
 
@@ -31,6 +32,20 @@ published site is older than `origin/main`:
 3. **Functions dev-tooling advisories.** `firebase-tools` 13.35.1 -> 15.28.2.
 
 Then Phase D, the server-authoritative mock, in two commits:
+
+Then Phase F, the plan calendar, in two commits:
+
+6. **`83f7fd9` — plan model.** `StudyPlan` as a synced entity with an explicit
+   `planStartDate`, completed and paused days, an exam date and a missed-day policy, plus
+   the pure calendar logic in `src/features/plan/plan-schedule.ts`. A missed day is always a
+   question, never an automatic change. `migrateLegacyStudyPlan` derives the start date from
+   the profile creation day in the learner's timezone, so no recorded progress is invalidated.
+7. **`e3e5bc9` — plan wiring.** Dashboard, sidebar and roadmap read the plan day from the
+   stored plan through `usePlanStatus`, which falls back to the old calculation until the
+   plan hydrates. `MissedDaysPrompt` offers the three choices with their consequences.
+   Completing the last block of a daily plan marks that calendar day done.
+
+Phase D detail:
 
 4. **`7295134` — server engine.** `functions/src/mock-engine.ts` (pure prompt projection,
    exam clock, grading, idempotent answer application) and `functions/src/mock-callables.ts`
@@ -65,12 +80,20 @@ Not blocked: Phase D is code-complete. See "Next Exact Task".
 
 ## Next Exact Task
 
-Not blocked — start here: Firestore Rules emulator abuse tests (Phase C). They are the
-only remaining proof that the hardened rules behave as their source claims. They need a
-Java runtime (available) and the Firestore emulator jar (currently blocked: the download
-host `storage.googleapis.com` is outside this environment's network allowlist). If that
-stays blocked, the next unblocked item is Phase F — `planStartDate`, `currentPlanDay`,
-completed/paused days and missed-day choices, which is pure local work with tests.
+Not blocked — start here: **Phase G, real personalization.** `mathLevel`, `physicsLevel`,
+`dailyAvailableMinutes` and the explanation language are collected at onboarding but do not
+reach the daily-plan generator, and `src/pages/practice-page.tsx` and
+`src/pages/vocabulary-page.tsx` still show static "Recommended", "8 due" and
+"Adaptive next interval" text that is not computed from user data. First concrete step:
+pass the onboarding baseline into `buildAdaptiveDailyPlan` as an initial prior that
+diagnostic evidence then overrides, and delete or compute each static claim.
+
+Also unblocked and adjacent: connect `VocabularyProgressSchema` and `FormulaProgressSchema`
+to the local-first repository so vocabulary and formula progress survives a reload.
+
+Still blocked, retried this session: Firestore Rules emulator abuse tests (Phase C). Java 21
+is present, but the emulator jar download host `storage.googleapis.com` is outside this
+environment's network allowlist. Run these wherever that host is reachable, or in CI.
 
 Blocked release sequence, to run the moment push access exists:
 
@@ -115,6 +138,9 @@ Blocked release sequence, to run the moment push access exists:
 - Shared question-bank contract compiles and behaves identically under Zod 3 and Zod 4;
   rules source-contract test is line-ending independent; repository-wide LF normalization;
   Functions dev-tooling advisories cleared.
+- **Phase F — plan calendar.** Explicit plan start date, current plan day, completed and
+  paused days, missed-day detection and the three learner choices, timezone-safe day maths,
+  exam-date boundary, and a migration that preserves the day number an existing learner saw.
 - **Phase D — server-authoritative mock.** Trusted start/answer/submit/review lifecycle,
   server-owned timing and status, grading from private solutions, idempotent mutations,
   prompt-only question payloads, rules that make a server attempt read-only to the browser,
@@ -136,9 +162,11 @@ Blocked release sequence, to run the moment push access exists:
 
 ## Not Started
 
-- Plan start date model (`planStartDate`, `currentPlanDay`, completed/paused days) and missed-day choices.
 - Skill graph, prerequisite repair engine, verified coverage dashboard, exam blueprint
   matrix, and the admin coverage gate that blocks publishing an incomplete mock.
+- Onboarding answers do not yet shape the generated plan, and the explanation language is
+  not applied consistently across lessons, practice and feedback.
+- Vocabulary and formula progress is still React state only; it does not survive a reload.
 - Complete verified foundation curriculum and trainer/support expansions.
 - Advanced mastery, relapse, timing, scratchpad, analytics, readiness confidence.
 - Full admin editors/validators/source tooling.
@@ -148,15 +176,15 @@ Blocked release sequence, to run the moment push access exists:
 
 ## Tests
 
-Run in this session on the tree of `4917069`. Every line below was executed on that tree;
+Run in this session on the tree of `e3e5bc9`. Every line below was executed on that tree;
 nothing is marked passing from memory.
 
 | Check | Command | Result |
 |---|---|---|
 | Root typecheck | `pnpm typecheck` | **pass** (was `TS2554` before this batch) |
 | Lint | `pnpm lint` | **pass**, 0 warnings |
-| Unit/component/contract tests | `pnpm test` | **pass**, 20 files / 123 tests (was 12 / 59) |
-| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 360.50 KiB |
+| Unit/component/contract tests | `pnpm test` | **pass**, 22 files / 157 tests (was 12 / 59) |
+| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 360.82 KiB |
 | Pages-configuration build | `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` | **pass**, 11-entry precache, 361.07 KiB |
 | Functions typecheck | `pnpm --dir functions typecheck` | **pass** |
 | Functions build | `pnpm --dir functions build` | **pass** |
@@ -201,7 +229,6 @@ Limitations of this run:
 - No real Vercel/Firebase deployment exists; GitHub Pages is browser-local demo mode.
 - Mock pages still use client-visible built-in answer data and local score calculation.
 - No trusted callable owns the `submitted`/`completed`/`graded` exam transition.
-- Dashboard plan day still derives from account/profile creation rather than a plan start date.
 - Practice/vocabulary surfaces still show static "Recommended", "8 due" and "Adaptive next interval"
   text that is not computed from user data.
 - Direct requests to `/CSCA-Prep/onboarding` return HTTP 404 before the SPA fallback renders.
@@ -230,6 +257,11 @@ Limitations of this run:
 
 ## Schema Changes
 
+- New synced entity `study-plan` -> `users/{uid}/studyPlans`. Added to
+  `SyncEntityTypeSchema`, `parseSyncEntity`, the Firestore adapter's collection map,
+  `isMutableSyncCollection` in the rules, and `resetMyProgress`. The local entities table is
+  generic, so no IndexedDB version bump is needed. A learner with no stored plan is migrated
+  from their profile creation day on first load, which keeps their previous day number.
 - `MockAttemptSchema` gains optional `questionIds` (recorded exam order) and
   `durationSeconds` (server-owned exam window). Both are optional, so every attempt already
   stored keeps validating and no migration is required. Their presence is what marks an
@@ -272,6 +304,27 @@ Limitations of this run:
 - `src/features/mock/mock-contract.test.ts` (new)
 - `src/lib/security/firestore-rules-contract.test.ts`
 
+`83f7fd9` (plan model):
+
+- `src/features/plan/plan-schedule.ts` (new)
+- `src/features/plan/plan-schedule.test.ts` (new)
+- `src/domain/models.ts`
+- `src/lib/persistence/firebaseAdapter.ts`
+- `firestore.rules`
+- `functions/src/index.ts`
+- `docs/FIREBASE_SCHEMA.md`
+
+`e3e5bc9` (plan wiring):
+
+- `src/features/plan/use-plan-status.ts` (new)
+- `src/features/plan/missed-days-prompt.tsx` (new)
+- `src/features/plan/missed-days-prompt.test.tsx` (new)
+- `src/stores/appStore.ts`
+- `src/app/app-data-provider.tsx`
+- `src/pages/dashboard-page.tsx`
+- `src/pages/roadmap-page.tsx`
+- `src/components/navigation/sidebar.tsx`
+
 `4917069` (production mock UI):
 
 - `src/features/mock/mock-service.ts` (new)
@@ -302,16 +355,14 @@ Limitations of this run:
 
 Unblocked work, in order:
 
-1. Firestore Rules emulator abuse tests. Java 21 is available in this environment; the
-   emulator jar download is not (`storage.googleapis.com` is outside the network allowlist).
-   Retry wherever the jar can be fetched, or run them in CI.
-2. Phase F — `planStartDate`, `currentPlanDay`, completed/paused days, missed-day choices
-   (shift, redistribute, keep the calendar), timezone-safe day maths, migrations and tests.
-   Today the plan day still derives from profile creation.
-3. Phase G — make onboarding answers actually shape the starting plan, and remove the static
-   "Recommended", "8 due" and "Adaptive next interval" text until it is computed.
-4. Phase E — the exam blueprint matrix, so a mock can be published at all. `startMockExam`
+1. Phase G — make onboarding answers shape the generated plan, apply the chosen explanation
+   language consistently, and replace every static "Recommended" / "8 due" /
+   "Adaptive next interval" claim with a computed one or remove it.
+2. Connect `VocabularyProgressSchema` and `FormulaProgressSchema` to the local-first
+   repository so trainer progress survives a reload and syncs.
+3. Phase E — the exam blueprint matrix, so a mock can be published at all. `startMockExam`
    already refuses an incomplete blueprint, so no production mock can run until this exists.
+4. Firestore Rules emulator abuse tests, wherever the emulator jar can be downloaded.
 
 Blocked on repository write access:
 
