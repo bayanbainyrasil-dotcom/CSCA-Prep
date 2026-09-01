@@ -1,8 +1,8 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-01 20:05 +05:00
+Last updated: 2026-09-01 20:30 +05:00
 Branch: `main`
-Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, and this documentation commit — see "Deployment Status".
+Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, and this documentation commit — see "Deployment Status".
 Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492`
 Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
 
@@ -10,8 +10,9 @@ Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe
 
 Phase A is code-complete and verified locally but cannot be finished: pushing is
 externally blocked, so CI, GitHub Pages and the live asset hash cannot be confirmed.
-Work continued on Phase D (server-authoritative mock) and Phase F (plan start date and
-missed days), neither of which needs credentials.
+Work continued on Phase D (server-authoritative mock), Phase F (plan start date and missed
+days) and Phase G (real personalization and persistent trainer progress), none of which
+needs credentials.
 
 ## Last Completed
 
@@ -32,6 +33,17 @@ published site is older than `origin/main`:
 3. **Functions dev-tooling advisories.** `firebase-tools` 13.35.1 -> 15.28.2.
 
 Then Phase D, the server-authoritative mock, in two commits:
+
+Then Phase G, real personalization, in one commit:
+
+8. **`9a62d26`.** Onboarding levels now reach `buildAdaptiveDailyPlan` as a prior whose
+   strength decays to zero over the first 20 graded answers; the stated daily minutes stay
+   a hard budget while exam proximity shifts the mix; vocabulary and formula reviews are
+   recorded through the local-first repository with interval, due date, lapses, quality and
+   correct/incorrect counts, so they survive a reload and sync; and the static
+   "Recommended: force recognition", "8 due" and "Adaptive" claims are replaced with values
+   computed from the learner's own records or with an honest "nothing measured yet".
+   `pickLocalized` applies the chosen explanation language with a stated English fallback.
 
 Then Phase F, the plan calendar, in two commits:
 
@@ -80,16 +92,17 @@ Not blocked: Phase D is code-complete. See "Next Exact Task".
 
 ## Next Exact Task
 
-Not blocked — start here: **Phase G, real personalization.** `mathLevel`, `physicsLevel`,
-`dailyAvailableMinutes` and the explanation language are collected at onboarding but do not
-reach the daily-plan generator, and `src/pages/practice-page.tsx` and
-`src/pages/vocabulary-page.tsx` still show static "Recommended", "8 due" and
-"Adaptive next interval" text that is not computed from user data. First concrete step:
-pass the onboarding baseline into `buildAdaptiveDailyPlan` as an initial prior that
-diagnostic evidence then overrides, and delete or compute each static claim.
+Not blocked — start here: **Phase E, the content blueprint.** This is now the single
+biggest gap between the app and a usable exam preparation tool, and it also blocks the
+production mock: `startMockExam` refuses an incomplete blueprint, so no server-graded mock
+can run until published `examTemplates` exist. First concrete step: define the
+`subject -> module -> topic -> skill -> micro-skill -> prerequisite -> difficulty ->
+question type` matrix as a typed structure with per-cell coverage count, verification
+status, source type, reviewer and review date, then add the admin coverage validation that
+refuses to publish a mock with empty or unverified cells. Diagnostic and mock composition
+follow the blueprint after that.
 
-Also unblocked and adjacent: connect `VocabularyProgressSchema` and `FormulaProgressSchema`
-to the local-first repository so vocabulary and formula progress survives a reload.
+Superseded, for reference — the previous next task was **Phase G, real personalization**: it is complete as of `9a62d26`.
 
 Still blocked, retried this session: Firestore Rules emulator abuse tests (Phase C). Java 21
 is present, but the emulator jar download host `storage.googleapis.com` is outside this
@@ -138,6 +151,11 @@ Blocked release sequence, to run the moment push access exists:
 - Shared question-bank contract compiles and behaves identically under Zod 3 and Zod 4;
   rules source-contract test is line-ending independent; repository-wide LF normalization;
   Functions dev-tooling advisories cleared.
+- **Phase G — personalization and trainer progress.** Onboarding levels as a decaying prior,
+  daily-minute budget respected, exam proximity shifting the mix, persistent vocabulary and
+  formula review state (mastery, interval, due date, lapses, quality, correct/incorrect),
+  owner-scoped records, and every previously static "recommended"/"due"/"adaptive" claim
+  either computed or removed.
 - **Phase F — plan calendar.** Explicit plan start date, current plan day, completed and
   paused days, missed-day detection and the three learner choices, timezone-safe day maths,
   exam-date boundary, and a migration that preserves the day number an existing learner saw.
@@ -164,9 +182,10 @@ Blocked release sequence, to run the moment push access exists:
 
 - Skill graph, prerequisite repair engine, verified coverage dashboard, exam blueprint
   matrix, and the admin coverage gate that blocks publishing an incomplete mock.
-- Onboarding answers do not yet shape the generated plan, and the explanation language is
-  not applied consistently across lessons, practice and feedback.
-- Vocabulary and formula progress is still React state only; it does not survive a reload.
+- The explanation language is applied on the vocabulary trainer; lessons, practice feedback
+  and formula copy still render their English fields only.
+- No published `examTemplates` blueprint exists, so the server-graded mock cannot run
+  end to end yet.
 - Complete verified foundation curriculum and trainer/support expansions.
 - Advanced mastery, relapse, timing, scratchpad, analytics, readiness confidence.
 - Full admin editors/validators/source tooling.
@@ -176,20 +195,21 @@ Blocked release sequence, to run the moment push access exists:
 
 ## Tests
 
-Run in this session on the tree of `e3e5bc9`. Every line below was executed on that tree;
+Run in this session on the tree of `9a62d26`. Every line below was executed on that tree;
 nothing is marked passing from memory.
 
 | Check | Command | Result |
 |---|---|---|
 | Root typecheck | `pnpm typecheck` | **pass** (was `TS2554` before this batch) |
 | Lint | `pnpm lint` | **pass**, 0 warnings |
-| Unit/component/contract tests | `pnpm test` | **pass**, 22 files / 157 tests (was 12 / 59) |
+| Unit/component/contract tests | `pnpm test` | **pass**, 26 files / 195 tests (was 12 / 59) |
 | Production build | `pnpm build` | **pass**, 14-entry PWA precache, 360.82 KiB |
 | Pages-configuration build | `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` | **pass**, 11-entry precache, 361.07 KiB |
 | Functions typecheck | `pnpm --dir functions typecheck` | **pass** |
 | Functions build | `pnpm --dir functions build` | **pass** |
 | Playwright, desktop project | `playwright test --project=desktop` | **pass**, 11 passed / 3 skipped |
 | Playwright, iphone + ipad projects | `playwright test` | **not run in WebKit** — specs exercised as Chromium emulation at the same viewports, 7 passed; see limitations |
+| Functions dependency audit (re-run) | `pnpm audit --dir functions` | 2 moderate, unchanged |
 | Root dependency audit | `pnpm audit`, `pnpm audit --prod` | **0 known vulnerabilities** |
 | Functions dependency audit | `pnpm audit --dir functions` | 2 moderate (was 1 critical / 8 high / 5 moderate) |
 | Functions production audit | `pnpm --dir functions audit --prod` | 1 moderate, not reachable (see Known Issues) |
@@ -229,8 +249,6 @@ Limitations of this run:
 - No real Vercel/Firebase deployment exists; GitHub Pages is browser-local demo mode.
 - Mock pages still use client-visible built-in answer data and local score calculation.
 - No trusted callable owns the `submitted`/`completed`/`graded` exam transition.
-- Practice/vocabulary surfaces still show static "Recommended", "8 due" and "Adaptive next interval"
-  text that is not computed from user data.
 - Direct requests to `/CSCA-Prep/onboarding` return HTTP 404 before the SPA fallback renders.
 
 ## Deployment Status
@@ -257,6 +275,13 @@ Limitations of this run:
 
 ## Schema Changes
 
+- `VocabularyProgressSchema` gains optional `correctCount`, `incorrectCount` and
+  `lastQuality`; `FormulaProgressSchema` gains optional `intervalDays`, `lapses`,
+  `correctCount`, `incorrectCount` and `lastQuality`. All optional, so records written
+  before this batch validate unchanged and pick the counters up on their next review.
+- `StudyPlanSchema` gains optional `baseline` (the self-reported onboarding levels).
+- The session object gains an optional `baseline`; it is optional precisely so a session
+  stored before this change still parses and no learner is signed out by the upgrade.
 - New synced entity `study-plan` -> `users/{uid}/studyPlans`. Added to
   `SyncEntityTypeSchema`, `parseSyncEntity`, the Firestore adapter's collection map,
   `isMutableSyncCollection` in the rules, and `resetMyProgress`. The local entities table is
@@ -314,6 +339,27 @@ Limitations of this run:
 - `functions/src/index.ts`
 - `docs/FIREBASE_SCHEMA.md`
 
+`9a62d26` (personalization and trainer progress):
+
+- `src/features/trainers/review-progress.ts` (new)
+- `src/features/trainers/review-progress.test.ts` (new)
+- `src/features/i18n/localized-text.ts` (new)
+- `src/features/i18n/localized-text.test.ts` (new)
+- `src/lib/adaptive/dailyPlan.ts`
+- `src/lib/adaptive/dailyPlan.baseline.test.ts` (new)
+- `src/stores/appStore.ts`
+- `src/stores/trainer-progress.test.ts` (new)
+- `src/app/app-data-provider.tsx`
+- `src/features/auth/auth-provider.tsx`
+- `src/domain/models.ts`
+- `src/pages/vocabulary-page.tsx`
+- `src/pages/formulas-page.tsx`
+- `src/pages/practice-page.tsx`
+- `src/pages/roadmap-page.tsx`
+- `src/pages/subject-page.tsx`
+- `src/test/routes.test.tsx`
+- `e2e/demo.spec.ts`
+
 `e3e5bc9` (plan wiring):
 
 - `src/features/plan/use-plan-status.ts` (new)
@@ -355,14 +401,15 @@ Limitations of this run:
 
 Unblocked work, in order:
 
-1. Phase G — make onboarding answers shape the generated plan, apply the chosen explanation
-   language consistently, and replace every static "Recommended" / "8 due" /
-   "Adaptive next interval" claim with a computed one or remove it.
-2. Connect `VocabularyProgressSchema` and `FormulaProgressSchema` to the local-first
-   repository so trainer progress survives a reload and syncs.
-3. Phase E — the exam blueprint matrix, so a mock can be published at all. `startMockExam`
-   already refuses an incomplete blueprint, so no production mock can run until this exists.
-4. Firestore Rules emulator abuse tests, wherever the emulator jar can be downloaded.
+1. Phase E — the blueprint matrix, per-cell coverage metadata, the admin coverage gate, and
+   diagnostic/mock composition driven by it. This blocks the production mock end to end.
+2. Extend the explanation language beyond the vocabulary trainer to lessons, practice
+   feedback and formula copy, with the same stated fallback.
+3. Phase I — privacy policy, terms, retention, data export and account deletion, before any
+   real student uses the app.
+4. Phase J — accessibility fixes (progressbar name, `<main>` landmark, skip link, focus on
+   validation errors, 48px targets) and the deep-link HTTP 200 / SEO decision.
+5. Firestore Rules emulator abuse tests, wherever the emulator jar can be downloaded.
 
 Blocked on repository write access:
 
