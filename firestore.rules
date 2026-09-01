@@ -35,6 +35,7 @@ service cloud.firestore {
         'examAttempts',
         'vocabularyProgress',
         'formulaProgress',
+        'studyPlans',
         'syncState'
       ];
     }

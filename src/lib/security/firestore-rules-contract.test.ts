@@ -27,6 +27,9 @@ const CONTRACT_FRAGMENTS = {
     "!('questionIds' in get(path).data.payload)",
     "!('durationSeconds' in get(path).data.payload)",
   ],
+  'syncs the study plan through the same versioned envelope as other progress': [
+    "'studyPlans',",
+  ],
   'keeps private solutions unreadable from any client': [
     'match /questionSolutions/{questionId} {\n      allow read: if isAdmin();\n      allow write: if false;',
   ],

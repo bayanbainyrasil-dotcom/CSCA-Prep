@@ -68,6 +68,7 @@ const USER_PROGRESS_COLLECTIONS = [
   "examAttempts",
   "vocabularyProgress",
   "formulaProgress",
+  "studyPlans",
   "diagnostics",
   "syncState",
 ] as const;

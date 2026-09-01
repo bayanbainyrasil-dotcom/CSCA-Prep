@@ -773,6 +773,66 @@ export const BookmarkSchema = z
   .strict();
 export type Bookmark = z.infer<typeof BookmarkSchema>;
 
+/** A calendar day in the learner's timezone, `YYYY-MM-DD`. */
+export const DateKeySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected a YYYY-MM-DD date key");
+
+/**
+ * What to do about study days that passed without work.
+ * - `shift`: a missed day does not consume a plan day; the plan follows the learner.
+ * - `redistribute`: calendar dates are kept and the remaining work is spread over the days left.
+ * - `calendar`: original dates are kept and missed work is dropped.
+ */
+export const MissedDayPolicySchema = z.enum(["shift", "redistribute", "calendar"]);
+export type MissedDayPolicy = z.infer<typeof MissedDayPolicySchema>;
+
+/**
+ * The learner's plan calendar. Replaces deriving the preparation day from the
+ * account creation timestamp, which silently consumed days a learner never
+ * studied.
+ */
+export const StudyPlanSchema = z
+  .object({
+    id: IdSchema,
+    userId: IdSchema,
+    planStartDate: DateKeySchema,
+    totalDays: z.number().int().min(1).max(400),
+    completedDays: z.array(DateKeySchema).max(400),
+    pausedDays: z.array(DateKeySchema).max(400),
+    missedDayPolicy: MissedDayPolicySchema,
+    acknowledgedMissedDays: z.array(DateKeySchema).max(400),
+    examDate: DateKeySchema.nullable(),
+    version: z.number().int().positive(),
+    createdAt: IsoDateTimeSchema,
+    updatedAt: IsoDateTimeSchema,
+  })
+  .strict()
+  .superRefine((plan, context) => {
+    const overlap = plan.completedDays.filter((dateKey) => plan.pausedDays.includes(dateKey));
+    if (overlap.length > 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["pausedDays"],
+        message: "A day cannot be both completed and paused",
+      });
+    }
+    for (const [field, values] of [
+      ["completedDays", plan.completedDays],
+      ["pausedDays", plan.pausedDays],
+      ["acknowledgedMissedDays", plan.acknowledgedMissedDays],
+    ] as const) {
+      if (new Set(values).size !== values.length) {
+        context.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [field],
+          message: "Day lists must not repeat a date",
+        });
+      }
+    }
+  });
+export type StudyPlan = z.infer<typeof StudyPlanSchema>;
+
 export const SyncEntityTypeSchema = z.enum([
   "profile",
   "attempt",
@@ -784,6 +844,7 @@ export const SyncEntityTypeSchema = z.enum([
   "formula-progress",
   "note",
   "bookmark",
+  "study-plan",
 ]);
 export type SyncEntityType = z.infer<typeof SyncEntityTypeSchema>;
 
@@ -840,7 +901,8 @@ export type SyncEntity =
   | VocabularyProgress
   | FormulaProgress
   | UserNote
-  | Bookmark;
+  | Bookmark
+  | StudyPlan;
 
 export function parseSyncEntity(entityType: SyncEntityType, input: unknown): SyncEntity {
   switch (entityType) {
@@ -864,6 +926,8 @@ export function parseSyncEntity(entityType: SyncEntityType, input: unknown): Syn
       return UserNoteSchema.parse(input);
     case "bookmark":
       return BookmarkSchema.parse(input);
+    case "study-plan":
+      return StudyPlanSchema.parse(input);
   }
 }
 

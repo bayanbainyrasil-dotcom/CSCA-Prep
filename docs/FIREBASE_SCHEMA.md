@@ -77,6 +77,7 @@ All paths below are `users/{uid}/{collection}/{entityId}`.
 | `examAttempts` | Client-editable draft; trusted submission is server-owned | Template, timer, draft answers and position |
 | `vocabularyProgress` | Versioned | SRS state and review dates |
 | `formulaProgress` | Versioned | SRS state and rearrangement mastery |
+| `studyPlans` | Versioned | Plan start date, completed/paused days, missed-day policy |
 | `diagnostics` | Append-only | Raw diagnostic responses |
 | `syncState` | Versioned | Small per-device sync checkpoint only |
 
