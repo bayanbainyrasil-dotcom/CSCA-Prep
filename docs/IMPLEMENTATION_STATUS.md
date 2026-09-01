@@ -1,9 +1,9 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-01 18:47 +05:00
-Last verified commit: `a17e759792da83e04038782758737fe1dd19864c`
+Last updated: 2026-09-01 18:56 +05:00
+Last verified implementation commit: `40ad32ecc62c93df2213cc3f438c669216e5a4ed`
 Branch: `main`
-Working tree: dirty with the P0A and P0B files listed below; no unrelated user changes were present at batch start.
+Repository state: the tested P0A/P0B implementation is committed and pushed to `origin/main`; this checkpoint update is documentation-only.
 
 ## Current Phase
 
@@ -87,9 +87,8 @@ Warnings/limitations:
 
 ## Deployment Status
 
-- Commit `a17e759792da83e04038782758737fe1dd19864c` is the last verified commit on `main`; the P0A/P0B batches are not committed or pushed.
-- GitHub CI completed successfully for that commit: `https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33482334392`.
-- GitHub Pages demo deployment completed successfully for that commit: `https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33482334500`.
+- Commit `40ad32ecc62c93df2213cc3f438c669216e5a4ed` contains the verified P0A/P0B batch and was pushed to `origin/main` on 2026-09-01.
+- GitHub CI and GitHub Pages were triggered by that push; confirm their final status before treating the published demo as updated.
 - Firebase production: blocked by the Google account MFA requirement before Console access.
 - Vercel production: GitHub sharing/App installation is confirmed, but the existing Vercel account requires email login and a one-time verification code before GitHub can be linked.
 
