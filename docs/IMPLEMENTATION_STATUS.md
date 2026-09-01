@@ -1,6 +1,6 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-08-31 23:00 +05:00
+Last updated: 2026-09-01 12:21 +05:00
 
 ## Current Phase
 
@@ -12,11 +12,11 @@ Added a fail-closed deployment contract: every Vercel build is Firebase-only and
 
 ## Current Task
 
-Provision and connect the real Firebase production/staging projects and Vercel project.
+Waiting for the user to complete Google 2-Step Verification and approve GitHub identity sharing for the Vercel login. Both account pages are open in the in-app browser.
 
 ## Next Exact Task
 
-Authenticate the Firebase and Vercel CLIs/accounts, configure the Firebase web apps plus App Check, deploy rules/indexes/storage/functions, add the seven Firebase client variables and `VITE_DEPLOYMENT_MODE=firebase` to Vercel, then deploy and verify that the public production site reports cloud mode.
+After the user enables Google 2-Step Verification, reload Firebase Console. After the user explicitly approves Vercel GitHub login, sign in, then configure Firebase web apps/App Check and the Vercel project without committing credentials.
 
 ## Completed
 
@@ -71,6 +71,14 @@ Failing:
 - Mock pages still use client-visible built-in answer data and are not the required server-authoritative production mock flow.
 - Dashboard plan day still derives from account/profile creation rather than a dedicated plan start date.
 
+## Deployment Status
+
+- Commit `6bed22d` is pushed to `main`.
+- GitHub CI completed successfully: `https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33422686237`.
+- GitHub Pages demo deployment completed successfully: `https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33422686252`.
+- Firebase production: blocked by the Google account MFA requirement before Console access.
+- Vercel production: blocked at login pending explicit approval to share the GitHub account identity with Vercel.
+
 ## Important Decisions
 
 - GitHub is source control; GitHub Pages remains demo-only; Vercel is the production frontend.
@@ -85,19 +93,7 @@ Failing:
 
 ## Files Changed This Batch
 
-- `.env.example`
-- `.github/workflows/deploy-pages.yml`
-- `README.md`
-- `docs/DEPLOYMENT.md`
 - `docs/IMPLEMENTATION_STATUS.md`
-- `src/components/system/deployment-mode-diagnostic.tsx`
-- `src/lib/deployment-config.ts`
-- `src/lib/deployment-config.test.ts`
-- `src/lib/deployment.ts`
-- `src/lib/firebase.ts`
-- `src/main.tsx`
-- `src/vite-env.d.ts`
-- `vite.config.ts`
 
 ## External Setup Required
 
@@ -111,8 +107,8 @@ Failing:
 ## Continue From Here
 
 1. Read this file and confirm the working tree/latest commit.
-2. Complete Firebase and Vercel authentication/provisioning without committing credentials.
-3. Deploy the Firebase backend and Vercel frontend.
-4. Verify cloud mode, headers, deep links, App Check, and Google login/profile restoration.
+2. Confirm the user has completed Google 2-Step Verification, then reload the open Firebase Console tab.
+3. Obtain explicit confirmation before clicking Vercel `Continue with GitHub`; complete login without storing credentials in the repository.
+4. Provision Firebase/Vercel, deploy the backend/frontend, and verify cloud mode, headers, deep links, App Check, and Google login/profile restoration.
 5. Update this checkpoint and commit P0.1.
 6. Continue with P0.2 production login verification, then P0.3 two-device sync proof.
