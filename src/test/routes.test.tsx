@@ -66,10 +66,16 @@ describe('key application routes', () => {
 
     expect(await screen.findByRole('heading', { name: 'Train the exact failure point.' }))
       .toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Start recommended/i })).toHaveAttribute(
+    // With no recorded attempts there is nothing to recommend from, so the page
+    // suggests a first session rather than claiming a weak-topic recommendation.
+    expect(screen.getByRole('link', { name: /Start suggested session/i })).toHaveAttribute(
       'href',
-      '/practice/session?mode=weak-topics',
+      '/practice/session?mode=learn',
     );
+    expect(screen.getByRole('heading', { name: 'Start with a first session' })).toBeInTheDocument();
+    expect(screen.getByText(/Nothing has been measured yet/i)).toBeInTheDocument();
+    expect(screen.getByText('None due')).toBeInTheDocument();
+    expect(screen.getByText('Needs practice data')).toBeInTheDocument();
   });
 
   it('enforces the understand-answer-confidence-feedback sequence', async () => {

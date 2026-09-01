@@ -26,13 +26,13 @@ export default function RoadmapPage() {
   const selectedPlanItems: Array<[string, string, string]> = selectedDay === currentDay && dailyPlan
     ? dailyPlan.blocks.map((block) => [block.subject ?? block.kind, block.title, `${block.targetMinutes} min`])
     : selectedWeek
-      ? [['Week focus', selectedWeek.focus, 'Adaptive'], ['Mathematics', selectedWeek.math, 'Planned'], ['Physics', selectedWeek.physics, 'Planned']]
+      ? [['Week focus', selectedWeek.focus, 'Planned'], ['Mathematics', selectedWeek.math, 'Planned'], ['Physics', selectedWeek.physics, 'Planned']]
       : [];
 
   return (
     <div>
       <PageHeading
-        eyebrow="Adaptive preparation plan"
+        eyebrow="Preparation plan"
         title="84 days, always one clear next step."
         description="The sequence stays stable; the workload adapts when mastery, missed days or exam speed change."
         actions={<Button variant="outline" onClick={() => setIntensity(intensity === 'steady' ? 'lighter' : intensity === 'lighter' ? 'intensive' : 'steady')}><SlidersHorizontal className="h-4 w-4" /> {intensity[0]!.toUpperCase() + intensity.slice(1)}</Button>}

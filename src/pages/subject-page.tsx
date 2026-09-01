@@ -60,7 +60,7 @@ export default function SubjectPage({ subject }: { subject: 'mathematics' | 'phy
             <p className={`font-mono text-[0.67rem] font-medium uppercase tracking-[0.15em] ${isMath ? 'text-primary-foreground/65' : 'text-background/55'}`}>Next recommended · {nextTopic.mastery ? 'adaptive review' : 'new topic'}</p>
             <h2 className="mt-2 font-display text-3xl font-semibold tracking-[-0.05em]">{nextTopic.title}</h2>
             <p className={`mt-2 max-w-xl text-sm leading-relaxed ${isMath ? 'text-primary-foreground/75' : 'text-background/65'}`}>{nextTopic.lessonId ? 'Open the verified lesson, then reinforce it with targeted questions.' : 'No lesson is linked yet, so start with verified topic practice.'}</p>
-            <div className="mt-5 flex flex-wrap gap-2"><Badge className="bg-white/15 text-current">Mastery {nextTopic.mastery}%</Badge><Badge className="bg-white/15 text-current">English-first prompts</Badge><Badge className="bg-white/15 text-current">Adaptive review</Badge></div>
+            <div className="mt-5 flex flex-wrap gap-2"><Badge className="bg-white/15 text-current">Mastery {nextTopic.mastery}%</Badge><Badge className="bg-white/15 text-current">English-first prompts</Badge><Badge className="bg-white/15 text-current">Spaced review</Badge></div>
           </div>
           <Button variant="secondary" size="lg" asChild><Link to={pathFor(nextTopic)}>Start <ArrowRight className="h-4 w-4" /></Link></Button>
         </CardContent>

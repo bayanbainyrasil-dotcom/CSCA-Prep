@@ -233,7 +233,7 @@ test('mobile primary navigation reaches practice without opening a menu', async 
 
   await expect(page).toHaveURL(/\/practice$/);
   await expect(page.getByRole('heading', { name: 'Train the exact failure point.' })).toBeVisible();
-  await expect(page.getByRole('link', { name: /Start recommended/i })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Start suggested session/i })).toBeVisible();
 });
 
 test('light and dark appearance choices apply immediately and survive reload', async ({
@@ -312,5 +312,5 @@ test('slow responses keep a clear loading-to-ready path', async ({ page }, testI
   });
   await page.goto('/practice');
   await expect(page.getByRole('heading', { name: 'Train the exact failure point.' })).toBeVisible({ timeout: 20_000 });
-  await expect(page.getByRole('link', { name: /Start recommended/i })).toBeEnabled();
+  await expect(page.getByRole('link', { name: /Start suggested session/i })).toBeEnabled();
 });

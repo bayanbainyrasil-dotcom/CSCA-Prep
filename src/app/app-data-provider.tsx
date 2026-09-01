@@ -12,6 +12,7 @@ import {
   UserSettingsSchema,
   VocabularyEntrySchema,
   type Attempt,
+  type OnboardingBaseline,
   type SyncEntityType,
   type UserProfile,
 } from '@/domain';
@@ -21,7 +22,8 @@ import { getCscaDatabase } from '@/lib/persistence/database';
 import { LocalFirstRepository } from '@/lib/persistence/repository';
 import { SyncEngine } from '@/lib/persistence/syncEngine';
 import { useAppStore } from '@/stores';
-import { migrateLegacyStudyPlan } from '@/features/plan/plan-schedule';
+import { calendarDaysUntilExam, migrateLegacyStudyPlan } from '@/features/plan/plan-schedule';
+import { countDue } from '@/features/trainers/review-progress';
 import { buildAdaptiveDailyPlan } from '@/lib/adaptive';
 import { dateKeyInTimezone } from '@/lib/date';
 
@@ -64,7 +66,12 @@ function stableBlockId(kind: string, topicIds: string[]) {
   return `plan-${kind}-${(hash >>> 0).toString(36)}`;
 }
 
-async function loadLocal(repository: LocalFirstRepository, profile: UserProfile, isCurrent = () => true) {
+async function loadLocal(
+  repository: LocalFirstRepository,
+  profile: UserProfile,
+  isCurrent = () => true,
+  baseline: OnboardingBaseline | null = null,
+) {
   const types: SyncEntityType[] = ['attempt', 'mistake', 'mastery', 'daily-plan', 'mock-attempt', 'vocabulary-progress', 'formula-progress', 'note', 'bookmark', 'study-plan'];
   const values = await Promise.all(types.map((type) => repository.list(type)));
   if (!isCurrent()) return;
@@ -87,14 +94,23 @@ async function loadLocal(repository: LocalFirstRepository, profile: UserProfile,
   const storedStudyPlan = (byType['study-plan'] ?? [])
     .map((item) => StudyPlanSchema.safeParse(item))
     .find((parsed) => parsed.success && parsed.data.userId === profile.uid);
-  const studyPlan = storedStudyPlan?.success
+  const examDate = profile.targetDate ? dateKeyInTimezone(new Date(profile.targetDate), profile.timezone) : null;
+  const migratedStudyPlan = storedStudyPlan?.success
     ? storedStudyPlan.data
     : migrateLegacyStudyPlan({
         userId: profile.uid,
         profileCreatedAt: profile.createdAt,
         timezone: profile.timezone,
-        examDate: profile.targetDate ? dateKeyInTimezone(new Date(profile.targetDate), profile.timezone) : null,
+        examDate,
       });
+  // The onboarding baseline and the exam date belong to the plan, and both can
+  // change after the plan was first created. Neither touches the learner's
+  // completed, paused or missed days.
+  const studyPlan = StudyPlanSchema.parse({
+    ...migratedStudyPlan,
+    ...(baseline && !migratedStudyPlan.baseline ? { baseline } : {}),
+    ...(examDate !== migratedStudyPlan.examDate ? { examDate } : {}),
+  });
 
   useAppStore.getState().hydrate({
     profile,
@@ -103,14 +119,19 @@ async function loadLocal(repository: LocalFirstRepository, profile: UserProfile,
     mistakes: byType.mistake,
     masteries: byType.mastery,
     dailyPlan: todayPlan,
+    vocabularyProgress: byType['vocabulary-progress'],
+    formulaProgress: byType['formula-progress'],
     activeMock: byType['mock-attempt']?.find((item) => (item as { status?: string }).status === 'in-progress') ?? null,
     activePractice: null,
     notes: byType.note,
     bookmarks: byType.bookmark,
   });
-  if (!storedStudyPlan?.success) {
+  if (!storedStudyPlan?.success || studyPlan !== migratedStudyPlan) {
     if (!isCurrent()) return;
-    await useAppStore.getState().setStudyPlan(studyPlan, true);
+    const persisted = storedStudyPlan?.success
+      ? StudyPlanSchema.parse({ ...studyPlan, version: studyPlan.version + 1, updatedAt: new Date().toISOString() })
+      : studyPlan;
+    await useAppStore.getState().setStudyPlan(persisted, true);
   }
 
   if (!todayPlan) {
@@ -119,10 +140,15 @@ async function loadLocal(repository: LocalFirstRepository, profile: UserProfile,
       userId: profile.uid,
       date: today,
       timezone: profile.timezone,
+      // The learner said how many minutes they have; the plan never exceeds it.
       targetMinutes: profile.settings.dailyStudyMinutes,
       topics: state.topics,
       masteries: Object.values(state.masteries),
-      dueEnglishReviewCount: state.vocabulary.length,
+      dueEnglishReviewCount: countDue(state.vocabulary.map((entry) => entry.id), state.vocabularyProgress),
+      baseline: studyPlan.baseline ?? baseline,
+      // Real graded answers, which is what displaces the self-reported level.
+      evidenceCount: state.attempts.length,
+      daysUntilExam: calendarDaysUntilExam(studyPlan, today),
     });
     const previousPlan = plansForToday.at(0);
     const previousBlocks = new Map(

@@ -724,6 +724,10 @@ export const VocabularyProgressSchema = z
     mastered: z.boolean(),
     lastReviewedAt: IsoDateTimeSchema.nullable(),
     nextReviewAt: IsoDateTimeSchema,
+    /** Added later; optional so records written before this field still validate. */
+    correctCount: z.number().int().nonnegative().optional(),
+    incorrectCount: z.number().int().nonnegative().optional(),
+    lastQuality: z.number().int().min(0).max(5).nullable().optional(),
     version: z.number().int().positive(),
     createdAt: IsoDateTimeSchema,
     updatedAt: IsoDateTimeSchema,
@@ -740,6 +744,12 @@ export const FormulaProgressSchema = z
     attempts: z.number().int().nonnegative(),
     lastReviewedAt: IsoDateTimeSchema.nullable(),
     nextReviewAt: IsoDateTimeSchema,
+    /** Added later; optional so records written before these fields still validate. */
+    intervalDays: z.number().min(0).max(365).optional(),
+    lapses: z.number().int().nonnegative().optional(),
+    correctCount: z.number().int().nonnegative().optional(),
+    incorrectCount: z.number().int().nonnegative().optional(),
+    lastQuality: z.number().int().min(0).max(5).nullable().optional(),
     version: z.number().int().positive(),
     createdAt: IsoDateTimeSchema,
     updatedAt: IsoDateTimeSchema,
@@ -792,10 +802,23 @@ export type MissedDayPolicy = z.infer<typeof MissedDayPolicySchema>;
  * account creation timestamp, which silently consumed days a learner never
  * studied.
  */
+/**
+ * Self-reported starting level from onboarding. It is a prior only: diagnostic
+ * and practice evidence override it as soon as there is any.
+ */
+export const OnboardingBaselineSchema = z
+  .object({
+    mathLevel: z.enum(["foundation", "basic", "intermediate"]),
+    physicsLevel: z.enum(["new", "foundation", "basic", "intermediate"]),
+  })
+  .strict();
+export type OnboardingBaseline = z.infer<typeof OnboardingBaselineSchema>;
+
 export const StudyPlanSchema = z
   .object({
     id: IdSchema,
     userId: IdSchema,
+    baseline: OnboardingBaselineSchema.nullable().optional(),
     planStartDate: DateKeySchema,
     totalDays: z.number().int().min(1).max(400),
     completedDays: z.array(DateKeySchema).max(400),

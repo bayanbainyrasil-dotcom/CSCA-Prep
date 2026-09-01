@@ -25,6 +25,8 @@ export interface SessionUser {
   preferredLanguage: 'en' | 'ru' | 'en-ru' | 'zh';
   profileVersion: number;
   settings: Record<string, unknown>;
+  /** Self-reported starting level from onboarding; absent for older sessions. */
+  baseline?: { mathLevel: 'foundation' | 'basic' | 'intermediate'; physicsLevel: 'new' | 'foundation' | 'basic' | 'intermediate' } | null;
   createdAt: string;
   lastActiveAt: string;
 }
@@ -50,7 +52,11 @@ export interface OnboardingInput {
 const roleSchema = z.enum(['user', 'admin']);
 const profileAccessSchema = z.object({
   role: roleSchema.optional(),
-  onboarding: z.object({ completed: z.boolean().optional() }).passthrough().optional(),
+  onboarding: z.object({
+    completed: z.boolean().optional(),
+    mathLevel: z.enum(['foundation', 'basic', 'intermediate']).optional(),
+    physicsLevel: z.enum(['new', 'foundation', 'basic', 'intermediate']).optional(),
+  }).passthrough().optional(),
   timezone: z.string().optional(),
   targetDate: z.unknown().optional(),
   preferredLanguage: z.enum(['en', 'ru', 'en-ru', 'zh']).optional(),
@@ -75,6 +81,12 @@ const sessionUserSchema = z.object({
   preferredLanguage: z.enum(['en', 'ru', 'en-ru', 'zh']),
   profileVersion: z.number().int().positive(),
   settings: z.record(z.string(), z.unknown()),
+  // Optional so sessions stored before this field existed still parse and no
+  // learner is signed out by the upgrade.
+  baseline: z.object({
+    mathLevel: z.enum(['foundation', 'basic', 'intermediate']),
+    physicsLevel: z.enum(['new', 'foundation', 'basic', 'intermediate']),
+  }).strict().nullable().optional(),
   createdAt: z.string(),
   lastActiveAt: z.string(),
 }).strict();
@@ -103,11 +115,25 @@ export function persistLocalSession(session: SessionUser): void {
 }
 
 export function persistLocalProfile(profile: UserProfile): void {
-  persistLocalSession(sessionFromProfile(profile));
+  // The onboarding baseline lives only in the session, so a profile-driven
+  // refresh must carry it forward rather than dropping it.
+  persistLocalSession(sessionFromProfile(profile, readStoredBaseline()));
 }
 
-function sessionFromProfile(profile: UserProfile): SessionUser {
+function readStoredBaseline(): SessionUser['baseline'] {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(LOCAL_SESSION_KEY);
+    const parsed = raw ? sessionUserSchema.safeParse(JSON.parse(raw) as unknown) : null;
+    return parsed?.success ? (parsed.data.baseline ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
+function sessionFromProfile(profile: UserProfile, baseline: SessionUser['baseline'] = null): SessionUser {
   return {
+    baseline: baseline ?? null,
     uid: profile.uid,
     name: profile.name,
     email: profile.email ?? '',
@@ -209,6 +235,10 @@ async function mapFirebaseUser(firebaseUser: User): Promise<SessionUser> {
     preferredLanguage: access.success ? (access.data.preferredLanguage ?? 'en-ru') : 'en-ru',
     profileVersion: access.success ? (access.data.version ?? 1) : 1,
     settings: access.success ? (access.data.settings ?? {}) : {},
+    baseline:
+      access.success && access.data.onboarding?.mathLevel && access.data.onboarding.physicsLevel
+        ? { mathLevel: access.data.onboarding.mathLevel, physicsLevel: access.data.onboarding.physicsLevel }
+        : null,
     createdAt: access.success ? (toIsoDateTime(access.data.createdAt) ?? new Date().toISOString()) : new Date().toISOString(),
     lastActiveAt: access.success ? (toIsoDateTime(access.data.lastActiveAt) ?? new Date().toISOString()) : new Date().toISOString(),
   };
@@ -374,6 +404,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           dailyStudyMinutes: parsedInput.dailyAvailableMinutes,
           explanationLanguage: preferredLanguage,
         },
+        baseline: {
+          mathLevel: parsedInput.mathLevel,
+          physicsLevel: parsedInput.physicsLevel,
+        },
         profileVersion: current.profileVersion + 1,
         createdAt: current.onboardingCompleted ? current.createdAt : now,
         lastActiveAt: now,
@@ -384,10 +418,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [user]);
 
   const updateSessionProfile = useCallback((profile: UserProfile) => {
-    const next = sessionFromProfile(profile);
-    if (isFirebaseConfigured) localStorage.setItem(`${SESSION_CACHE_PREFIX}${profile.uid}`, JSON.stringify(next));
-    else persistLocalSession(next);
-    setUser((current) => current?.uid === profile.uid ? next : current);
+    setUser((current) => {
+      if (current?.uid !== profile.uid) return current;
+      const next = sessionFromProfile(profile, current.baseline ?? readStoredBaseline());
+      if (isFirebaseConfigured) localStorage.setItem(`${SESSION_CACHE_PREFIX}${profile.uid}`, JSON.stringify(next));
+      else persistLocalSession(next);
+      return next;
+    });
   }, []);
 
   const signOutUser = useCallback(async () => {

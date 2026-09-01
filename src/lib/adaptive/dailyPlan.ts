@@ -3,6 +3,7 @@ import {
   DailyPlanSchema,
   type DailyPlan,
   type DailyPlanBlockKind,
+  type OnboardingBaseline,
   type Subject,
   type Topic,
   type TopicMastery,
@@ -26,8 +27,45 @@ export interface AdaptiveDailyPlanInput {
   topics: Topic[];
   masteries: TopicMastery[];
   dueEnglishReviewCount?: number;
+  /** Self-reported starting level. A prior only — see `baselinePriorStrength`. */
+  baseline?: OnboardingBaseline | null;
+  /** Graded answers recorded so far. Real evidence displaces the baseline. */
+  evidenceCount?: number;
+  /** Calendar days left before the exam, if the learner has set a date. */
+  daysUntilExam?: number | null;
   now?: Date;
   idFactory?: () => string;
+}
+
+/**
+ * After this many graded answers the self-reported level stops influencing the
+ * plan at all: by then the learner's own record is better evidence than what
+ * they guessed about themselves at sign-up.
+ */
+export const BASELINE_EVIDENCE_THRESHOLD = 20;
+
+/** 1 when nothing is known about the learner, 0 once there is enough evidence. */
+export function baselinePriorStrength(evidenceCount = 0): number {
+  if (!Number.isFinite(evidenceCount) || evidenceCount <= 0) return 1;
+  return Math.max(0, Math.min(1, 1 - evidenceCount / BASELINE_EVIDENCE_THRESHOLD));
+}
+
+const MATH_LEVEL_EMPHASIS: Record<OnboardingBaseline["mathLevel"], number> = {
+  foundation: 1.3,
+  basic: 1,
+  intermediate: 0.75,
+};
+
+const PHYSICS_LEVEL_EMPHASIS: Record<OnboardingBaseline["physicsLevel"], number> = {
+  new: 1.4,
+  foundation: 1.25,
+  basic: 1,
+  intermediate: 0.8,
+};
+
+/** Blends a weight toward the baseline emphasis in proportion to the prior's strength. */
+function applyPrior(weight: number, emphasis: number, strength: number): number {
+  return weight * (1 + (emphasis - 1) * strength);
 }
 
 function comparePriority(left: TopicMastery, right: TopicMastery, now: Date): number {
@@ -82,6 +120,21 @@ export function buildAdaptiveDailyPlan(input: AdaptiveDailyPlanInput): DailyPlan
   const newPhysics = firstUnseenTopic("physics", input.topics, masteryByTopic);
   const candidates: CandidateBlock[] = [];
 
+  // The onboarding answers are used as a starting prior and nothing more: the
+  // strength falls to zero as graded answers accumulate, so a learner who
+  // under- or over-rated themselves is corrected by their own record.
+  const priorStrength = input.baseline ? baselinePriorStrength(input.evidenceCount) : 0;
+  const mathEmphasis = input.baseline ? MATH_LEVEL_EMPHASIS[input.baseline.mathLevel] : 1;
+  const physicsEmphasis = input.baseline ? PHYSICS_LEVEL_EMPHASIS[input.baseline.physicsLevel] : 1;
+  const priorApplied = priorStrength > 0 && (mathEmphasis !== 1 || physicsEmphasis !== 1);
+
+  // Close to the exam, consolidation beats new material. The daily budget is
+  // never raised beyond what the learner said they have; only the mix changes.
+  const daysUntilExam = input.daysUntilExam ?? null;
+  const examIsClose = daysUntilExam !== null && daysUntilExam <= 14;
+  const newContentEmphasis = examIsClose ? 0.6 : 1;
+  const consolidationEmphasis = examIsClose ? 1.5 : 1;
+
   candidates.push({
     kind: "mental-math",
     subject: "mathematics",
@@ -96,8 +149,12 @@ export function buildAdaptiveDailyPlan(input: AdaptiveDailyPlanInput): DailyPlan
       subject: "mathematics",
       title: newMath.title.en,
       topicIds: [newMath.id],
-      weight: 0.25,
-      reason: "Next unlocked Mathematics topic.",
+      weight: applyPrior(0.25, mathEmphasis, priorStrength) * newContentEmphasis,
+      reason: priorApplied && mathEmphasis !== 1
+        ? `Next unlocked Mathematics topic, sized for the starting level you chose${
+            mathEmphasis > 1 ? " (extra foundation time)" : " (less introduction time)"
+          }. The diagnostic replaces this estimate.`
+        : "Next unlocked Mathematics topic.",
     });
   }
   if (newPhysics) {
@@ -106,8 +163,12 @@ export function buildAdaptiveDailyPlan(input: AdaptiveDailyPlanInput): DailyPlan
       subject: "physics",
       title: newPhysics.title.en,
       topicIds: [newPhysics.id],
-      weight: 0.28,
-      reason: "Next unlocked Physics topic; Physics receives extra foundation time.",
+      weight: applyPrior(0.28, physicsEmphasis, priorStrength) * newContentEmphasis,
+      reason: priorApplied && physicsEmphasis !== 1
+        ? `Next unlocked Physics topic, sized for the starting level you chose${
+            physicsEmphasis > 1 ? " (extra foundation time)" : " (less introduction time)"
+          }. The diagnostic replaces this estimate.`
+        : "Next unlocked Physics topic; Physics receives extra foundation time.",
     });
   }
   if ((input.dueEnglishReviewCount ?? 0) > 0 || targetMinutes >= 30) {
@@ -128,8 +189,10 @@ export function buildAdaptiveDailyPlan(input: AdaptiveDailyPlanInput): DailyPlan
       subject: weakest.subject,
       title: `Strengthen ${topicById.get(weakest.topicId)?.title.en ?? "a weak topic"}`,
       topicIds: selected.map((mastery) => mastery.topicId),
-      weight: 0.16,
-      reason: `Lowest mastery is ${Math.round(weakest.score)}%.`,
+      weight: 0.16 * consolidationEmphasis,
+      reason: examIsClose
+        ? `Lowest mastery is ${Math.round(weakest.score)}%, and the exam is ${daysUntilExam} ${daysUntilExam === 1 ? "day" : "days"} away, so consolidation comes before new material.`
+        : `Lowest mastery is ${Math.round(weakest.score)}%.`,
     });
   }
   if (due.length > 0) {
@@ -139,7 +202,7 @@ export function buildAdaptiveDailyPlan(input: AdaptiveDailyPlanInput): DailyPlan
       subject: due.length === 1 ? firstDue.subject : null,
       title: "Spaced Review",
       topicIds: due.slice(0, 4).map((mastery) => mastery.topicId),
-      weight: 0.2,
+      weight: 0.2 * consolidationEmphasis,
       reason: `${due.length} topic review${due.length === 1 ? " is" : "s are"} due.`,
     });
   }

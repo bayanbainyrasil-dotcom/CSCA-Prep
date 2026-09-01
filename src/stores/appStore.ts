@@ -20,8 +20,10 @@ import {
   UserNoteSchema,
   UserProfileSchema,
   UserSettingsSchema,
+  FormulaProgressSchema,
   StudyPlanSchema,
   VocabularyEntrySchema,
+  VocabularyProgressSchema,
   createInitialTopicMastery,
   type Attempt,
   type Bookmark,
@@ -39,11 +41,20 @@ import {
   type TopicMastery,
   type UserNote,
   type UserProfile,
+  type FormulaProgress,
   type MissedDayPolicy,
   type StudyPlan,
+  type VocabularyProgress,
   type UserSettings,
   type VocabularyEntry,
 } from "../domain";
+import {
+  applyFormulaReview,
+  applyVocabularyReview,
+  createFormulaProgress,
+  createVocabularyProgress,
+  type TrainerReview,
+} from "../features/trainers/review-progress";
 import {
   applyMissedDayChoice,
   markDayCompleted,
@@ -113,6 +124,8 @@ export interface HydrationPayload {
   notes?: unknown;
   dailyPlan?: unknown;
   studyPlan?: unknown;
+  vocabularyProgress?: unknown;
+  formulaProgress?: unknown;
   mockExams?: unknown;
   activeMock?: unknown;
   activePractice?: unknown;
@@ -133,6 +146,8 @@ export interface CscaAppState {
   notes: Record<string, UserNote>;
   dailyPlan: DailyPlan | null;
   studyPlan: StudyPlan | null;
+  vocabularyProgress: Record<string, VocabularyProgress>;
+  formulaProgress: Record<string, FormulaProgress>;
   mockExams: MockExam[];
   activeMock: MockAttempt | null;
   activePractice: ActivePracticeSession | null;
@@ -155,6 +170,8 @@ export interface CscaAppState {
   markStudyDayPaused: (dateKey: string) => Promise<void>;
   movePlanStart: (dateKey: string) => Promise<void>;
   setStudyPlanExamDate: (dateKey: string | null) => Promise<void>;
+  reviewVocabulary: (vocabularyId: string, review: TrainerReview) => Promise<VocabularyProgress>;
+  reviewFormula: (formulaId: string, review: TrainerReview) => Promise<FormulaProgress>;
   startPractice: (mode: PracticeMode, questionIds: string[]) => void;
   advancePractice: () => void;
   endPractice: () => void;
@@ -311,6 +328,10 @@ function calculateMetrics(input: {
   };
 }
 
+function keyBy<T>(items: T[], key: (item: T) => string): Record<string, T> {
+  return Object.fromEntries(items.map((item) => [key(item), item]));
+}
+
 function toRecord<T extends { id: string }>(items: T[]): Record<string, T> {
   return Object.fromEntries(items.map((item) => [item.id, item]));
 }
@@ -346,6 +367,8 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
     notes: {},
     dailyPlan: null,
     studyPlan: null,
+    vocabularyProgress: {},
+    formulaProgress: {},
     mockExams: [],
     activeMock: null,
     activePractice: null,
@@ -386,6 +409,14 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
             : payload.studyPlan === null
               ? null
               : StudyPlanSchema.parse(payload.studyPlan),
+        vocabularyProgress:
+          payload.vocabularyProgress === undefined
+            ? get().vocabularyProgress
+            : keyBy(z.array(VocabularyProgressSchema).parse(payload.vocabularyProgress), (item) => item.vocabularyId),
+        formulaProgress:
+          payload.formulaProgress === undefined
+            ? get().formulaProgress
+            : keyBy(z.array(FormulaProgressSchema).parse(payload.formulaProgress), (item) => item.formulaId),
         mockExams: parseArray(MockExamSchema, payload.mockExams) ?? get().mockExams,
         activeMock: payload.activeMock === undefined || payload.activeMock === null ? null : MockAttemptSchema.parse(payload.activeMock),
         activePractice:
@@ -409,6 +440,8 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
         notes: {},
         dailyPlan: null,
         studyPlan: null,
+        vocabularyProgress: {},
+        formulaProgress: {},
         activeMock: null,
         activePractice: null,
         settings: DEFAULT_SETTINGS,
@@ -538,6 +571,32 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
       if (updated === plan) return;
       set({ studyPlan: updated });
       await persistAndSync("study-plan", updated, true);
+    },
+
+    /**
+     * Records one vocabulary review. The interval, ease, lapse count and due
+     * date come from the shared scheduler, and the record is persisted through
+     * the same local-first path as every other entity, so it survives a reload
+     * and syncs when a cloud session exists.
+     */
+    reviewVocabulary: async (vocabularyId, review) => {
+      const userId = get().profile?.uid;
+      if (!userId) throw new Error("Sign in before recording a review");
+      const existing = get().vocabularyProgress[vocabularyId] ?? createVocabularyProgress(userId, vocabularyId);
+      const updated = applyVocabularyReview(existing, review);
+      set({ vocabularyProgress: { ...get().vocabularyProgress, [vocabularyId]: updated } });
+      await persistAndSync("vocabulary-progress", updated, true);
+      return updated;
+    },
+
+    reviewFormula: async (formulaId, review) => {
+      const userId = get().profile?.uid;
+      if (!userId) throw new Error("Sign in before recording a review");
+      const existing = get().formulaProgress[formulaId] ?? createFormulaProgress(userId, formulaId);
+      const updated = applyFormulaReview(existing, review);
+      set({ formulaProgress: { ...get().formulaProgress, [formulaId]: updated } });
+      await persistAndSync("formula-progress", updated, true);
+      return updated;
     },
 
     startPractice: (mode, questionIds) => {
