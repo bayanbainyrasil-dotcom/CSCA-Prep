@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { roadmapWeeks } from '@/data/curriculum';
-import { preparationDay } from '@/lib/date';
+import { usePlanStatus } from '@/features/plan/use-plan-status';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/stores';
 
@@ -15,9 +15,9 @@ type DayState = 'completed' | 'active' | 'upcoming' | 'overdue';
 
 export default function RoadmapPage() {
   const completedDays = useAppStore((state) => state.metrics.completedDays);
-  const profile = useAppStore((state) => state.profile);
   const dailyPlan = useAppStore((state) => state.dailyPlan);
-  const currentDay = preparationDay(profile?.createdAt ?? new Date().toISOString(), new Date(), profile?.timezone ?? 'UTC');
+  const plan = usePlanStatus();
+  const currentDay = plan.planDay;
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [intensity, setIntensity] = useState<'steady' | 'lighter' | 'intensive'>('steady');
   const days = useMemo(() => Array.from({ length: 84 }, (_, index) => index + 1), []);

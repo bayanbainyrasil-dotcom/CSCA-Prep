@@ -6,6 +6,7 @@ import {
   DailyPlanSchema,
   FormulaSchema,
   LessonSchema,
+  StudyPlanSchema,
   TopicSchema,
   UserProfileSchema,
   UserSettingsSchema,
@@ -20,6 +21,7 @@ import { getCscaDatabase } from '@/lib/persistence/database';
 import { LocalFirstRepository } from '@/lib/persistence/repository';
 import { SyncEngine } from '@/lib/persistence/syncEngine';
 import { useAppStore } from '@/stores';
+import { migrateLegacyStudyPlan } from '@/features/plan/plan-schedule';
 import { buildAdaptiveDailyPlan } from '@/lib/adaptive';
 import { dateKeyInTimezone } from '@/lib/date';
 
@@ -63,7 +65,7 @@ function stableBlockId(kind: string, topicIds: string[]) {
 }
 
 async function loadLocal(repository: LocalFirstRepository, profile: UserProfile, isCurrent = () => true) {
-  const types: SyncEntityType[] = ['attempt', 'mistake', 'mastery', 'daily-plan', 'mock-attempt', 'vocabulary-progress', 'formula-progress', 'note', 'bookmark'];
+  const types: SyncEntityType[] = ['attempt', 'mistake', 'mastery', 'daily-plan', 'mock-attempt', 'vocabulary-progress', 'formula-progress', 'note', 'bookmark', 'study-plan'];
   const values = await Promise.all(types.map((type) => repository.list(type)));
   if (!isCurrent()) return;
   const byType = Object.fromEntries(types.map((type, index) => [type, values[index] ?? []]));
@@ -79,8 +81,24 @@ async function loadLocal(repository: LocalFirstRepository, profile: UserProfile,
     item.timezone === profile.timezone &&
     item.targetMinutes === profile.settings.dailyStudyMinutes
   )) ?? null;
+  // One plan calendar per learner. A returning learner with progress but no
+  // stored plan is migrated from their profile creation day, so the day number
+  // they saw before this feature existed is the day number they see now.
+  const storedStudyPlan = (byType['study-plan'] ?? [])
+    .map((item) => StudyPlanSchema.safeParse(item))
+    .find((parsed) => parsed.success && parsed.data.userId === profile.uid);
+  const studyPlan = storedStudyPlan?.success
+    ? storedStudyPlan.data
+    : migrateLegacyStudyPlan({
+        userId: profile.uid,
+        profileCreatedAt: profile.createdAt,
+        timezone: profile.timezone,
+        examDate: profile.targetDate ? dateKeyInTimezone(new Date(profile.targetDate), profile.timezone) : null,
+      });
+
   useAppStore.getState().hydrate({
     profile,
+    studyPlan,
     attempts: byType.attempt,
     mistakes: byType.mistake,
     masteries: byType.mastery,
@@ -90,6 +108,11 @@ async function loadLocal(repository: LocalFirstRepository, profile: UserProfile,
     notes: byType.note,
     bookmarks: byType.bookmark,
   });
+  if (!storedStudyPlan?.success) {
+    if (!isCurrent()) return;
+    await useAppStore.getState().setStudyPlan(studyPlan, true);
+  }
+
   if (!todayPlan) {
     const state = useAppStore.getState();
     const generated = buildAdaptiveDailyPlan({

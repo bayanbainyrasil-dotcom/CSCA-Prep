@@ -3,15 +3,13 @@ import { Search, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { preparationDay } from '@/lib/date';
-import { useAppStore } from '@/stores';
+import { usePlanStatus } from '@/features/plan/use-plan-status';
 import { adminNav, primaryNav } from './nav-items';
 import { useAuth } from '@/features/auth/auth-provider';
 
 export function Sidebar({ onSearch }: { onSearch: () => void }) {
   const { user, isDemo } = useAuth();
-  const profile = useAppStore((state) => state.profile);
-  const currentDay = preparationDay(profile?.createdAt ?? user?.createdAt ?? new Date().toISOString(), new Date(), profile?.timezone ?? user?.timezone ?? 'UTC');
+  const currentDay = usePlanStatus().planDay;
   const phase = currentDay <= 28 ? 'Foundation sprint' : currentDay <= 56 ? 'Mixed consolidation' : 'Exam-speed phase';
   const navItems = user?.role === 'admin' ? [...primaryNav, adminNav] : primaryNav;
 

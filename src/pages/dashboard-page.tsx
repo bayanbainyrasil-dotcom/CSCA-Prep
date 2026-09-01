@@ -8,7 +8,9 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ReadinessOrbit } from '@/features/dashboard/readiness-orbit';
 import { useAuth } from '@/features/auth/auth-provider';
-import { daysUntilDate, greetingFor, preparationDay, weekdayFor } from '@/lib/date';
+import { daysUntilDate, greetingFor, weekdayFor } from '@/lib/date';
+import { MissedDaysPrompt } from '@/features/plan/missed-days-prompt';
+import { usePlanStatus } from '@/features/plan/use-plan-status';
 import { useAppStore } from '@/stores';
 
 export default function DashboardPage() {
@@ -27,7 +29,8 @@ export default function DashboardPage() {
   ];
   const today = new Date();
   const timezone = profile?.timezone ?? user?.timezone ?? 'UTC';
-  const dayNumber = preparationDay(profile?.createdAt ?? user?.createdAt ?? today.toISOString(), today, timezone);
+  const plan = usePlanStatus();
+  const dayNumber = plan.planDay;
   const daysUntilExam = daysUntilDate(profile?.targetDate ?? user?.targetDate ?? null, today, timezone);
   const lowestMastery = Object.values(masteries).sort((left, right) => left.score - right.score)[0];
   const reviewTopic = lowestMastery ? topics.find((item) => item.id === lowestMastery.topicId) : null;
@@ -52,11 +55,13 @@ export default function DashboardPage() {
   return (
     <div>
       <PageHeading
-        eyebrow={`${weekdayFor(today, timezone)} · Day ${dayNumber} / 84`}
+        eyebrow={`${weekdayFor(today, timezone)} · Day ${dayNumber} / ${plan.totalDays}`}
         title={`${greetingFor(today, timezone)}, ${user?.name.split(' ')[0] ?? 'Learner'}`}
         description={dailyPlan?.adaptiveReasons[0] ?? 'Your plan will appear as soon as your saved progress and study topics finish loading.'}
         actions={<div className="flex flex-wrap items-center justify-end gap-2"><LocalTimeStatus compact timezone={timezone} /><Badge variant={daysUntilExam === null || daysUntilExam < 0 ? 'warning' : 'success'}>{countdownLabel}</Badge></div>}
       />
+
+      <MissedDaysPrompt />
 
       <div className="content-grid">
         <section className="lg:col-span-8" aria-labelledby="today-plan-title">

@@ -20,6 +20,7 @@ import {
   UserNoteSchema,
   UserProfileSchema,
   UserSettingsSchema,
+  StudyPlanSchema,
   VocabularyEntrySchema,
   createInitialTopicMastery,
   type Attempt,
@@ -38,9 +39,18 @@ import {
   type TopicMastery,
   type UserNote,
   type UserProfile,
+  type MissedDayPolicy,
+  type StudyPlan,
   type UserSettings,
   type VocabularyEntry,
 } from "../domain";
+import {
+  applyMissedDayChoice,
+  markDayCompleted,
+  markDayPaused,
+  setExamDate as setPlanExamDate,
+  setPlanStartDate as movePlanStartDate,
+} from "../features/plan/plan-schedule";
 import { updateTopicMastery } from "../lib/adaptive";
 import type { SaveEntityOptions } from "../lib/persistence";
 import type { SyncStatusSnapshot } from "../lib/persistence";
@@ -102,6 +112,7 @@ export interface HydrationPayload {
   bookmarks?: unknown;
   notes?: unknown;
   dailyPlan?: unknown;
+  studyPlan?: unknown;
   mockExams?: unknown;
   activeMock?: unknown;
   activePractice?: unknown;
@@ -121,6 +132,7 @@ export interface CscaAppState {
   bookmarks: Record<string, Bookmark>;
   notes: Record<string, UserNote>;
   dailyPlan: DailyPlan | null;
+  studyPlan: StudyPlan | null;
   mockExams: MockExam[];
   activeMock: MockAttempt | null;
   activePractice: ActivePracticeSession | null;
@@ -137,6 +149,12 @@ export interface CscaAppState {
   updateSettings: (patch: Partial<UserSettings>) => Promise<void>;
   setDailyPlan: (plan: unknown, persist?: boolean) => Promise<void>;
   completeDailyPlanBlock: (blockId: string) => Promise<void>;
+  setStudyPlan: (plan: unknown, persist?: boolean) => Promise<void>;
+  chooseMissedDayPolicy: (policy: MissedDayPolicy, todayKey: string) => Promise<void>;
+  markStudyDayCompleted: (dateKey: string) => Promise<void>;
+  markStudyDayPaused: (dateKey: string) => Promise<void>;
+  movePlanStart: (dateKey: string) => Promise<void>;
+  setStudyPlanExamDate: (dateKey: string | null) => Promise<void>;
   startPractice: (mode: PracticeMode, questionIds: string[]) => void;
   advancePractice: () => void;
   endPractice: () => void;
@@ -327,6 +345,7 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
     bookmarks: {},
     notes: {},
     dailyPlan: null,
+    studyPlan: null,
     mockExams: [],
     activeMock: null,
     activePractice: null,
@@ -361,6 +380,12 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
         bookmarks: payload.bookmarks === undefined ? get().bookmarks : toRecord(z.array(BookmarkSchema).parse(payload.bookmarks)),
         notes: payload.notes === undefined ? get().notes : toRecord(z.array(UserNoteSchema).parse(payload.notes)),
         dailyPlan: payload.dailyPlan === undefined || payload.dailyPlan === null ? null : DailyPlanSchema.parse(payload.dailyPlan),
+        studyPlan:
+          payload.studyPlan === undefined
+            ? get().studyPlan
+            : payload.studyPlan === null
+              ? null
+              : StudyPlanSchema.parse(payload.studyPlan),
         mockExams: parseArray(MockExamSchema, payload.mockExams) ?? get().mockExams,
         activeMock: payload.activeMock === undefined || payload.activeMock === null ? null : MockAttemptSchema.parse(payload.activeMock),
         activePractice:
@@ -383,6 +408,7 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
         bookmarks: {},
         notes: {},
         dailyPlan: null,
+        studyPlan: null,
         activeMock: null,
         activePractice: null,
         settings: DEFAULT_SETTINGS,
@@ -450,6 +476,68 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
       if (!found) throw new Error("Unknown daily plan block");
       set({ dailyPlan: updated });
       await persistAndSync("daily-plan", updated, true);
+
+      // A plan day counts as done only when every block of it is done, so the
+      // plan calendar reflects real work rather than an opened page.
+      if (updated.blocks.every((block) => block.status === "completed")) {
+        await get().markStudyDayCompleted(updated.date);
+      }
+    },
+
+    setStudyPlan: async (input, shouldPersist = true) => {
+      const plan = StudyPlanSchema.parse(input);
+      const profile = get().profile;
+      if (profile && plan.userId !== profile.uid) throw new Error("Study plan belongs to another user");
+      set({ studyPlan: plan });
+      if (shouldPersist) await persistAndSync("study-plan", plan, true);
+    },
+
+    /**
+     * The learner's answer to "you missed some days". Nothing about the plan
+     * changes until this is called, so the schedule is never rewritten silently.
+     */
+    chooseMissedDayPolicy: async (policy, todayKey) => {
+      const plan = get().studyPlan;
+      if (!plan) throw new Error("No study plan to update");
+      const updated = applyMissedDayChoice(plan, policy, todayKey);
+      set({ studyPlan: updated });
+      await persistAndSync("study-plan", updated, true);
+    },
+
+    markStudyDayCompleted: async (dateKey) => {
+      const plan = get().studyPlan;
+      if (!plan) return;
+      const updated = markDayCompleted(plan, dateKey);
+      if (updated === plan) return;
+      set({ studyPlan: updated });
+      await persistAndSync("study-plan", updated, true);
+    },
+
+    markStudyDayPaused: async (dateKey) => {
+      const plan = get().studyPlan;
+      if (!plan) throw new Error("No study plan to update");
+      const updated = markDayPaused(plan, dateKey);
+      if (updated === plan) return;
+      set({ studyPlan: updated });
+      await persistAndSync("study-plan", updated, true);
+    },
+
+    movePlanStart: async (dateKey) => {
+      const plan = get().studyPlan;
+      if (!plan) throw new Error("No study plan to update");
+      const updated = movePlanStartDate(plan, dateKey);
+      if (updated === plan) return;
+      set({ studyPlan: updated });
+      await persistAndSync("study-plan", updated, true);
+    },
+
+    setStudyPlanExamDate: async (dateKey) => {
+      const plan = get().studyPlan;
+      if (!plan) throw new Error("No study plan to update");
+      const updated = setPlanExamDate(plan, dateKey);
+      if (updated === plan) return;
+      set({ studyPlan: updated });
+      await persistAndSync("study-plan", updated, true);
     },
 
     startPractice: (mode, questionIds) => {
