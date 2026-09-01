@@ -1,6 +1,6 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-01 12:21 +05:00
+Last updated: 2026-09-01 12:28 +05:00
 
 ## Current Phase
 
@@ -12,11 +12,11 @@ Added a fail-closed deployment contract: every Vercel build is Firebase-only and
 
 ## Current Task
 
-Waiting for the user to complete Google 2-Step Verification and approve GitHub identity sharing for the Vercel login. Both account pages are open in the in-app browser.
+GitHub identity sharing with Vercel is approved. The correct GitHub profile (`bayanbainyrasil-dotcom`) is confirmed and the Vercel GitHub App is installed for all repositories. Vercel requires a one-time email code for the pre-existing account; the code was sent to `bayanbai.nyrasil@gmail.com` and its input is open. Firebase still waits for the user to complete Google 2-Step Verification.
 
 ## Next Exact Task
 
-After the user enables Google 2-Step Verification, reload Firebase Console. After the user explicitly approves Vercel GitHub login, sign in, then configure Firebase web apps/App Check and the Vercel project without committing credentials.
+Enter the one-time Vercel email code supplied by the user, link the confirmed GitHub profile to the existing Vercel account, and import the original `bayanbainyrasil-dotcom/CSCA-Prep` repository without cloning it. After the user enables Google 2-Step Verification, reload Firebase Console and configure Firebase web apps/App Check and Vercel without committing credentials.
 
 ## Completed
 
@@ -77,7 +77,7 @@ Failing:
 - GitHub CI completed successfully: `https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33422686237`.
 - GitHub Pages demo deployment completed successfully: `https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33422686252`.
 - Firebase production: blocked by the Google account MFA requirement before Console access.
-- Vercel production: blocked at login pending explicit approval to share the GitHub account identity with Vercel.
+- Vercel production: GitHub sharing is approved and the correct profile/App installation is confirmed; login is blocked only on the one-time email code sent to `bayanbai.nyrasil@gmail.com`.
 
 ## Important Decisions
 
@@ -107,8 +107,8 @@ Failing:
 ## Continue From Here
 
 1. Read this file and confirm the working tree/latest commit.
-2. Confirm the user has completed Google 2-Step Verification, then reload the open Firebase Console tab.
-3. Obtain explicit confirmation before clicking Vercel `Continue with GitHub`; complete login without storing credentials in the repository.
+2. Enter the one-time Vercel verification code from `bayanbai.nyrasil@gmail.com`, link GitHub, and confirm the repository is imported from `bayanbainyrasil-dotcom` rather than cloned to another account.
+3. Confirm the user has completed Google 2-Step Verification, then reload the open Firebase Console tab.
 4. Provision Firebase/Vercel, deploy the backend/frontend, and verify cloud mode, headers, deep links, App Check, and Google login/profile restoration.
 5. Update this checkpoint and commit P0.1.
 6. Continue with P0.2 production login verification, then P0.3 two-device sync proof.
