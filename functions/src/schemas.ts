@@ -106,8 +106,16 @@ const CommonMistakeSchema = z
   })
   .strict();
 
+// The key schema is passed explicitly so this shared contract compiles under both
+// the Functions toolchain (Zod 3) and the web toolchain (Zod 4), where the
+// single-argument `z.record(value)` overload was removed.
+const TemplateParameterKeySchema = z.string().min(1).max(120);
+
 const TemplateParametersSchema = z
-  .record(z.union([z.string().max(500), z.number().finite(), z.boolean()]))
+  .record(
+    TemplateParameterKeySchema,
+    z.union([z.string().max(500), z.number().finite(), z.boolean()]),
+  )
   .refine((value) => Object.keys(value).length <= 50, "Too many template parameters.");
 
 export const QuestionSchema = z

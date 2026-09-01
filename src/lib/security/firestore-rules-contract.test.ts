@@ -1,22 +1,43 @@
 import { describe, expect, it } from 'vitest';
-import rules from '../../../firestore.rules?raw';
+import rawRules from '../../../firestore.rules?raw';
+import { normalizeLineEndings } from './normalize-line-endings';
+
+const rules = normalizeLineEndings(rawRules);
+
+const CONTRACT_FRAGMENTS = {
+  'keeps mock attempts out of the generic mutable create path': [
+    "collectionId != 'examAttempts'",
+    "collectionId == 'examAttempts'\n              && validClientExamDraftCreate(uid, documentId)",
+  ],
+  'allows client drafts only without trusted submission or result data': [
+    "payload.status in ['in-progress', 'abandoned']",
+    'payload.submittedAt == null',
+    'payload.result == null',
+    "data.entityType == 'mock-attempt'",
+  ],
+  'accepts nested answers only while the parent is in progress': [
+    "get(path).data.payload.status == 'in-progress'",
+    "data.entityType == 'mock-answer'",
+    'validClientExamAnswer(uid, answerId)',
+  ],
+} as const;
 
 describe('mock exam Firestore source contract', () => {
-  it('keeps mock attempts out of the generic mutable create path', () => {
-    expect(rules).toContain("collectionId != 'examAttempts'");
-    expect(rules).toContain("collectionId == 'examAttempts'\n              && validClientExamDraftCreate(uid, documentId)");
-  });
+  for (const [title, fragments] of Object.entries(CONTRACT_FRAGMENTS)) {
+    it(title, () => {
+      for (const fragment of fragments) {
+        expect(rules).toContain(fragment);
+      }
+    });
+  }
 
-  it('allows client drafts only without trusted submission or result data', () => {
-    expect(rules).toContain("payload.status in ['in-progress', 'abandoned']");
-    expect(rules).toContain('payload.submittedAt == null');
-    expect(rules).toContain('payload.result == null');
-    expect(rules).toContain("data.entityType == 'mock-attempt'");
-  });
+  it('holds on a CRLF checkout of the same rules source', () => {
+    const crlfRules = normalizeLineEndings(rules.replace(/\n/g, '\r\n'));
 
-  it('accepts nested answers only while the parent is in progress', () => {
-    expect(rules).toContain("get(path).data.payload.status == 'in-progress'");
-    expect(rules).toContain("data.entityType == 'mock-answer'");
-    expect(rules).toContain('validClientExamAnswer(uid, answerId)');
+    for (const fragments of Object.values(CONTRACT_FRAGMENTS)) {
+      for (const fragment of fragments) {
+        expect(crlfRules).toContain(fragment);
+      }
+    }
   });
 });
