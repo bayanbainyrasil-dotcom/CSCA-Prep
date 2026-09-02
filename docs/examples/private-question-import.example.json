@@ -1,0 +1,71 @@
+{
+  "_comment": [
+    "Example shape for a private production question file.",
+    "This file is illustrative only. The numbers below are obviously fake and the",
+    "'answers' here are deliberately trivial, so nothing real is published by",
+    "committing this example.",
+    "",
+    "A real file is created by an administrator on their own device, chosen through",
+    "the Admin import screen, and sent straight to the server. It is never written",
+    "to browser storage, never cached by the service worker and never logged.",
+    "The server splits every item: prompt and options go to 'questions', while",
+    "correctAnswer, solution, shortSolution, explanation and commonMistakes go to",
+    "the protected 'questionSolutions' collection that no learner can read.",
+    "",
+    "Every imported item is stored as pending-review. A named human must approve it",
+    "before it counts as coverage."
+  ],
+  "items": [
+    {
+      "id": "example-private-item-001",
+      "expectedVersion": 0,
+      "question": {
+        "cellId": "math-linear-isolate-unknown",
+        "questionType": "single-step-calculation",
+        "subject": "mathematics",
+        "module": "Algebra",
+        "topicId": "math-linear",
+        "skill": "Solve linear relations",
+        "difficulty": 1,
+        "language": "en",
+        "question": "EXAMPLE ONLY. Solve x + 1 = 2.",
+        "questionTranslation": "ТОЛЬКО ПРИМЕР. Решите уравнение x + 1 = 2.",
+        "options": [
+          { "id": "a", "text": "x = 1" },
+          { "id": "b", "text": "x = 3" },
+          { "id": "c", "text": "x = -1" },
+          { "id": "d", "text": "x = 2" }
+        ],
+        "correctAnswer": "a",
+        "solution": "EXAMPLE ONLY. Subtract 1 from both sides: x = 2 - 1 = 1.",
+        "shortSolution": "x = 1.",
+        "explanation": "EXAMPLE ONLY. Placeholder text showing where the explanation goes.",
+        "commonMistakes": [
+          {
+            "id": "added",
+            "description": "EXAMPLE ONLY. Adding instead of subtracting gives 3.",
+            "distractorOptionId": "b"
+          },
+          {
+            "id": "sign",
+            "description": "EXAMPLE ONLY. A sign slip gives -1.",
+            "distractorOptionId": "c"
+          },
+          {
+            "id": "unchanged",
+            "description": "EXAMPLE ONLY. Copying the right-hand side gives 2.",
+            "distractorOptionId": "d"
+          }
+        ],
+        "formulas": [],
+        "vocabulary": ["solve"],
+        "estimatedTime": 30,
+        "tags": ["example-only"],
+        "sourceType": "original-csca-style",
+        "sourceNote": "EXAMPLE ONLY. Replace with a real source reference a reviewer can follow up.",
+        "status": "published",
+        "demo": false
+      }
+    }
+  ]
+}
