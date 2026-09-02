@@ -115,6 +115,7 @@ export const BlueprintQuestionRecordSchema = z
     knownLimitations: z.string().max(2_000).default(''),
     contentVersion: z.number().int().nonnegative(),
     verifiedContentVersion: z.number().int().nonnegative().nullable(),
+    publicAnswerKey: z.boolean().default(false),
   })
   .strict()
   .superRefine((item, context) => {

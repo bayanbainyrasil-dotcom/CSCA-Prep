@@ -90,9 +90,28 @@ export interface BlueprintQuestionRecord {
   contentVersion: number;
   /** The content version a reviewer actually read. */
   verifiedContentVersion: number | null;
+  /**
+   * True when the item's answer key has been published somewhere public — for
+   * example the seed committed to this repository. Such an item is legitimate
+   * practice material and can never back a confidential mock, because the answers
+   * are already readable by anyone.
+   */
+  publicAnswerKey: boolean;
 }
 
-export function countsAsVerifiedCoverage(cell: BlueprintCell, item: BlueprintQuestionRecord): boolean {
+/** A mode whose questions must not have a published answer key. */
+export function isConfidentialMode(mode: BlueprintExamMode | undefined): boolean {
+  return mode === "mock";
+}
+
+export function countsAsVerifiedCoverage(
+  cell: BlueprintCell,
+  item: BlueprintQuestionRecord,
+  options: { mode?: BlueprintExamMode } = {},
+): boolean {
+  // An item whose answer key is public cannot secure a confidential exam, however
+  // carefully it was reviewed.
+  if (isConfidentialMode(options.mode) && item.publicAnswerKey) return false;
   return (
     item.cellId === cell.id &&
     item.status === 'published' &&
@@ -194,6 +213,10 @@ export interface CellCoverage {
   /** Items that actually count. Never entered by hand. */
   verifiedItems: number;
   demoItems: number;
+  /** Items whose answer key is already public. */
+  publicKeyItems: number;
+  /** True when a reviewed item was excluded because this mode is confidential. */
+  excludedForMode: boolean;
   languages: BlueprintLanguage[];
   missingLanguages: BlueprintLanguage[];
   missingDifficulties: number[];
@@ -234,6 +257,12 @@ function statusFor(cell: BlueprintCell, coverage: Omit<CellCoverage, 'status' | 
     return { status: 'empty', reasons: ['No question has been authored for this cell.'] };
   }
   if (coverage.verifiedItems === 0) {
+    if (coverage.excludedForMode) {
+      reasons.push(
+        `${coverage.publicKeyItems} reviewed item${coverage.publicKeyItems === 1 ? '' : 's'} here ${coverage.publicKeyItems === 1 ? 'has' : 'have'} a published answer key, so ${coverage.publicKeyItems === 1 ? 'it is' : 'they are'} practice material and cannot secure a confidential exam.`,
+      );
+      return { status: 'unverified', reasons };
+    }
     reasons.push(
       `${coverage.totalItems} authored${coverage.demoItems > 0 ? ` (${coverage.demoItems} demo)` : ''}, none reviewer-verified.`,
     );
@@ -321,6 +350,11 @@ export function difficultyDistributionSkew(items: BlueprintQuestionRecord[]): {
 export interface EvaluateBlueprintOptions {
   /** Modes that must reach full coverage before the blueprint is publishable. */
   requiredModes?: BlueprintExamMode[];
+  /**
+   * The mode this report is for. In a confidential mode, items with a published
+   * answer key are excluded from verified coverage and reported as such.
+   */
+  mode?: BlueprintExamMode;
 }
 
 export function evaluateBlueprintCoverage(
@@ -369,8 +403,14 @@ export function evaluateBlueprintCoverage(
 
   const coverage = cells.map((cell) => {
     const cellItems = itemsByCell.get(cell.id) ?? [];
-    const verified = cellItems.filter((item) => countsAsVerifiedCoverage(cell, item));
+    const verified = cellItems.filter((item) => countsAsVerifiedCoverage(cell, item, { mode: options.mode }));
     const demoItems = cellItems.filter((item) => item.demo).length;
+    const publicKeyItems = cellItems.filter((item) => item.publicAnswerKey).length;
+    const excludedForMode =
+      isConfidentialMode(options.mode) &&
+      cellItems.some(
+        (item) => item.publicAnswerKey && countsAsVerifiedCoverage(cell, item, {}),
+      );
 
     for (const item of cellItems) {
       if (item.subject !== cell.subject) {
@@ -395,6 +435,8 @@ export function evaluateBlueprintCoverage(
       totalItems: cellItems.length,
       verifiedItems: verified.length,
       demoItems,
+      publicKeyItems,
+      excludedForMode,
       languages,
       missingLanguages,
       missingDifficulties,
@@ -431,7 +473,7 @@ export function evaluateBlueprintCoverage(
 
   const verifiedItems = items.filter((item) => {
     const cell = item.cellId ? byId.get(item.cellId) : undefined;
-    return cell ? countsAsVerifiedCoverage(cell, item) : false;
+    return cell ? countsAsVerifiedCoverage(cell, item, { mode: options.mode }) : false;
   });
   const answerSkew = answerDistributionSkew(verifiedItems);
   if (answerSkew.skewed) {
@@ -635,7 +677,8 @@ function eligibleItemsByCell(
     if (!cell.allowedExamModes.includes(spec.mode)) continue;
 
     const eligible = items.filter(
-      (item) => item.language === spec.language && countsAsVerifiedCoverage(cell, item),
+      (item) =>
+        item.language === spec.language && countsAsVerifiedCoverage(cell, item, { mode: spec.mode }),
     );
     result.set(cell.id, eligible);
   }

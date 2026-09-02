@@ -26,6 +26,8 @@ function cell(overrides: Partial<CoverageCell> & { id: string }): CoverageCell {
     totalItems: 0,
     verifiedItems: 0,
     demoItems: 0,
+    publicKeyItems: 0,
+    excludedForMode: false,
     languages: [],
     missingLanguages: [],
     missingDifficulties: [],

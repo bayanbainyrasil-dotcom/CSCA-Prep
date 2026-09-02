@@ -1,7 +1,6 @@
 import { httpsCallable } from 'firebase/functions';
 import { z } from 'zod';
 import { functions } from '@/lib/firebase';
-import type { BlueprintCell } from './blueprint';
 
 /**
  * Client side of blueprint administration.
@@ -34,6 +33,8 @@ const CoverageCellSchema = z
     totalItems: z.number(),
     verifiedItems: z.number(),
     demoItems: z.number(),
+    publicKeyItems: z.number(),
+    excludedForMode: z.boolean(),
     languages: z.array(z.string()),
     missingLanguages: z.array(z.string()),
     missingDifficulties: z.array(z.number()),
@@ -83,51 +84,6 @@ export async function fetchBlueprintCoverage(input: {
   const call = httpsCallable(requireFunctions(), 'getBlueprintCoverage');
   const response = await call(input);
   return CoverageReportSchema.parse(response.data);
-}
-
-/**
- * Uploads the blueprint requirement seed through the trusted callable, one cell
- * at a time so a rejected cell is reported rather than silently skipped. The
- * server writes every cell as `draft`; nothing here can certify anything.
- */
-export async function seedBlueprintCells(
-  cells: BlueprintCell[],
-  onProgress?: (done: number, total: number) => void,
-): Promise<{ created: number; failures: { cellId: string; message: string }[] }> {
-  const call = httpsCallable(requireFunctions(), 'upsertBlueprintCell');
-  const failures: { cellId: string; message: string }[] = [];
-  let created = 0;
-
-  for (const [index, cell] of cells.entries()) {
-    try {
-      await call({
-        cellId: cell.id,
-        subject: cell.subject,
-        module: cell.module,
-        topicId: cell.topicId,
-        topic: cell.topic,
-        skillId: cell.skillId,
-        skill: cell.skill,
-        microSkillId: cell.microSkillId,
-        microSkill: cell.microSkill,
-        prerequisiteCellIds: cell.prerequisiteCellIds,
-        difficultyLevels: cell.difficultyLevels,
-        questionTypes: cell.questionTypes,
-        minimumItems: cell.minimumItems,
-        supportedLanguages: cell.supportedLanguages,
-        allowedExamModes: cell.allowedExamModes,
-        sourceType: cell.sourceType,
-        sourceReference: cell.sourceReference,
-        knownLimitations: cell.knownLimitations,
-      });
-      created += 1;
-    } catch (error) {
-      failures.push({ cellId: cell.id, message: error instanceof Error ? error.message : 'Rejected by the server.' });
-    }
-    onProgress?.(index + 1, cells.length);
-  }
-
-  return { created, failures };
 }
 
 export async function setContentVerification(input: {
@@ -202,6 +158,75 @@ export async function fetchReviewQueue(pageSize = 100): Promise<ReviewItem[]> {
   const response = await call({ pageSize });
   const parsed = z.object({ items: z.array(ReviewItemSchema), nextCursor: z.string().nullable() }).parse(response.data);
   return parsed.items.filter((item) => item.question !== null);
+}
+
+const ImportDecisionSchema = z
+  .object({
+    id: z.string(),
+    outcome: z.enum(['create', 'update', 'unchanged', 'conflict', 'invalid']),
+    reason: z.string(),
+    contentHash: z.string(),
+    existingVersion: z.number().nullable(),
+    nextVersion: z.number().nullable(),
+  })
+  .strict();
+
+const ImportResultSchema = z
+  .object({
+    dryRun: z.boolean(),
+    summary: z
+      .object({
+        create: z.number(),
+        update: z.number(),
+        unchanged: z.number(),
+        conflict: z.number(),
+        invalid: z.number(),
+        total: z.number(),
+        blocked: z.boolean(),
+      })
+      .strict(),
+    decisions: z.array(ImportDecisionSchema),
+    seedVersion: z.string().optional(),
+    publicAnswerKey: z.boolean().optional(),
+    allowedModes: z.array(z.string()).optional(),
+    alreadyApplied: z.boolean().optional(),
+  })
+  .strict();
+export type ImportResult = z.infer<typeof ImportResultSchema>;
+
+async function callImport(name: string, payload: Record<string, unknown>): Promise<ImportResult> {
+  const call = httpsCallable(requireFunctions(), name);
+  const response = await call(payload);
+  return ImportResultSchema.parse(response.data);
+}
+
+export function importBlueprintDraft(input: { batchId: string; seedVersion: string; dryRun: boolean }) {
+  return callImport('importBlueprintDraft', input);
+}
+
+export function importPublicQuestionSeed(input: { batchId: string; seedVersion: string; dryRun: boolean }) {
+  return callImport('importPublicQuestionSeed', input);
+}
+
+/**
+ * Sends an administrator's local file straight to the server. The parsed content
+ * is held in memory for the duration of the call and is never written to
+ * `localStorage`, IndexedDB or any cache.
+ */
+export function importPrivateQuestions(input: {
+  batchId: string;
+  dryRun: boolean;
+  items: { id: string; expectedVersion?: number; question: unknown }[];
+}) {
+  return callImport('importPrivateQuestions', input);
+}
+
+export function readImportProblems(error: unknown): { id: string; outcome: string; reason: string }[] {
+  const details = (error as { details?: unknown })?.details;
+  const parsed = z
+    .object({ problems: z.array(z.object({ id: z.string(), outcome: z.string(), reason: z.string() })).optional() })
+    .safeParse(details);
+  return parsed.success ? (parsed.data.problems ?? []) : [];
 }
 
 export async function publishMockExam(input: {

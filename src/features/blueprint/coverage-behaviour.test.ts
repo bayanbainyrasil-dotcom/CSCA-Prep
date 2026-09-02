@@ -175,3 +175,72 @@ describe('after a real human approval', () => {
     ]);
   });
 });
+
+/**
+ * The seed committed to this repository has its answers in public Git history.
+ * That makes it legitimate practice material and permanently unusable as
+ * confidential mock content, however carefully it is later reviewed.
+ */
+describe('a question whose answer key is already public', () => {
+  const publicBank = DRAFT_QUESTION_SEED.map((question) => asRecord(question, { publicAnswerKey: true }));
+
+  it('covers the authored slice for practice', () => {
+    const practice = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, publicBank, { mode: 'practice' });
+    const covered = practice.cells.filter((entry) => entry.status === 'covered').map((entry) => entry.cell.id);
+    expect(covered.sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
+  });
+
+  it('covers nothing at all for a mock, however thoroughly it was reviewed', () => {
+    const mock = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, publicBank, { mode: 'mock' });
+    expect(mock.verifiedCells).toBe(0);
+    expect(mock.totals.covered).toBe(0);
+  });
+
+  it('says why, naming the published key rather than a missing review', () => {
+    const mock = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, publicBank, { mode: 'mock' });
+    const entry = mock.cells.find((item) => item.cell.id === AUTHORED_SLICE_CELL_IDS[0]);
+
+    expect(entry?.status).toBe('unverified');
+    expect(entry?.excludedForMode).toBe(true);
+    expect(entry?.publicKeyItems).toBeGreaterThan(0);
+    expect(entry?.verifiedItems).toBe(0);
+    expect(entry?.reasons.join(' ')).toContain('published answer key');
+    expect(entry?.reasons.join(' ')).toContain('cannot secure a confidential exam');
+  });
+
+  it('blocks publishing a mock that draws on those cells', () => {
+    const mock = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, publicBank, { mode: 'mock' });
+    const decision = canPublishExam(mock, {
+      subject: 'mathematics',
+      mode: 'mock',
+      cellIds: [...AUTHORED_SLICE_CELL_IDS],
+    });
+
+    expect(decision.allowed).toBe(false);
+    expect(decision.blockers.join(' ')).toContain('published answer key');
+  });
+
+  it('still allows publishing the same cells as practice', () => {
+    const practice = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, publicBank, { mode: 'practice' });
+    const decision = canPublishExam(practice, {
+      subject: 'mathematics',
+      mode: 'practice',
+      cellIds: [...AUTHORED_SLICE_CELL_IDS],
+    });
+
+    expect(decision).toEqual({ allowed: true, blockers: [] });
+  });
+
+  it('counts a privately held item in the same cell, so the gap is closable', () => {
+    const mixed = [
+      ...publicBank,
+      ...DRAFT_QUESTION_SEED.map((question) =>
+        asRecord(question, { questionId: `private-${question.id}`, publicAnswerKey: false }),
+      ),
+    ];
+    const mock = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, mixed, { mode: 'mock' });
+
+    const covered = mock.cells.filter((entry) => entry.status === 'covered').map((entry) => entry.cell.id);
+    expect(covered.sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
+  });
+});
