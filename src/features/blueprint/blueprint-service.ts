@@ -133,7 +133,9 @@ export async function seedBlueprintCells(
 export async function setContentVerification(input: {
   target: 'blueprint-cell' | 'question';
   targetId: string;
-  verificationStatus: 'demo' | 'draft' | 'unverified' | 'author-checked' | 'reviewer-verified';
+  verificationStatus: 'demo' | 'draft' | 'pending-review' | 'unverified' | 'author-checked' | 'reviewer-verified';
+  /** The content version the reviewer actually read. */
+  contentVersion: number;
   sourceReference?: string;
   note?: string;
 }) {
@@ -145,9 +147,61 @@ export async function setContentVerification(input: {
       verificationStatus: z.string(),
       reviewer: z.string().nullable(),
       reviewedAt: z.string().nullable(),
+      verifiedContentVersion: z.number().nullable(),
     })
     .strict()
     .parse(response.data);
+}
+
+const ReviewItemSchema = z
+  .object({
+    id: z.string(),
+    expectedVersion: z.number(),
+    question: z
+      .object({
+        subject: z.string(),
+        module: z.string(),
+        topicId: z.string(),
+        skill: z.string(),
+        difficulty: z.number(),
+        language: z.string(),
+        question: z.string(),
+        questionTranslation: z.string().optional(),
+        options: z.array(z.object({ id: z.string(), text: z.string() }).loose()),
+        correctAnswer: z.string(),
+        solution: z.string(),
+        shortSolution: z.string(),
+        explanation: z.string(),
+        commonMistakes: z.array(z.object({ id: z.string(), description: z.string() }).loose()).default([]),
+        cellId: z.string().optional(),
+        questionType: z.string().optional(),
+        sourceType: z.string(),
+        sourceNote: z.string().optional(),
+        sourceReference: z.string().optional(),
+        status: z.string(),
+        demo: z.boolean().optional(),
+        verificationStatus: z.string().optional(),
+        reviewer: z.string().nullable().optional(),
+        reviewedAt: z.string().nullable().optional(),
+        verifiedContentVersion: z.number().nullable().optional(),
+        templateParameters: z.record(z.string(), z.unknown()).optional(),
+      })
+      .loose()
+      .nullable(),
+  })
+  .strict();
+export type ReviewItem = z.infer<typeof ReviewItemSchema>;
+
+/**
+ * The review packet: every item awaiting a human, with its full solution, its
+ * blueprint mapping, its provenance and the content version a reviewer must
+ * approve. Approving a different version is refused by the server.
+ */
+export async function fetchReviewQueue(pageSize = 100): Promise<ReviewItem[]> {
+  const call = httpsCallable(requireFunctions(), 'exportQuestionBank');
+  const response = await call({ pageSize });
+  const parsed = z.object({ items: z.array(ReviewItemSchema), nextCursor: z.string().nullable() }).parse(response.data);
+  return parsed.items.filter((item) => item.question !== null);
 }
 
 export async function publishMockExam(input: {
