@@ -48,3 +48,10 @@ Desktop.ini
 *.log
 .pnpm-store/
 .npm/
+
+# Delivery artifacts produced when a push is unavailable. They are a copy of
+# this repository's own history, so committing them would store it twice.
+csca-prep-verified.bundle
+csca-prep-verified.patch
+csca-prep-*.bundle
+csca-prep-*.patch
