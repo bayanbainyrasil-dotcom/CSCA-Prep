@@ -14,12 +14,7 @@ import {
   TutorProviderError,
 } from '../../../functions/src/tutor/provider';
 import { AskTutorSchema, TutorReplySchema } from '../../../functions/src/tutor/tutor-schemas';
-import {
-  WITHHELD_REPLY,
-  type TutorAsk,
-  type TutorQuestionContext,
-  type TutorSecrets,
-} from '../../../functions/src/tutor/tutor-contract';
+import type { TutorAsk, TutorQuestionContext, TutorSecrets } from '../../../functions/src/tutor/tutor-contract';
 
 /**
  * The evaluation battery. Every entry is run through the whole engine, not
@@ -53,7 +48,7 @@ const SECRETS: TutorSecrets = {
 };
 
 const ASK: TutorAsk = {
-  mode: 'hint',
+  action: 'practice_hint',
   questionId: CONTEXT.questionId,
   language: 'en',
   learnerAttempt: 'I moved the 7 across but got 3x = 29.',
@@ -99,9 +94,12 @@ function runtimeFor(reply: string): { runtime: TutorRuntime; events: TutorEvent[
     runtime: {
       environment: { AI_TUTOR_ENABLED: 'true' },
       now: 1_800_000_000_000,
+      session: { examMode: 'practice', answerRevealed: false },
       provider: createFakeTutorProvider({ reply: () => reply }),
       readQuota: () => Promise.resolve(null),
       writeQuota: () => Promise.resolve(),
+      readBudget: () => Promise.resolve(null),
+      writeBudget: () => Promise.resolve(),
       readCache: (key) => Promise.resolve(cache.get(key) ?? null),
       writeCache: (key, entry) => {
         cache.set(key, entry);
@@ -121,10 +119,20 @@ describe('answer-leak evaluation', () => {
     for (const reply of MUST_BE_WITHHELD) {
       const { runtime } = runtimeFor(reply);
       const result = await answerTutorAsk(ASK, CONTEXT, SECRETS, runtime);
-      if (result.text !== WITHHELD_REPLY) escaped.push(reply);
+      if (result.source === 'provider' || result.text.includes(reply)) escaped.push(reply);
     }
     expect(escaped, 'these leaks reached the learner').toEqual([]);
     expect(MUST_BE_WITHHELD.length).toBeGreaterThanOrEqual(16);
+  });
+
+  it('never lets the correct option text through, whatever the wrapping', async () => {
+    for (const reply of MUST_BE_WITHHELD) {
+      const { runtime } = runtimeFor(reply);
+      const result = await answerTutorAsk(ASK, CONTEXT, SECRETS, runtime);
+      expect(result.text, reply).not.toContain(SECRETS.correctOptionText);
+      expect(result.text, reply).not.toContain(SECRETS.solution);
+      expect(result.text, reply).not.toContain(SECRETS.shortSolution);
+    }
   });
 
   it('never caches a withheld reply, so a leak cannot be replayed', async () => {
@@ -144,7 +152,7 @@ describe('answer-leak evaluation', () => {
     for (const reply of MUST_BE_DELIVERED) {
       const { runtime } = runtimeFor(reply);
       const result = await answerTutorAsk(ASK, CONTEXT, SECRETS, runtime);
-      if (result.text !== reply) refused.push(reply);
+      if (result.text !== reply || result.source !== 'provider') refused.push(reply);
     }
     expect(refused, 'these safe hints were refused').toEqual([]);
   });
@@ -179,7 +187,7 @@ describe('the provider seam', () => {
 });
 
 describe('the wire contract', () => {
-  const valid = { mode: 'hint', questionId: 'q-1', language: 'en', learnerAttempt: 'I tried x = 9.', mutationId: 'm-1' };
+  const valid = { action: 'practice_hint', questionId: 'q-1', language: 'en', learnerAttempt: 'I tried x = 9.', mutationId: 'm-1' };
 
   it('accepts a well-formed ask', () => {
     expect(AskTutorSchema.safeParse(valid).success).toBe(true);
@@ -201,6 +209,9 @@ describe('the wire contract', () => {
       { apiKey: 'AIza-not-a-real-key' },
       { quota: 10_000 },
       { temperature: 2 },
+      { answerRevealed: true },
+      { examMode: 'none' },
+      { budget: 999 },
     ]) {
       expect(AskTutorSchema.safeParse({ ...valid, ...forged }).success, JSON.stringify(forged)).toBe(false);
     }
@@ -213,19 +224,21 @@ describe('the wire contract', () => {
 
   it('replies carry no answer key field at all', () => {
     const parsed = TutorReplySchema.safeParse({
-      mode: 'hint',
+      action: 'practice_hint',
       text: 'Apply the same operation to both sides.',
       cached: false,
       withheldReason: null,
+      source: 'provider',
       remaining: 29,
     });
     expect(parsed.success).toBe(true);
     expect(
       TutorReplySchema.safeParse({
-        mode: 'hint',
+        action: 'practice_hint',
         text: 'ok',
         cached: false,
         withheldReason: null,
+        source: 'provider',
         remaining: 29,
         correctAnswer: 'a',
       }).success,

@@ -11,11 +11,12 @@
  * is screened before it reaches a learner.
  */
 
-export type TutorMode = 'hint' | 'explain-concept' | 'check-reasoning';
+import { fenceLearnerText, FENCE_INSTRUCTION } from './tutor-injection';
+import type { TutorAction } from './tutor-actions';
 
-/** What the caller asks for. No mode implies the learner has earned the answer. */
+/** What the caller asks for. No action implies the learner has earned the answer. */
 export interface TutorAsk {
-  mode: TutorMode;
+  action: TutorAction;
   questionId: string;
   language: 'en' | 'ru' | 'zh';
   /** The learner's own words or working, never a stored solution. */
@@ -44,12 +45,14 @@ export interface TutorSecrets {
 }
 
 export interface TutorReply {
-  mode: TutorMode;
+  action: TutorAction;
   text: string;
   /** True when the reply came from the cache rather than a provider call. */
   cached: boolean;
   /** Set when screening replaced a provider reply it refused to pass on. */
   withheldReason: string | null;
+  /** Where the words came from, so nothing implies a model wrote them. */
+  source: 'provider' | 'verified-content' | 'fixed-guidance';
 }
 
 // --- Feature flag -----------------------------------------------------------
@@ -119,7 +122,7 @@ export function decideQuota(window: QuotaWindow | null, now: number, defaults = 
  */
 export function tutorCacheKey(ask: TutorAsk, promptVersion: string): string {
   const attempt = ask.learnerAttempt.trim().toLowerCase().replace(/\s+/g, ' ');
-  return [promptVersion, ask.mode, ask.questionId, ask.language, fnv1a(attempt)].join(':');
+  return [promptVersion, ask.action, ask.questionId, ask.language, fnv1a(attempt)].join(':');
 }
 
 function fnv1a(value: string): string {
@@ -143,22 +146,36 @@ export const TUTOR_PROMPT_VERSION = '2026-09-02.1';
  */
 export function buildTutorPrompt(ask: TutorAsk, context: TutorQuestionContext): string {
   const options = context.options.map((option) => `${option.id}) ${option.text}`).join('\n');
-  const instruction: Record<TutorMode, string> = {
-    hint: 'Give one short hint about the next step. Do not state which option is correct and do not give the final value.',
-    'explain-concept': `Explain the idea behind "${context.skill}" in two or three sentences. Do not solve this question.`,
-    'check-reasoning': 'Say whether the reasoning below has a gap, and name the gap. Do not state the correct option or the final value.',
-  };
   return [
+    FENCE_INSTRUCTION,
     `Topic: ${context.topic}`,
     `Skill: ${context.skill}`,
     `Difficulty: ${context.difficulty}`,
     `Question: ${context.prompt}`,
     `Options:\n${options}`,
-    `Learner wrote: ${ask.learnerAttempt || '(nothing yet)'}`,
+    `Student working:\n${fenceLearnerText(ask.learnerAttempt || '(nothing yet)')}`,
     `Language: ${ask.language}`,
-    instruction[ask.mode],
+    ACTION_INSTRUCTION[ask.action],
   ].join('\n\n');
 }
+
+/**
+ * The per-action instruction. Every pre-answer action carries an explicit
+ * refusal to name the option or the value: the model is told, as well as
+ * simply not being given the key.
+ */
+const ACTION_INSTRUCTION: Record<TutorAction, string> = {
+  practice_hint:
+    'Give one short hint about the next step. Do not state which option is correct and do not give the final value.',
+  explain_step:
+    'Name what changed between the student’s last two lines, and whether it was valid. Do not state which option is correct and do not give the final value.',
+  prerequisite_coach:
+    'Name the earlier skill this question depends on and one thing to practise first. Do not solve this question, do not state which option is correct and do not give the final value.',
+  post_answer_explanation:
+    'The student has already answered and seen the result. Explain why the correct option is correct, in three or four sentences.',
+  translate_explanation:
+    'The student has already answered and seen the result. Restate the explanation in the requested language, changing nothing about the mathematics.',
+};
 
 /** Nothing private may appear in a prompt. This is asserted, not assumed. */
 export function promptLeaksSecrets(prompt: string, secrets: TutorSecrets): string[] {

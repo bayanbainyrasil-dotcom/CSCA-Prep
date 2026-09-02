@@ -35,7 +35,7 @@ const SECRETS: TutorSecrets = {
 };
 
 const ASK: TutorAsk = {
-  mode: 'hint',
+  action: 'practice_hint',
   questionId: CONTEXT.questionId,
   language: 'en',
   learnerAttempt: 'I moved the 7 across but got 3x = 29.',
@@ -108,7 +108,7 @@ describe('the cache key', () => {
 
   it('changes with the mode, the question, the language and the prompt version', () => {
     const base = tutorCacheKey(ASK, TUTOR_PROMPT_VERSION);
-    expect(tutorCacheKey({ ...ASK, mode: 'explain-concept' }, TUTOR_PROMPT_VERSION)).not.toBe(base);
+    expect(tutorCacheKey({ ...ASK, action: 'explain_step' as const }, TUTOR_PROMPT_VERSION)).not.toBe(base);
     expect(tutorCacheKey({ ...ASK, questionId: 'other-001' }, TUTOR_PROMPT_VERSION)).not.toBe(base);
     expect(tutorCacheKey({ ...ASK, language: 'ru' }, TUTOR_PROMPT_VERSION)).not.toBe(base);
     expect(tutorCacheKey(ASK, '2099-01-01.1')).not.toBe(base);
@@ -129,8 +129,8 @@ describe('the prompt a provider is allowed to see', () => {
   });
 
   it('never carries the answer key or the worked solution, in any mode', () => {
-    for (const mode of ['hint', 'explain-concept', 'check-reasoning'] as const) {
-      const prompt = buildTutorPrompt({ ...ASK, mode }, CONTEXT);
+    for (const mode of ['practice_hint', 'explain_step', 'prerequisite_coach'] as const) {
+      const prompt = buildTutorPrompt({ ...ASK, action: mode }, CONTEXT);
       expect(promptLeaksSecrets(prompt, SECRETS), mode).toEqual([]);
       expect(prompt, mode).not.toContain(SECRETS.solution);
       expect(prompt, mode).not.toContain(SECRETS.shortSolution);
@@ -140,7 +140,7 @@ describe('the prompt a provider is allowed to see', () => {
 
   it('tells the provider not to state the answer', () => {
     expect(buildTutorPrompt(ASK, CONTEXT)).toContain('Do not state which option is correct');
-    expect(buildTutorPrompt({ ...ASK, mode: 'check-reasoning' }, CONTEXT)).toContain('Do not state the correct option');
+    expect(buildTutorPrompt({ ...ASK, action: 'prerequisite_coach' }, CONTEXT)).toContain('do not state which option is correct');
   });
 
   it('detects a leak if prompt construction ever regresses', () => {
