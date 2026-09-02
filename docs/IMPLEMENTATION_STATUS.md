@@ -128,11 +128,26 @@ Two things are open, one blocked and one not.
 Blocked: push the verified commits and confirm GitHub CI + GitHub Pages are green, then
 confirm the live asset hash equals the hash produced by the released commit.
 
-**Blocker, re-tested and still present:** the session git proxy refuses to push —
-`bayanbainyrasil-dotcom/CSCA-Prep is not in this session's authorized repository set`.
-No credential is invented and no second repository is created. All six commits exist
-locally and are fully verified; they need repository write access to land. Each batch is
-also exported as a `.bundle` and a `.patch` so nothing depends on this session surviving.
+**Blocker, re-tested on 2026-09-02 and still present.** `git fetch origin` succeeds, so
+the repository is readable and `origin/main` is `24be373`, a strict ancestor of local
+HEAD — a plain fast-forward push would apply cleanly. The push itself is refused before
+it reaches GitHub:
+
+```
+remote: access denied by the git proxy: bayanbainyrasil-dotcom/CSCA-Prep is not in
+this session's authorized repository set, so the proxy will not inject a credential
+for it. To fix, add the repository to the session's sources.
+```
+
+This is the sandbox's own credential proxy, not a GitHub permission: the fix is to add
+the repository to this session's authorized sources, which cannot be done from inside the
+session. No credential is invented, no force push is attempted, and no second repository
+is created. Delivery through the user's own machine was checked too and is not available:
+no folder is connected to this session, so the desktop bridge has nothing mounted.
+
+Every commit is fully verified locally and is exported as a `.bundle` and a `.patch`, so
+nothing depends on this session surviving. **The project is not published.** CI, Pages and
+the live bundle hash cannot be confirmed until the commits land.
 
 Not blocked: Phase D is code-complete. See "Next Exact Task".
 
@@ -477,6 +492,59 @@ Leak surfaces, checked separately:
 - `e2e/content-privacy.spec.ts` scans everything the real browser downloaded and everything
   the service worker cached after a warm load for the seed solutions, and finds none.
 
+## AI0 — AI tutor groundwork, no provider and no key (this batch)
+
+Verified on `96aad8c`. There is no Gemini key anywhere in this repository, no
+provider SDK dependency, and no endpoint. The only registered provider is a
+deterministic fake, and an unknown provider name is refused rather than falling
+back to one.
+
+What exists:
+
+- **Five actions**, and nothing else: `practice_hint`, `post_answer_explanation`,
+  `explain_step`, `translate_explanation`, `prerequisite_coach`.
+- **Kill switch** (`AI_TUTOR_KILL_SWITCH=true`) checked before anything else.
+- **Feature flag** (`AI_TUTOR_ENABLED`) off unless set to the exact string `true`.
+  `1`, `yes`, `TRUE` and ` true` all leave it off.
+- **Exam gate.** Every action is refused while a diagnostic or a mock is in
+  progress. A post-answer explanation is refused until the server has revealed
+  the result for that question.
+- **Two leak defences.** The key and the worked solution never enter a prompt for
+  any pre-answer action, and prompt construction is asserted against the secrets
+  it must not contain. Every pre-answer reply is then screened for the correct
+  option's text, a sentence lifted from the stored solution, an answer
+  announcement in English, Russian or Chinese, and a bare option letter. A
+  failing reply is withheld whole and never cached.
+- **Per-learner quota** (30 per hour, expiring window) and a **shared daily
+  budget** (requests and tokens), both spent only when a provider is called, so
+  a cache hit is free.
+- **Cache** keyed on prompt version, action, question, language and a normalised
+  attempt; no learner identity, so two learners share one reply. A cached reply
+  is re-screened against the current answer key before it is served again.
+- **Prompt-injection handling.** The learner's text is fenced with markers it
+  cannot close from inside, under a standing instruction that nothing within it
+  is an instruction. An attempt is counted, not refused.
+- **Offline fallback.** Every refusal path returns fixed human-written guidance,
+  or the stored short solution where the result is already revealed, labelled
+  `verified-content` or `fixed-guidance` so nothing implies a model wrote it.
+- **Usage metadata** records an outcome, reasons, an injection-pattern count and
+  token counts — never a prompt, a reply or the learner's words.
+
+Asserted by test, not by comment: nothing under `functions/src/tutor/` imports
+`firebase-admin` or `firebase-functions`, names a collection, calls `FieldValue`,
+reads `process.env`, or mentions a provider SDK, endpoint or key. The tutor
+returns text; it never grades, writes a score, changes mastery, readiness or the
+plan, sets a verification, or publishes content.
+
+`AI0` totals 73 tests across four files.
+
+**The external step, when the tutor is wanted:** create a Gemini authorization
+key outside this repository, restrict it to the Gemini API only, store it as the
+Firebase Secret Manager secret `GEMINI_API_KEY`, and bind that secret to the
+tutor Function alone. No key belongs in React, a `VITE_*` variable, Git, a log,
+the bundle, this document or a screenshot. Until then the fake provider is what
+runs, and the flag stays off.
+
 ## Files Changed This Batch
 
 `a74916a`:
@@ -581,10 +649,7 @@ Unblocked work, in order:
 1. Human review of the 17 imported items (see "Next Exact Task"), which is what turns the
    first six cells covered **for practice**. It cannot turn them covered for a mock: their
    answers are public.
-2. AI0 — the AI tutor groundwork with no real key: provider interface, strict schemas, a
-   fake provider, a feature flag off by default, quotas, a cache, and evaluation plus
-   anti-answer-leak tests.
-3. Author or import private production questions for a confidential mock, through
+2. Author or import private production questions for a confidential mock, through
    `importPrivateQuestions`. Until then no mock can be published from reviewed content.
 4. Extend the explanation language beyond the vocabulary trainer to lessons, practice
    feedback and formula copy, with the same stated fallback.
