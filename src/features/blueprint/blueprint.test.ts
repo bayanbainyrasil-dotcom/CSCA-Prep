@@ -64,6 +64,8 @@ function record(
     reviewedAt: REVIEWED_AT,
     correctAnswerLabel: 'a',
     knownLimitations: '',
+    contentVersion: 1,
+    verifiedContentVersion: 1,
     ...overrides,
   });
 }
@@ -78,13 +80,13 @@ describe('provenance rules', () => {
   it('refuses to call an item reviewer-verified without a reviewer and a date', () => {
     expect(() => record({ questionId: 'q1', cellId: 'c1', reviewer: null })).toThrow();
     expect(
-      record({ questionId: 'q1', cellId: 'c1', verificationStatus: 'draft', reviewer: null, reviewedAt: null }).questionId,
+      record({ questionId: 'q1', cellId: 'c1', verificationStatus: 'draft', reviewer: null, reviewedAt: null, verifiedContentVersion: null }).questionId,
     ).toBe('q1');
   });
 
   it('refuses to mark demo material verified', () => {
     expect(() => record({ questionId: 'q1', cellId: 'c1', demo: true })).toThrow();
-    expect(record({ questionId: 'q1', cellId: 'c1', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null }).demo).toBe(true);
+    expect(record({ questionId: 'q1', cellId: 'c1', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null, verifiedContentVersion: null }).demo).toBe(true);
   });
 
   it('rejects a cell that is its own prerequisite and repeated levels', () => {
@@ -101,13 +103,20 @@ describe('what counts as coverage', () => {
     expect(countsAsVerifiedCoverage(target, record({ questionId: 'q1', cellId: 'c1' }))).toBe(true);
   });
 
+  it('rejects an item whose review is for an earlier version of its text', () => {
+    expect(countsAsVerifiedCoverage(target, record({ questionId: 'q-stale', cellId: 'c1', contentVersion: 3, verifiedContentVersion: 2 }))).toBe(false);
+    expect(countsAsVerifiedCoverage(target, record({ questionId: 'q-fresh', cellId: 'c1', contentVersion: 3, verifiedContentVersion: 3 }))).toBe(true);
+    expect(countsAsVerifiedCoverage(target, record({ questionId: 'q-never', cellId: 'c1', verifiedContentVersion: null }))).toBe(false);
+  });
+
   it('rejects demo, draft, archived, unreviewed and misfiled items', () => {
     const rejected: BlueprintQuestionRecord[] = [
-      record({ questionId: 'q2', cellId: 'c1', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null }),
+      record({ questionId: 'q2', cellId: 'c1', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null, verifiedContentVersion: null }),
       record({ questionId: 'q3', cellId: 'c1', status: 'draft' }),
       record({ questionId: 'q4', cellId: 'c1', status: 'archived' }),
-      record({ questionId: 'q5', cellId: 'c1', verificationStatus: 'author-checked', reviewer: null, reviewedAt: null }),
-      record({ questionId: 'q6', cellId: 'c1', verificationStatus: 'unverified', reviewer: null, reviewedAt: null, sourceType: 'template-generated' }),
+      record({ questionId: 'q5', cellId: 'c1', verificationStatus: 'author-checked', reviewer: null, reviewedAt: null, verifiedContentVersion: null }),
+      record({ questionId: 'q5b', cellId: 'c1', verificationStatus: 'pending-review', reviewer: null, reviewedAt: null, verifiedContentVersion: null }),
+      record({ questionId: 'q6', cellId: 'c1', verificationStatus: 'unverified', reviewer: null, reviewedAt: null, sourceType: 'template-generated', verifiedContentVersion: null }),
       record({ questionId: 'q7', cellId: 'c1', topicId: 'other-topic' }),
       record({ questionId: 'q8', cellId: 'c1', subject: 'physics' }),
       record({ questionId: 'q9', cellId: 'c1', difficulty: 5 }),
@@ -134,7 +143,7 @@ describe('coverage evaluation', () => {
   it('does not count demo content as coverage and says so', () => {
     const coverage = evaluateBlueprintCoverage(cells, [
       record({ questionId: 'q1', cellId: 'c1', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null }),
-      record({ questionId: 'q2', cellId: 'c1', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null }),
+      record({ questionId: 'q2', cellId: 'c1', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null, verifiedContentVersion: null }),
     ]);
     const first = coverage.cells.find((entry) => entry.cell.id === 'c1');
     expect(first?.totalItems).toBe(2);
@@ -304,7 +313,7 @@ describe('publication gate', () => {
   it('refuses a mock whose cell has only demo content', () => {
     const coverage = evaluateBlueprintCoverage(cells, [
       record({ questionId: 'q-c1', cellId: 'c1' }),
-      record({ questionId: 'q-c2', cellId: 'c2', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null }),
+      record({ questionId: 'q-c2', cellId: 'c2', demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null, verifiedContentVersion: null }),
     ]);
     const decision = canPublishExam(coverage, { subject: 'mathematics', mode: 'mock', cellIds: ['c1', 'c2'] });
     expect(decision.allowed).toBe(false);

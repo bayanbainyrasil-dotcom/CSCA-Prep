@@ -105,7 +105,17 @@ function toQuestionRecord(
     reviewedAt: typeof data.reviewedAt === "string" ? data.reviewedAt : null,
     correctAnswerLabel,
     knownLimitations: asString(data.knownLimitations),
+    contentVersion: typeof data.version === "number" ? data.version : 0,
+    verifiedContentVersion:
+      typeof data.verifiedContentVersion === "number" ? data.verifiedContentVersion : null,
   };
+}
+
+/** Reads one blueprint cell, or `undefined` when it does not exist. */
+export async function loadBlueprintCell(cellId: string): Promise<BlueprintCell | undefined> {
+  const snapshot = await db.collection(BLUEPRINT_COLLECTION).doc(cellId).get();
+  const data = snapshot.data();
+  return snapshot.exists && data ? toCell(snapshot.id, data) : undefined;
 }
 
 /** Reads the blueprint and the published bank, and recomputes coverage from them. */
@@ -245,16 +255,28 @@ export const setContentVerification = onCall(adminCallableOptions, async (reques
   const reviewedAt = new Date().toISOString();
   const reviewer = principal.email ?? principal.uid;
 
-  const previous = await db.runTransaction(async (transaction) => {
+  const outcome = await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(reference);
     if (!snapshot.exists) {
       throw new HttpsError("not-found", "That content does not exist.");
     }
     const data = snapshot.data() ?? {};
+    const contentVersion = typeof data.version === "number" ? data.version : 0;
+
     if (input.target === "question" && data.demo === true && verified) {
       throw new HttpsError(
         "failed-precondition",
         "Demo material cannot be marked verified. Publish a reviewed original item instead.",
+      );
+    }
+
+    // A review certifies a specific wording. If the item changed since the
+    // reviewer opened it, the approval is for text that no longer exists.
+    if (verified && input.contentVersion !== contentVersion) {
+      throw new HttpsError(
+        "aborted",
+        "This item changed since it was opened for review. Re-read the current version before approving it.",
+        { expected: input.contentVersion, actual: contentVersion },
       );
     }
 
@@ -264,28 +286,40 @@ export const setContentVerification = onCall(adminCallableOptions, async (reques
         verificationStatus: input.verificationStatus,
         reviewer: verified ? reviewer : null,
         reviewedAt: verified ? reviewedAt : null,
+        verifiedContentVersion: verified ? contentVersion : null,
         ...(input.sourceReference === undefined ? {} : { sourceReference: input.sourceReference }),
-        version: typeof data.version === "number" ? data.version + 1 : 1,
+        // Deliberately no version bump: recording a review is not a content change.
         updatedAt: reviewedAt,
         updatedBy: principal.uid,
         serverUpdatedAt: FieldValue.serverTimestamp(),
       },
       { merge: true },
     );
-    return typeof data.verificationStatus === "string" ? data.verificationStatus : "unverified";
+    return {
+      previous: typeof data.verificationStatus === "string" ? data.verificationStatus : "unverified",
+      contentVersion,
+    };
   });
+  const previous = outcome.previous;
 
   await writeAuditLog(principal.uid, "content.verification.changed", {
     target: input.target,
     targetId: input.targetId,
     from: previous,
     to: input.verificationStatus,
+    contentVersion: outcome.contentVersion,
     reviewer: verified ? reviewer : null,
     reviewedAt: verified ? reviewedAt : null,
     ...(input.note === undefined ? {} : { note: input.note }),
   });
 
-  return { targetId: input.targetId, verificationStatus: input.verificationStatus, reviewer: verified ? reviewer : null, reviewedAt: verified ? reviewedAt : null };
+  return {
+    targetId: input.targetId,
+    verificationStatus: input.verificationStatus,
+    reviewer: verified ? reviewer : null,
+    reviewedAt: verified ? reviewedAt : null,
+    verifiedContentVersion: verified ? outcome.contentVersion : null,
+  };
 });
 
 export interface BlueprintGateResult {

@@ -59,11 +59,22 @@ describe('blueprint authoring contract', () => {
 });
 
 describe('verification contract', () => {
-  const base = { target: 'question' as const, targetId: 'q1', verificationStatus: 'reviewer-verified' as const };
+  const base = {
+    target: 'question' as const,
+    targetId: 'q1',
+    verificationStatus: 'reviewer-verified' as const,
+    contentVersion: 3,
+  };
 
   it('takes only the target and the new status', () => {
     expect(SetContentVerificationSchema.safeParse(base).success).toBe(true);
     expect(SetContentVerificationSchema.safeParse({ ...base, sourceReference: 'Textbook chapter 4' }).success).toBe(true);
+  });
+
+  it('requires the content version the reviewer actually read', () => {
+    const withoutVersion: Record<string, unknown> = { ...base };
+    delete withoutVersion.contentVersion;
+    expect(SetContentVerificationSchema.safeParse(withoutVersion).success).toBe(false);
   });
 
   it('does not let the caller supply the reviewer or the review time', () => {
@@ -138,12 +149,22 @@ describe('question bank contract', () => {
     estimatedTime: 60,
     sourceType: 'original-csca-style' as const,
     sourceNote: 'Authored for CSCA Prep.',
+    cellId: 'cell-a',
+    questionType: 'single-step-calculation' as const,
   };
 
-  it('lets an import declare its blueprint cell and question type', () => {
-    expect(
-      QuestionSchema.safeParse({ ...baseQuestion, cellId: 'cell-a', questionType: 'single-step-calculation' }).success,
-    ).toBe(true);
+  it('accepts a question that names its blueprint cell and question type', () => {
+    expect(QuestionSchema.safeParse(baseQuestion).success).toBe(true);
+  });
+
+  it('refuses a question that answers no stated requirement', () => {
+    const withoutCell: Record<string, unknown> = { ...baseQuestion };
+    delete withoutCell.cellId;
+    expect(QuestionSchema.safeParse(withoutCell).success).toBe(false);
+
+    const withoutType: Record<string, unknown> = { ...baseQuestion };
+    delete withoutType.questionType;
+    expect(QuestionSchema.safeParse(withoutType).success).toBe(false);
   });
 
   it('does not let an import declare itself reviewed', () => {

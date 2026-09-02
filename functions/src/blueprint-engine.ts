@@ -21,10 +21,15 @@ export type BlueprintQuestionType =
 
 export type BlueprintExamMode = "diagnostic" | "practice" | "mock";
 
-/** `demo` and `draft` give generated placeholder material an honest home. */
+/**
+ * `demo` and `draft` give generated placeholder material an honest home, and
+ * `pending-review` is where authored content waits: it has passed the automatic
+ * checks but no human has read it, so it is not coverage.
+ */
 export type VerificationStatus =
   | "demo"
   | "draft"
+  | "pending-review"
   | "unverified"
   | "author-checked"
   | "reviewer-verified";
@@ -81,6 +86,10 @@ export interface BlueprintQuestionRecord {
   reviewedAt: string | null;
   correctAnswerLabel: string;
   knownLimitations: string;
+  /** Bumped by every content write. */
+  contentVersion: number;
+  /** The content version a reviewer actually read. */
+  verifiedContentVersion: number | null;
 }
 
 export function countsAsVerifiedCoverage(cell: BlueprintCell, item: BlueprintQuestionRecord): boolean {
@@ -91,11 +100,89 @@ export function countsAsVerifiedCoverage(cell: BlueprintCell, item: BlueprintQue
     item.verificationStatus === 'reviewer-verified' &&
     item.reviewer !== null &&
     item.reviewedAt !== null &&
+    // A review certifies the words a reviewer read. Editing the question after
+    // that leaves the record verified-looking but stale, so it stops counting
+    // until it has been reviewed again at its current version.
+    item.verifiedContentVersion !== null &&
+    item.verifiedContentVersion === item.contentVersion &&
     item.subject === cell.subject &&
     item.topicId === cell.topicId &&
     cell.questionTypes.includes(item.questionType) &&
     cell.difficultyLevels.includes(item.difficulty)
   );
+}
+
+export interface QuestionMappingDraft {
+  subject: BlueprintSubject;
+  topicId: string;
+  questionType: BlueprintQuestionType;
+  difficulty: number;
+  language: BlueprintLanguage;
+  /** The exam modes this item is intended for, when the author declares them. */
+  intendedModes?: BlueprintExamMode[];
+}
+
+export interface MappingProblem {
+  code: string;
+  message: string;
+}
+
+/**
+ * Checks that a question actually answers the requirement it claims.
+ *
+ * The server runs this on every import, so a mis-mapped item is refused rather
+ * than published and later reported as a coverage gap nobody can explain. The
+ * admin editor runs the same function to show the same messages before saving.
+ */
+export function validateQuestionAgainstCell(
+  cell: BlueprintCell | undefined,
+  draft: QuestionMappingDraft,
+  cellId: string,
+): MappingProblem[] {
+  if (!cell) {
+    return [{ code: "unknown-cell", message: `Blueprint cell ${cellId} does not exist.` }];
+  }
+
+  const problems: MappingProblem[] = [];
+  if (draft.subject !== cell.subject) {
+    problems.push({
+      code: "subject-mismatch",
+      message: `This cell covers ${cell.subject}, but the question is ${draft.subject}.`,
+    });
+  }
+  if (draft.topicId !== cell.topicId) {
+    problems.push({
+      code: "topic-mismatch",
+      message: `This cell covers topic ${cell.topicId}, but the question is filed under ${draft.topicId}.`,
+    });
+  }
+  if (!cell.questionTypes.includes(draft.questionType)) {
+    problems.push({
+      code: "question-type-not-allowed",
+      message: `This cell asks for ${cell.questionTypes.join(" or ")}, not ${draft.questionType}.`,
+    });
+  }
+  if (!cell.difficultyLevels.includes(draft.difficulty)) {
+    problems.push({
+      code: "difficulty-not-allowed",
+      message: `This cell asks for difficulty ${cell.difficultyLevels.join(" or ")}, not ${draft.difficulty}.`,
+    });
+  }
+  if (!cell.supportedLanguages.includes(draft.language)) {
+    problems.push({
+      code: "language-not-supported",
+      message: `This cell supports ${cell.supportedLanguages.join(", ")}, not ${draft.language}.`,
+    });
+  }
+  for (const mode of draft.intendedModes ?? []) {
+    if (!cell.allowedExamModes.includes(mode)) {
+      problems.push({
+        code: "mode-not-allowed",
+        message: `This cell is not allowed in ${mode} mode.`,
+      });
+    }
+  }
+  return problems;
 }
 
 export type CellCoverageStatus = 'covered' | 'partial' | 'unverified' | 'empty';

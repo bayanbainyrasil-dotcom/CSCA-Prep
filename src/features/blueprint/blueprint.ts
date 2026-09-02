@@ -29,6 +29,7 @@ export const BlueprintExamModeSchema = z.enum(['diagnostic', 'practice', 'mock']
 export const VerificationStatusSchema = z.enum([
   'demo',
   'draft',
+  'pending-review',
   'unverified',
   'author-checked',
   'reviewer-verified',
@@ -112,6 +113,8 @@ export const BlueprintQuestionRecordSchema = z
     reviewedAt: IsoField.nullable(),
     correctAnswerLabel: z.string().trim().min(1).max(32),
     knownLimitations: z.string().max(2_000).default(''),
+    contentVersion: z.number().int().nonnegative(),
+    verifiedContentVersion: z.number().int().nonnegative().nullable(),
   })
   .strict()
   .superRefine((item, context) => {

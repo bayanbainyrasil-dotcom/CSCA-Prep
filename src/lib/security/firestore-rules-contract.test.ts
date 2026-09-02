@@ -32,7 +32,7 @@ const CONTRACT_FRAGMENTS = {
   ],
   'keeps the blueprint and its verification server-owned': [
     "match /blueprintCells/{cellId} {\n      allow read: if signedIn();\n      allow write: if false;",
-    "'verificationStatus', 'reviewer', 'reviewedAt'",
+    "'verificationStatus', 'reviewer', 'reviewedAt', 'verifiedContentVersion'",
   ],
   'lets a mock be published only through the gated callable': [
     "match /examTemplates/{examTemplateId} {",

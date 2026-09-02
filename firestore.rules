@@ -447,13 +447,13 @@ service cloud.firestore {
         && validContentCreate()
         && !request.resource.data.keys().hasAny([
           'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes',
-          'verificationStatus', 'reviewer', 'reviewedAt'
+          'verificationStatus', 'reviewer', 'reviewedAt', 'verifiedContentVersion'
         ]);
       allow update: if isAdmin()
         && validContentUpdate()
         && !request.resource.data.keys().hasAny([
           'correctAnswer', 'solution', 'shortSolution', 'explanation', 'commonMistakes',
-          'verificationStatus', 'reviewer', 'reviewedAt'
+          'verificationStatus', 'reviewer', 'reviewedAt', 'verifiedContentVersion'
         ]);
       allow delete: if isAdmin();
     }

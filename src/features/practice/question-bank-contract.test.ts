@@ -28,6 +28,10 @@ const baseQuestion = {
   sourceType: 'template-generated',
   sourceNote: 'Original CSCA-style item generated from a reviewed template.',
   templateId: 'tpl-linear-equation-1',
+  // Blueprint linkage is required: an item that answers no stated requirement
+  // cannot be imported at all.
+  cellId: 'math-linear-isolate-unknown',
+  questionType: 'single-step-calculation',
 } as const;
 
 const withParameters = (templateParameters: Record<string, unknown>) =>

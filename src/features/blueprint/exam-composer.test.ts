@@ -62,6 +62,8 @@ function item(
     reviewedAt: REVIEWED_AT,
     correctAnswerLabel: 'a',
     knownLimitations: '',
+    contentVersion: 1,
+    verifiedContentVersion: 1,
     ...overrides,
   });
 }
@@ -123,9 +125,9 @@ describe('composeExam', () => {
 
   it('ignores demo, draft and unreviewed items entirely', () => {
     const unusable = [
-      item('demo-1', 'c1', { demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null }),
+      item('demo-1', 'c1', { demo: true, verificationStatus: 'demo', reviewer: null, reviewedAt: null, verifiedContentVersion: null }),
       item('draft-1', 'c1', { status: 'draft' }),
-      item('unreviewed-1', 'c1', { verificationStatus: 'author-checked', reviewer: null, reviewedAt: null }),
+      item('unreviewed-1', 'c1', { verificationStatus: 'pending-review', reviewer: null, reviewedAt: null, verifiedContentVersion: null }),
     ];
     const result = composeExam([cell('c1')], unusable, { ...spec, questionCount: 1 });
     expect(result.ok).toBe(false);

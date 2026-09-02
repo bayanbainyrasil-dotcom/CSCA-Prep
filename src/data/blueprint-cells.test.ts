@@ -184,6 +184,8 @@ describe('coverage of the seed as it stands today', () => {
         reviewedAt: null,
         correctAnswerLabel: 'a',
         knownLimitations: '',
+        contentVersion: 1,
+        verifiedContentVersion: null,
       }),
     ];
     const demoCoverage = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, demoBank);
@@ -239,6 +241,8 @@ describe('rejections the seed must keep enforcing', () => {
       reviewedAt: null,
       correctAnswerLabel: 'a',
       knownLimitations: '',
+      contentVersion: 1,
+      verifiedContentVersion: null,
     });
     const coverage = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, [stray]);
     expect(coverage.orphanQuestionIds).toEqual(['stray-1']);
@@ -264,6 +268,8 @@ describe('rejections the seed must keep enforcing', () => {
       reviewedAt: null,
       correctAnswerLabel: 'a',
       knownLimitations: '',
+      contentVersion: 1,
+      verifiedContentVersion: null,
     });
     const coverage = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, [misfiled]);
     expect(coverage.issues.some((issue) => issue.code === 'question-subject-mismatch')).toBe(true);

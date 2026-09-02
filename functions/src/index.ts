@@ -18,6 +18,8 @@ import {
   requireAuth,
   writeAuditLog,
 } from "./callable";
+import { validateQuestionAgainstCell } from "./blueprint-engine";
+import { loadBlueprintCell } from "./blueprint-callables";
 import { auth, db } from "./platform";
 import {
   BootstrapAdminSchema,
@@ -532,6 +534,37 @@ export const importQuestionBank = onCall(
     const input = parseInput(ImportQuestionBankSchema, request.data);
     await enforceRateLimit("importQuestionBank", principal.uid, 30, 60 * 60);
 
+    // Every item must answer a real requirement, and must actually fit it. This
+    // runs on a dry run too, so the editor reports the same refusal it would get
+    // on save rather than discovering it afterwards.
+    const cellIds = [...new Set(input.items.map((item) => item.question.cellId))];
+    const cells = new Map(
+      await Promise.all(
+        cellIds.map(async (cellId) => [cellId, await loadBlueprintCell(cellId)] as const),
+      ),
+    );
+    const mappingErrors = input.items.flatMap((item) => {
+      const problems = validateQuestionAgainstCell(
+        cells.get(item.question.cellId),
+        {
+          subject: item.question.subject,
+          topicId: item.question.topicId,
+          questionType: item.question.questionType,
+          difficulty: item.question.difficulty,
+          language: item.question.language,
+        },
+        item.question.cellId,
+      );
+      return problems.map((problem) => ({ id: item.id, ...problem }));
+    });
+    if (mappingErrors.length > 0) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Some questions do not match the blueprint cell they claim.",
+        { mappingErrors: mappingErrors.slice(0, 50) },
+      );
+    }
+
     if (input.dryRun) {
       return {
         dryRun: true,
@@ -568,6 +601,15 @@ export const importQuestionBank = onCall(
 
         const nextVersion = currentVersion + 1;
         const { prompt, privateSolution } = splitQuestion(item.question);
+        // A content write always resets verification: whatever a reviewer approved
+        // before, they did not approve this text. An import can never publish an
+        // item as verified.
+        const verification = {
+          verificationStatus: "pending-review" as const,
+          reviewer: null,
+          reviewedAt: null,
+          verifiedContentVersion: null,
+        };
         const common = {
           version: nextVersion,
           createdAt: snapshot.exists
@@ -581,7 +623,7 @@ export const importQuestionBank = onCall(
         };
         transaction.set(
           promptRefs[index]!,
-          { id: item.id, ...prompt, ...common },
+          { id: item.id, ...prompt, ...verification, ...common },
           { merge: false },
         );
         transaction.set(

@@ -150,23 +150,23 @@ export const QuestionSchema = z
     templateId: identifier.optional(),
     templateParameters: TemplateParametersSchema.optional(),
     /**
-     * Blueprint linkage. Verification fields are deliberately absent: an import
-     * cannot declare itself reviewed. Only `setContentVerification` writes those,
-     * and it stamps the reviewer and the time on the server.
+     * Blueprint linkage, required: a question that answers no stated requirement
+     * cannot be published, because it would be served to learners while measuring
+     * nothing. Verification fields are deliberately absent — an import cannot
+     * declare itself reviewed. Only `setContentVerification` writes those, and it
+     * stamps the reviewer and the time on the server.
      */
-    cellId: identifier.optional(),
-    questionType: z
-      .enum([
-        "concept-recognition",
-        "single-step-calculation",
-        "multi-step-calculation",
-        "formula-selection",
-        "unit-conversion",
-        "graph-reading",
-        "estimation",
-        "word-problem",
-      ])
-      .optional(),
+    cellId: identifier,
+    questionType: z.enum([
+      "concept-recognition",
+      "single-step-calculation",
+      "multi-step-calculation",
+      "formula-selection",
+      "unit-conversion",
+      "graph-reading",
+      "estimation",
+      "word-problem",
+    ]),
   })
   .strict()
   .superRefine((question, context) => {
@@ -385,10 +385,16 @@ export const SetContentVerificationSchema = z
     verificationStatus: z.enum([
       "demo",
       "draft",
+      "pending-review",
       "unverified",
       "author-checked",
       "reviewer-verified",
     ]),
+    /**
+     * The content version the reviewer actually read. Approving a version that is
+     * no longer current is refused, so an edit after review cannot inherit it.
+     */
+    contentVersion: z.number().int().nonnegative(),
     sourceReference: z.string().trim().max(500).optional(),
     note: safeText(1_000).optional(),
   })
