@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
 import { DRAFT_QUESTION_SEED } from '../functions/src/public-question-seed';
 
 /**
@@ -76,4 +77,45 @@ test('the administrator import panel is unreachable without a trusted deployment
 
   await expect(page.getByRole('heading', { name: 'Import in one step' })).toHaveCount(0);
   await expect(page.getByLabel(/Question file \(JSON/)).toHaveCount(0);
+});
+
+/** The app shell only renders for a signed-in learner, so seed the local session. */
+async function seedLocalSession(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const key = 'csca-local-session-v2';
+    if (localStorage.getItem(key)) return;
+    const now = new Date();
+    const target = new Date(now.getTime() + 84 * 86_400_000).toISOString().slice(0, 10);
+    localStorage.setItem(key, JSON.stringify({
+      uid: 'demo-local-user',
+      name: 'Nurasyl',
+      email: '',
+      role: 'user',
+      onboardingCompleted: true,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+      targetDate: target,
+      preferredLanguage: 'en-ru',
+      profileVersion: 1,
+      settings: {},
+      createdAt: now.toISOString(),
+      lastActiveAt: now.toISOString(),
+    }));
+  });
+}
+
+test('a keyboard user reaches main content with one keystroke', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'Focus order is checked once.');
+  await seedLocalSession(page);
+  await page.goto('/');
+  await page.waitForLoadState('networkidle');
+
+  await page.keyboard.press('Tab');
+  const skip = page.getByRole('link', { name: /Skip to main content/i });
+  await expect(skip).toBeFocused();
+  // Hidden until focused, then visible: the link must not clutter the page.
+  await expect(skip).toBeInViewport();
+
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#main-content$/);
+  await expect(page.locator('main#main-content')).toBeVisible();
 });

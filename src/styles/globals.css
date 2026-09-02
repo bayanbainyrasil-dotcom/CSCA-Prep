@@ -97,6 +97,23 @@
   .data-label { @apply font-mono text-[0.67rem] font-medium uppercase tracking-[0.15em] text-muted-foreground; }
   .glass-panel { @apply border border-white/30 bg-card/80 backdrop-blur-xl dark:border-white/[0.06]; }
   .tap-target { min-height: 44px; min-width: 44px; }
+  .skip-link {
+    position: absolute;
+    left: 0.75rem;
+    top: -3rem;
+    z-index: 100;
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    border-radius: 0.75rem;
+    background: hsl(var(--primary));
+    color: hsl(var(--primary-foreground));
+    padding: 0 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: top 150ms ease;
+  }
+  .skip-link:focus-visible, .skip-link:focus { top: 0.75rem; }
   .scrollbar-none { scrollbar-width: none; }
   .scrollbar-none::-webkit-scrollbar { display: none; }
 }

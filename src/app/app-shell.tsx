@@ -12,6 +12,9 @@ export function AppShell() {
 
   return (
     <div className="min-h-dvh">
+      {/* First in the tab order, hidden until focused: it lets a keyboard user
+          pass the sidebar and the header in one keystroke. */}
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <Sidebar onSearch={openSearch} />
       <AppHeader onSearch={openSearch} />
       <main id="main-content" className="px-4 pb-28 pt-5 sm:px-6 sm:pt-7 lg:ml-[258px] lg:px-8 lg:pb-12">
