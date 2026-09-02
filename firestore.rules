@@ -463,6 +463,14 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Import bookkeeping. A client that could write one of these records could
+    // make the server believe a batch had already been applied, or make it
+    // re-apply one; a client that could read them learns which content exists.
+    // Only the trusted callables touch this collection.
+    match /_importBatches/{batchId} {
+      allow read, write: if false;
+    }
+
     // The curriculum blueprint is readable by any signed-in learner so the app can
     // explain what a topic requires, but only the trusted callables write it:
     // verification status, reviewer and review date are server-stamped facts, and

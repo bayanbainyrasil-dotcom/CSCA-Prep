@@ -41,6 +41,9 @@ const CONTRACT_FRAGMENTS = {
   'keeps private solutions unreadable from any client': [
     'match /questionSolutions/{questionId} {\n      allow read: if isAdmin();\n      allow write: if false;',
   ],
+  'keeps import bookkeeping entirely off the client': [
+    'match /_importBatches/{batchId} {\n      allow read, write: if false;',
+  ],
 } as const;
 
 describe('mock exam Firestore source contract', () => {
