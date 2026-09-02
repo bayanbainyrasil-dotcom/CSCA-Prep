@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import * as Switch from '@radix-ui/react-switch';
-import { Check, Download, LoaderCircle, Moon, RotateCcw, Save, Sun } from 'lucide-react';
+import { AlertTriangle, Check, Download, LoaderCircle, Moon, RotateCcw, Save, Sun, Trash2 } from 'lucide-react';
 import { httpsCallable } from 'firebase/functions';
 import { toast } from 'sonner';
 import { z } from 'zod';
@@ -66,13 +66,16 @@ function downloadJson(value: unknown, name: string) {
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
-  const { user, isDemo, updateSessionProfile } = useAuth();
+  const { user, isDemo, reauthenticate, updateSessionProfile } = useAuth();
   const updateSettings = useAppStore((state) => state.updateSettings);
   const setProfile = useAppStore((state) => state.setProfile);
   const [settings, setSettings] = useState<SettingsState>(() => initialSettings(user));
   const [resetOpen, setResetOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleting, setDeleting] = useState<'reauthenticating' | 'deleting' | null>(null);
   const [resetting, setResetting] = useState(false);
   const update = <K extends keyof SettingsState>(key: K, value: SettingsState[K]) => setSettings((current) => ({ ...current, [key]: value }));
 
@@ -148,6 +151,31 @@ export default function SettingsPage() {
     }
   };
 
+  /**
+   * Deleting an account is irreversible, so it asks for three separate things:
+   * the word DELETE typed out, a fresh sign-in proving it is the account holder,
+   * and only then the server call. The server checks the sign-in freshness
+   * itself from the token, so this client step cannot be skipped by a caller.
+   */
+  const deleteAccount = async () => {
+    if (!user || deleting || deleteConfirmation !== 'DELETE') return;
+    try {
+      setDeleting('reauthenticating');
+      await reauthenticate();
+      setDeleting('deleting');
+      const call = httpsCallable(functions!, 'deleteMyAccount');
+      await call({ confirmation: 'DELETE' });
+      await clearLocalUserData(user.uid);
+      localStorage.clear();
+      toast.success('Your account and all its data were deleted.');
+      window.location.replace('/');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The account could not be deleted.';
+      toast.error(message);
+      setDeleting(null);
+    }
+  };
+
   const reset = async () => {
     if (!user || resetting) return;
     setResetting(true);
@@ -197,8 +225,36 @@ export default function SettingsPage() {
       <Card><CardContent className="p-5 sm:p-6"><h2 className="font-display text-xl font-semibold">Study plan</h2><div className="mt-5 grid gap-5 sm:grid-cols-2"><div><FieldLabel htmlFor="target-date">Target CSCA date</FieldLabel><Input id="target-date" type="date" min={user ? dateKeyInTimezone(new Date(), user.timezone) : undefined} value={settings.targetDate} onChange={(event) => update('targetDate', event.target.value)} /><p className="mt-2 text-xs text-muted-foreground">Use the date shown on your exam registration.</p></div><div><FieldLabel htmlFor="daily-minutes">Daily study target</FieldLabel><select id="daily-minutes" value={settings.dailyMinutes} onChange={(event) => update('dailyMinutes', Number(event.target.value))} className="tap-target w-full rounded-xl border bg-card px-3.5 text-sm"><option value="45">45 minutes</option><option value="60">60 minutes</option><option value="90">90 minutes</option><option value="120">2 hours</option><option value="180">3 hours</option></select></div><div><FieldLabel htmlFor="language">Explanation language</FieldLabel><select id="language" value={settings.language} onChange={(event) => update('language', event.target.value as SettingsState['language'])} className="tap-target w-full rounded-xl border bg-card px-3.5 text-sm"><option value="en-ru">English + Russian</option><option value="en">English</option><option value="ru">Russian</option></select></div><div><FieldLabel htmlFor="difficulty">Preferred difficulty · {settings.difficulty}/5</FieldLabel><input id="difficulty" className="mt-3 w-full accent-primary" type="range" min="1" max="5" value={settings.difficulty} onChange={(event) => update('difficulty', Number(event.target.value))} /></div></div></CardContent></Card>
       <Card><CardContent className="p-5 sm:p-6"><h2 className="font-display text-xl font-semibold">Date &amp; time</h2><p className="mt-2 text-sm leading-relaxed text-muted-foreground">This follows your device timezone automatically when the app opens or returns to the foreground. No GPS permission is needed.</p><LocalTimeStatus className="mt-5" timezone={user?.timezone ?? 'UTC'} /></CardContent></Card>
       <Card><CardContent className="p-5 sm:p-6"><h2 className="font-display text-xl font-semibold">Experience</h2><div className="mt-5 space-y-1">{([['sound', 'Sound effects', 'Subtle answer feedback'], ['animations', 'Animations', 'Fast page and progress motion'], ['reminders', 'Study reminders', 'Only after notification permission']] as const).map(([key, label, description]) => <div key={key} className="flex items-center gap-4 rounded-xl p-3 hover:bg-secondary/50"><div className="flex-1"><p className="text-sm font-semibold">{label}</p><p className="text-xs text-muted-foreground">{description}</p></div><Switch.Root aria-label={label} checked={settings[key]} onCheckedChange={(value) => update(key, value)} className="relative h-7 w-12 rounded-full bg-secondary data-[state=checked]:bg-primary"><Switch.Thumb className="block h-5 w-5 translate-x-1 rounded-full bg-white shadow transition-transform data-[state=checked]:translate-x-6" /></Switch.Root></div>)}</div></CardContent></Card>
-      <Card><CardContent className="p-5 sm:p-6"><h2 className="font-display text-xl font-semibold">Data</h2><div className="mt-5 flex flex-wrap gap-2"><Button variant="outline" disabled={exporting} onClick={() => void exportData()}>{exporting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{exporting ? 'Exporting…' : 'Export my data'}</Button><Button variant="danger" onClick={() => setResetOpen(true)}><RotateCcw className="h-4 w-4" />Reset progress</Button></div></CardContent></Card>
+      <Card><CardContent className="p-5 sm:p-6"><h2 className="font-display text-xl font-semibold">Data</h2><div className="mt-5 flex flex-wrap gap-2"><Button variant="outline" disabled={exporting} onClick={() => void exportData()}>{exporting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}{exporting ? 'Exporting…' : 'Export my data'}</Button><Button variant="danger" onClick={() => setResetOpen(true)}><RotateCcw className="h-4 w-4" />Reset progress</Button>{isDemo ? null : <Button variant="danger" onClick={() => { setDeleteConfirmation(''); setDeleteOpen(true); }}><Trash2 className="h-4 w-4" />Delete my account</Button>}</div><p className="mt-4 text-xs leading-relaxed text-muted-foreground">Reset clears your learning progress and keeps your account. Deleting your account removes your profile, every record listed in the export, any files you uploaded, and the sign-in itself. Neither can be undone.</p></CardContent></Card>
     </div><aside className="lg:col-span-4"><Card className="sticky top-24"><CardContent className="p-5 sm:p-6"><h2 className="font-display text-xl font-semibold">Appearance</h2><div className="mt-4 grid grid-cols-3 gap-2">{([['system', 'System', Check], ['light', 'Light', Sun], ['dark', 'Dark', Moon]] as const).map(([value, label, Icon]) => <button key={value} onClick={() => setTheme(value)} className={`rounded-xl border p-3 text-center text-xs font-bold ${theme === value ? 'border-primary bg-primary/[0.06] text-primary' : 'text-muted-foreground'}`}><Icon className="mx-auto mb-2 h-4 w-4" />{label}</button>)}</div><Button className="mt-6 w-full" onClick={() => void save()} disabled={saving}><Save className="h-4 w-4" />{saving ? 'Saving…' : 'Save settings'}</Button></CardContent></Card></aside></div>
     <Dialog open={resetOpen} onOpenChange={setResetOpen}><DialogContent title="Reset all learning progress?" description="Lessons, attempts, mastery, mistakes and mock history will be deleted. Your account stays active."><p className="text-sm leading-relaxed text-muted-foreground">Export your data first if you may need it later. This action cannot be undone.</p><div className="mt-6 flex justify-end gap-2"><Button variant="outline" disabled={resetting} onClick={() => setResetOpen(false)}>Cancel</Button><Button variant="danger" disabled={resetting} onClick={() => void reset()}>{resetting ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />}{resetting ? 'Resetting…' : 'Reset progress'}</Button></div></DialogContent></Dialog>
+    <Dialog open={deleteOpen} onOpenChange={(open) => { if (deleting === null) setDeleteOpen(open); }}>
+      <DialogContent title="Delete your account?" description="Your profile, your study data and any files you uploaded are permanently removed, and you are signed out.">
+        <p className="flex gap-2 text-sm leading-relaxed text-destructive" role="alert">
+          <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+          This cannot be undone. Export your data first if you may want it.
+        </p>
+        <div className="mt-5">
+          <FieldLabel htmlFor="delete-confirmation">Type DELETE to confirm</FieldLabel>
+          <Input
+            id="delete-confirmation"
+            value={deleteConfirmation}
+            autoComplete="off"
+            onChange={(event) => setDeleteConfirmation(event.target.value.trim().toUpperCase())}
+            aria-describedby="delete-confirmation-help"
+          />
+          <p id="delete-confirmation-help" className="mt-2 text-xs text-muted-foreground">
+            You will be asked to sign in again first, so nobody else using this device can delete your account.
+          </p>
+        </div>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button variant="outline" disabled={deleting !== null} onClick={() => setDeleteOpen(false)}>Cancel</Button>
+          <Button variant="danger" disabled={deleting !== null || deleteConfirmation !== 'DELETE'} onClick={() => void deleteAccount()}>
+            {deleting !== null ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            {deleting === 'reauthenticating' ? 'Confirming it is you…' : deleting === 'deleting' ? 'Deleting…' : 'Delete my account'}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   </div>;
 }

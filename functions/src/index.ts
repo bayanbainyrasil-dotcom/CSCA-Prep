@@ -6,6 +6,7 @@ import type {
   Query,
   QueryDocumentSnapshot,
 } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { logger } from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
@@ -24,6 +25,7 @@ import { auth, db } from "./platform";
 import {
   BootstrapAdminSchema,
   ClassifyMistakeSchema,
+  DeleteMyAccountSchema,
   EnsureUserProfileSchema,
   ExportMyDataSchema,
   ExportQuestionBankSchema,
@@ -1092,5 +1094,79 @@ export const resetMyProgress = onCall(
       reset: true,
       preserved: ["Firebase Auth account", `users/${principal.uid}`],
     };
+  },
+);
+
+/** How recently the caller must have signed in for account deletion to proceed. */
+const REAUTHENTICATION_WINDOW_SECONDS = 5 * 60;
+
+/**
+ * Deletes the caller's own account: their study data, their profile, their
+ * uploaded files and their Firebase Auth user.
+ *
+ * Three things guard it. The caller types the word DELETE, so a stray click
+ * cannot do this. The sign-in must be recent, checked from `auth_time` in the
+ * verified token rather than from anything the client says — a session left
+ * open on a shared machine cannot delete the account. And the Auth user is
+ * removed last, so a failure part-way leaves an account that can sign in and
+ * try again rather than orphaned data with no owner.
+ */
+export const deleteMyAccount = onCall(
+  {
+    ...sensitiveCallableOptions,
+    timeoutSeconds: 540,
+    memory: "512MiB",
+    maxInstances: 5,
+  },
+  async (request) => {
+    const principal = requireAuth(request);
+    parseInput(DeleteMyAccountSchema, request.data);
+    await enforceRateLimit("deleteMyAccount", principal.uid, 5, 60 * 60);
+
+    const authTime = principal.token.auth_time;
+    const signedInAt = typeof authTime === "number" ? authTime : 0;
+    const secondsSinceSignIn = Math.floor(Date.now() / 1_000) - signedInAt;
+    if (signedInAt === 0 || secondsSinceSignIn > REAUTHENTICATION_WINDOW_SECONDS) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Sign in again to confirm it is you, then delete the account.",
+        { code: "reauthentication-required", windowSeconds: REAUTHENTICATION_WINDOW_SECONDS },
+      );
+    }
+
+    const userRef = db.collection("users").doc(principal.uid);
+    for (let index = 0; index < USER_PROGRESS_COLLECTIONS.length; index += 3) {
+      const group = USER_PROGRESS_COLLECTIONS.slice(index, index + 3);
+      await Promise.all(
+        group.map((collectionName) => db.recursiveDelete(userRef.collection(collectionName))),
+      );
+    }
+    // recursiveDelete on the document removes the profile and any subcollection
+    // added since this list was written, so nothing is left behind by omission.
+    await db.recursiveDelete(userRef);
+
+    let filesDeleted = 0;
+    try {
+      const [files] = await getStorage()
+        .bucket()
+        .getFiles({ prefix: `users/${principal.uid}/` });
+      await Promise.all(files.map((file) => file.delete()));
+      filesDeleted = files.length;
+    } catch (cause) {
+      // A storage failure must not leave the account half-deleted with no way
+      // to retry, so it is recorded and the deletion continues.
+      logger.warn("account deletion: storage cleanup failed", { uid: principal.uid, cause: String(cause) });
+    }
+
+    // Counts and the uid only: nothing a learner wrote reaches the audit trail.
+    await auditWithoutBreakingRequest(principal.uid, "account.deleted", {
+      collections: USER_PROGRESS_COLLECTIONS.length,
+      filesDeleted,
+    });
+
+    // Last, and after the data: an account that can still sign in can retry.
+    await auth.deleteUser(principal.uid);
+
+    return { deleted: true, filesDeleted };
   },
 );

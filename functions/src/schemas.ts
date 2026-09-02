@@ -539,4 +539,15 @@ export const ResetMyProgressSchema = z
   })
   .strict();
 
+/**
+ * Account deletion is irreversible, so the caller types the word rather than
+ * clicking once. The freshness of the sign-in is checked server-side from the
+ * token, not asserted by the caller.
+ */
+export const DeleteMyAccountSchema = z
+  .object({
+    confirmation: z.literal("DELETE"),
+  })
+  .strict();
+
 export type QuestionInput = z.infer<typeof QuestionSchema>;

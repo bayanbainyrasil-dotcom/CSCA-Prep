@@ -36,6 +36,8 @@ interface AuthContextValue {
   loading: boolean;
   isDemo: boolean;
   signIn: () => Promise<void>;
+  /** Re-proves it is the account holder, for an irreversible action. */
+  reauthenticate: () => Promise<void>;
   signOutUser: () => Promise<void>;
   completeOnboarding: (input: OnboardingInput) => Promise<void>;
   updateSessionProfile: (profile: UserProfile) => void;
@@ -427,6 +429,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  /**
+   * Signs the same account in again so the ID token carries a fresh `auth_time`.
+   * The server reads that claim, so a session left open on a shared machine
+   * cannot delete an account without the owner proving who they are.
+   */
+  const reauthenticate = useCallback(async () => {
+    if (!auth) throw new Error('Re-authentication needs a configured Firebase deployment.');
+    const { GoogleAuthProvider, reauthenticateWithPopup } = await import('firebase/auth');
+    const current = auth.currentUser;
+    if (!current) throw new Error('Sign in first.');
+    await reauthenticateWithPopup(current, new GoogleAuthProvider());
+    // Force a refresh so the next callable carries the new auth_time.
+    await current.getIdToken(true);
+  }, []);
+
   const signOutUser = useCallback(async () => {
     if (!auth) {
       setUser(readLocalSession());
@@ -440,8 +457,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const value = useMemo(
-    () => ({ user, loading, isDemo: !isFirebaseConfigured, signIn, signOutUser, completeOnboarding, updateSessionProfile }),
-    [completeOnboarding, loading, signIn, signOutUser, updateSessionProfile, user],
+    () => ({ user, loading, isDemo: !isFirebaseConfigured, signIn, reauthenticate, signOutUser, completeOnboarding, updateSessionProfile }),
+    [completeOnboarding, loading, reauthenticate, signIn, signOutUser, updateSessionProfile, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
