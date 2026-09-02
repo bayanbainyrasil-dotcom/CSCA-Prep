@@ -11,9 +11,9 @@ Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe
 Phase A is code-complete and verified locally but cannot be finished: pushing is
 externally blocked, so CI, GitHub Pages and the live asset hash cannot be confirmed.
 Work continued on Phase D (server-authoritative mock), Phase F (plan start date and missed
-days) and Phase G (real personalization and persistent trainer progress) and Phase E1-E5 (the
-curriculum blueprint, its server gate and the admin coverage dashboard), none of which
-needs credentials.
+days), Phase G (real personalization and persistent trainer progress) and Phase E1-E8 (the
+curriculum blueprint, its server gate, the admin coverage dashboard, the authored slice and
+the one-step content import), none of which needs credentials.
 
 ## Last Completed
 
@@ -138,21 +138,48 @@ Not blocked: Phase D is code-complete. See "Next Exact Task".
 
 ## Next Exact Task
 
-**Resume here.** E7 is complete in code. The next step needs a person, not a commit.
+**Resume here. E8 is complete in code. The next step needs a person, not a commit.**
 
-**A human must review the 17 authored questions.** They exist as drafts in
-`src/data/draft-questions.ts`; their arithmetic is independently verified by
-`src/data/draft-questions.test.ts`, but no human has read them, so none is verified and
-coverage is still 0 of 105. Claude deliberately did not mark its own questions reviewed:
-`setContentVerification` stamps the reviewer from the authenticated caller, so approving
-them here would mean fabricating a reviewer.
+**A human must review the 17 authored questions.** Importing them is now one guided
+sequence rather than 17 manual forms, but no human has read any of them, so none is
+verified and coverage is still 0 of 105. Claude deliberately did not mark its own questions
+reviewed: `setContentVerification` stamps the reviewer from the authenticated caller, so
+approving them here would mean fabricating a reviewer.
 
 What the person does, once a Firebase deployment and an administrator account exist:
-open Admin, upload the 105 draft blueprint cells, import the 17 items through the editor
-(or an import script built from `DRAFT_QUESTION_SEED`), then read each packet in the review
-queue and approve the version shown. The six cells under `math-foundation` and
-`math-linear` then turn covered, and a mock built from exactly those six can be published.
-Everything else stays refused.
+
+1. Open Admin. The import panel runs a dry run first and writes nothing until confirmed.
+2. Import the blueprint draft (105 cells, all stored `draft`, no reviewer).
+3. Import the public practice seed (17 items, all stored `pending-review`, no reviewer).
+4. Read each packet in the review queue and approve the exact version shown.
+
+The six cells under `math-foundation` and `math-linear` then turn covered **for practice**.
+They do not turn covered for a mock, and no approval can change that — see the next section.
+
+### The 17 seed questions are public, permanently
+
+Their `correctAnswer`, `solution` and `shortSolution` are committed to this public
+repository and are in its Git history. Anyone can read them. Moving the file into
+`functions/src` was the right place for it, but it does not unpublish what Git already
+shows, and this file will not pretend otherwise.
+
+The consequence is enforced in code, not merely documented:
+
+- The public seed import marks every item `publicAnswerKey: true` and sets
+  `allowedModes: ["practice"]`.
+- `countsAsVerifiedCoverage` refuses a `publicAnswerKey` item whenever the mode is `mock`,
+  however thoroughly a human reviewed it.
+- The coverage report exposes `publicKeyItems` and `excludedForMode`, and the cell reason
+  says the key is published rather than implying a missing review.
+
+**A confidential production mock therefore needs questions that have never been published.**
+Those arrive through `importPrivateQuestions`: an administrator's own JSON file, chosen in
+the browser, parsed in the tab, sent straight to the server and split there — prompt and
+options to `questions`, and `correctAnswer`, `solution`, `shortSolution`, `explanation` and
+`commonMistakes` to `questionSolutions`, which no learner can read. The file is never put in
+React state, never written to `localStorage`, IndexedDB or a cache, never logged and never
+committed. `docs/examples/private-question-import.example.json` shows the shape with
+obviously fake content.
 
 Coverage today: **0 of 105 cells covered**, 46 Mathematics and 59 Physics, because no
 reviewer-verified question exists. `publishMockExam` and `startMockExam` both refuse with
@@ -401,6 +428,55 @@ Limitations of this run:
   empty keys and keys longer than 120 characters are newly rejected. No stored data migration is
   required — no persisted question in the seed content uses such keys.
 
+## E8 — one-step content import (this batch)
+
+Verified locally on `f7fe7df`. Commands run separately, results as observed:
+
+| Command | Result |
+| --- | --- |
+| `pnpm typecheck` | pass |
+| `pnpm lint` (`--max-warnings 0`) | pass |
+| `pnpm test` | 40 files, 422 tests, pass |
+| `pnpm build` | pass, 14 precache entries (361.48 KiB) |
+| `functions: npm run typecheck` | pass |
+| `functions: npm run build` | pass |
+| `node scripts/check-bundle-secrets.mjs` | pass — 81 files scanned, 34 solution strings absent |
+| `playwright --project=desktop` | 14 passed, 3 skipped |
+| `playwright --project=iphone` | 4 passed, rest skipped by design |
+| `playwright --project=ipad` | 3 passed, rest skipped by design |
+
+Playwright ran with `PLAYWRIGHT_CHROMIUM_PATH` pointed at the Chromium already on this
+machine, because the browser build Playwright expects cannot be downloaded here. That means
+the phone and tablet projects exercised their viewport and input profile **on Chromium, not
+on real WebKit**. CI still installs and uses WebKit; this is a sandbox fallback and is
+recorded as weaker evidence, not as a WebKit pass.
+
+What the import guarantees, each backed by a test that runs the deployed handler against an
+in-memory Firestore (`src/features/blueprint/import-callables.test.ts`):
+
+- An anonymous caller is refused `unauthenticated`; a signed-in learner is refused
+  `permission-denied`; all three callables set `enforceAppCheck` and `consumeAppCheckToken`.
+- A dry run writes no content, no batch record and no audit entry.
+- A repeated batch id returns `alreadyApplied` and writes nothing again; a fresh batch id
+  over unchanged content reports 105 unchanged and leaves every version at 1.
+- A stale `expectedVersion` is refused `aborted` and the stored item is byte-identical after.
+- One unmappable item blocks the entire batch: neither item is written and no batch record
+  is created.
+- Nothing imported carries a reviewer, a review date or a verified status.
+- The private path leaves no answer, solution, explanation or common mistake in the
+  readable document, and the audit log contains none of them either.
+- `exportQuestionBank` — the review queue — returns all 17 items, every one `pending-review`.
+
+Leak surfaces, checked separately:
+
+- No shipped source imports a seed; the two `src/data` re-exports are imported by tests only.
+- The admin surface references no `localStorage`, `sessionStorage`, `indexedDB`, `caches`,
+  `document.cookie`, console method or analytics sink.
+- The service worker precaches `css,html,ico,png,svg` only and caches at runtime by
+  `request.destination`, so a callable response (empty destination) is never stored.
+- `e2e/content-privacy.spec.ts` scans everything the real browser downloaded and everything
+  the service worker cached after a warm load for the seed solutions, and finds none.
+
 ## Files Changed This Batch
 
 `a74916a`:
@@ -502,10 +578,15 @@ Limitations of this run:
 
 Unblocked work, in order:
 
-1. E8 — a one-step import of `DRAFT_QUESTION_SEED`, so a reviewer is not retyping 17 items.
-2. Human review of those 17 items (see "Next Exact Task"), which is what turns the first
-   six cells covered.
-2. Extend the explanation language beyond the vocabulary trainer to lessons, practice
+1. Human review of the 17 imported items (see "Next Exact Task"), which is what turns the
+   first six cells covered **for practice**. It cannot turn them covered for a mock: their
+   answers are public.
+2. AI0 — the AI tutor groundwork with no real key: provider interface, strict schemas, a
+   fake provider, a feature flag off by default, quotas, a cache, and evaluation plus
+   anti-answer-leak tests.
+3. Author or import private production questions for a confidential mock, through
+   `importPrivateQuestions`. Until then no mock can be published from reviewed content.
+4. Extend the explanation language beyond the vocabulary trainer to lessons, practice
    feedback and formula copy, with the same stated fallback.
 3. Phase I — privacy policy, terms, retention, data export and account deletion, before any
    real student uses the app.
