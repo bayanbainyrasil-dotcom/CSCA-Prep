@@ -108,6 +108,7 @@ function toQuestionRecord(
     contentVersion: typeof data.version === "number" ? data.version : 0,
     verifiedContentVersion:
       typeof data.verifiedContentVersion === "number" ? data.verifiedContentVersion : null,
+    publicAnswerKey: data.publicAnswerKey === true,
   };
 }
 
@@ -185,6 +186,8 @@ export const getBlueprintCoverage = onCall(adminCallableOptions, async (request)
       totalItems: entry.totalItems,
       verifiedItems: entry.verifiedItems,
       demoItems: entry.demoItems,
+      publicKeyItems: entry.publicKeyItems,
+      excludedForMode: entry.excludedForMode,
       languages: entry.languages,
       missingLanguages: entry.missingLanguages,
       missingDifficulties: entry.missingDifficulties,
@@ -341,7 +344,9 @@ export async function assertExamIsPublishable(input: {
   seed: string;
 }): Promise<BlueprintGateResult> {
   const { cells, items } = await loadBlueprintState();
-  const coverage = evaluateBlueprintCoverage(cells, items);
+  // The report is computed for the mode being published, so an item whose answer
+  // key is public cannot secure a confidential mock.
+  const coverage = evaluateBlueprintCoverage(cells, items, { mode: input.mode });
   const decision = canPublishExam(coverage, {
     subject: input.subject,
     mode: input.mode,

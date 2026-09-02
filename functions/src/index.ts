@@ -55,6 +55,14 @@ export {
   upsertBlueprintCell,
 } from "./blueprint-callables";
 
+// Content import: blueprint requirements, the public practice seed, and an
+// administrator's private production file.
+export {
+  importBlueprintDraft,
+  importPrivateQuestions,
+  importPublicQuestionSeed,
+} from "./import-callables";
+
 const standardCallableOptions = {
   enforceAppCheck: true,
   cors: true,

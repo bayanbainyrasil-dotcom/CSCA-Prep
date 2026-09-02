@@ -430,6 +430,59 @@ export const PublishMockExamSchema = z
     }
   });
 
+const importBatchFields = {
+  /** Stable per attempt, so re-running the same batch is a no-op. */
+  batchId: identifier,
+  dryRun: z.boolean(),
+};
+
+export const ImportBlueprintDraftSchema = z
+  .object({ ...importBatchFields, seedVersion: z.string().trim().min(1).max(64) })
+  .strict();
+
+/**
+ * The caller names which server-held seed to import and at which version. It
+ * cannot send the content, a verification status, a reviewer or a coverage
+ * count: the server reads its own copy.
+ */
+export const ImportPublicQuestionSeedSchema = z
+  .object({ ...importBatchFields, seedVersion: z.string().trim().min(1).max(64) })
+  .strict();
+
+/**
+ * Confidential content an administrator holds locally. The answer key and the
+ * solution travel in this payload and are split server-side: only the prompt is
+ * written to `questions`, and the key and solution go to `questionSolutions`,
+ * which no learner can read.
+ */
+export const ImportPrivateQuestionsSchema = z
+  .object({
+    ...importBatchFields,
+    items: z
+      .array(
+        z
+          .object({
+            id: identifier,
+            expectedVersion: z.number().int().nonnegative().optional(),
+            question: QuestionSchema,
+          })
+          .strict(),
+      )
+      .min(1)
+      .max(100),
+  })
+  .strict()
+  .superRefine((input, context) => {
+    const ids = input.items.map((item) => item.id);
+    if (new Set(ids).size !== ids.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["items"],
+        message: "Question IDs must be unique within one import.",
+      });
+    }
+  });
+
 export const StartMockExamSchema = z
   .object({
     mockExamId: identifier,
