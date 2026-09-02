@@ -1,8 +1,8 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-02 09:05 +05:00
+Last updated: 2026-09-02 09:40 +05:00
 Branch: `main`
-Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, `b9c1ccc`, `f08a39e`, `8111394`, `e47c9e2`, `840a6c4`, `83c8948`, and this documentation commit — see "Deployment Status".
+Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, `b9c1ccc`, `f08a39e`, `8111394`, `e47c9e2`, `840a6c4`, `83c8948`, `c503edf`, `ed1e212`, `2b7f5d9`, and this documentation commit — see "Deployment Status".
 Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492`
 Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
 
@@ -35,7 +35,7 @@ published site is older than `origin/main`:
 
 Then Phase D, the server-authoritative mock, in two commits:
 
-Then Phase E, the curriculum blueprint, in four commits:
+Then Phase E, the curriculum blueprint, in six commits:
 
 9.  **`f08a39e` — model and validator.** `BlueprintCell` (subject, module, topic, skill,
     micro-skill, prerequisites, difficulty levels, question types, minimum verified items,
@@ -54,6 +54,21 @@ Then Phase E, the curriculum blueprint, in four commits:
     the gate rather than trusting publication time. Rules: `blueprintCells` is
     client-write-denied, `examTemplates` is write-denied even for admins so publication must
     go through the gate, and `questions` writes refuse verification fields.
+14. **`2b7f5d9` — first authored slice and human review.** 17 original CSCA-style draft items
+    covering the six `math-foundation` and `math-linear` cells at their stated minimums,
+    difficulties and question types, each with an English prompt, a Russian rendering, a
+    worked solution, a short solution and a named mistake behind every distractor. Their
+    answers are recomputed independently in the tests. The admin editor now picks the
+    blueprint cell first through a searchable, module-grouped list and restricts difficulty,
+    type and language to what the cell allows, showing the server's own refusal codes live.
+    `ReviewQueue` presents the full packet and records an explicit human decision against a
+    named content version.
+13. **`ed1e212` — mapping and review guards.** `cellId` and `questionType` are required on
+    import; `validateQuestionAgainstCell` refuses a mis-mapped item on both the dry run and
+    the real import. Questions carry a `contentVersion` and a `verifiedContentVersion`; an
+    import always resets to `pending-review`, approval names the version read and is refused
+    if the item changed, and coverage requires the two to match, so a stale approval stops
+    counting.
 12. **`83c8948` — requirement seed.** 105 cells (46 Mathematics, 59 Physics) built from the
     repository's own topic lists, every one `draft`, unreviewed and undated, with a source
     reference that names the file it came from and states it is not an official CSCA
@@ -123,23 +138,30 @@ Not blocked: Phase D is code-complete. See "Next Exact Task".
 
 ## Next Exact Task
 
-**Resume here.** Phase E machinery and its requirement seed are both done. What remains is
-content: **E7 — author and review real questions against the blueprint.**
+**Resume here.** E7 is complete in code. The next step needs a person, not a commit.
 
-Exact next step: extend the admin question editor (`src/pages/admin-page.tsx`) with a
-blueprint-cell selector and a question-type selector, so an imported question carries
-`cellId` and `questionType` — `QuestionSchema` already accepts both, and without them a
-published question is reported as belonging to no blueprint cell. Then author items for one
-narrow slice first, for example the six Mathematics cells under `math-foundation` and
-`math-linear`, mark each reviewed through `setContentVerification` (which stamps reviewer
-and date server-side), and watch those cells turn from empty to covered in the dashboard.
-One covered slice is what makes the first `publishMockExam` call succeed.
+**A human must review the 17 authored questions.** They exist as drafts in
+`src/data/draft-questions.ts`; their arithmetic is independently verified by
+`src/data/draft-questions.test.ts`, but no human has read them, so none is verified and
+coverage is still 0 of 105. Claude deliberately did not mark its own questions reviewed:
+`setContentVerification` stamps the reviewer from the authenticated caller, so approving
+them here would mean fabricating a reviewer.
 
-Coverage today: **0 of 105 cells covered.** All 105 are empty — 46 Mathematics, 59 Physics
-— because no reviewer-verified question exists. `publishMockExam` and `startMockExam`
-therefore both refuse with `insufficient-verified-coverage`. That is the intended
-behaviour, not a defect: no server-graded mock can run until real verified content exists.
-The local demo keeps working throughout and stays labelled a demo.
+What the person does, once a Firebase deployment and an administrator account exist:
+open Admin, upload the 105 draft blueprint cells, import the 17 items through the editor
+(or an import script built from `DRAFT_QUESTION_SEED`), then read each packet in the review
+queue and approve the version shown. The six cells under `math-foundation` and
+`math-linear` then turn covered, and a mock built from exactly those six can be published.
+Everything else stays refused.
+
+Coverage today: **0 of 105 cells covered**, 46 Mathematics and 59 Physics, because no
+reviewer-verified question exists. `publishMockExam` and `startMockExam` both refuse with
+`insufficient-verified-coverage`. That is the intended behaviour, not a defect. The local
+demo keeps working throughout and stays labelled a demo.
+
+The next code task, which does not need the review: **E8 — a seeding script or admin action
+that imports `DRAFT_QUESTION_SEED` in one step**, so the reviewer does not retype 17 items
+into the editor by hand.
 
 Superseded, for reference — the previous next task was **Phase E, the content blueprint**: This is now the single
 biggest gap between the app and a usable exam preparation tool, and it also blocks the
@@ -200,6 +222,10 @@ Blocked release sequence, to run the moment push access exists:
 - Shared question-bank contract compiles and behaves identically under Zod 3 and Zod 4;
   rules source-contract test is line-ending independent; repository-wide LF normalization;
   Functions dev-tooling advisories cleared.
+- **Phase E7 — authoring and review.** Blueprint mapping required and validated on import,
+  content-versioned approval that resets on any edit, a blueprint-first admin editor, a human
+  review packet, 17 independently verified draft questions, and coverage tests over the real
+  seed proving that draft, pending, demo, archived and version-stale items count for nothing.
 - **Phase E — blueprint machinery.** Cell and item model with full provenance, coverage
   computed from the published bank, the validator (duplicate ids, orphan prerequisites,
   cycles, subject/topic mismatch, missing languages, difficulties and question types,
@@ -240,12 +266,12 @@ Blocked release sequence, to run the moment push access exists:
   matrix, and the admin coverage gate that blocks publishing an incomplete mock.
 - The explanation language is applied on the vocabulary trainer; lessons, practice feedback
   and formula copy still render their English fields only.
-- **No reviewed question exists yet.** The blueprint now declares 105 requirements, and all
-  105 are empty, so coverage is zero and `publishMockExam` and `startMockExam` both refuse.
-  The machinery and the requirements are complete; the reviewed content is not. This is the
-  single remaining blocker for the server-graded mock.
-- The admin question editor cannot yet set `cellId` or `questionType`, so a question
-  authored there would be reported as belonging to no blueprint cell.
+- **No reviewed question exists yet.** 17 items are authored and independently checked, but
+  no human has read them, so all 105 cells are empty, coverage is zero, and
+  `publishMockExam` and `startMockExam` both refuse. This is the single remaining blocker
+  for the server-graded mock, and it is a human task, not a code task.
+- The 17 authored items are not yet importable in one step: they would have to be typed into
+  the editor individually. A seeding action is the next code task.
 - The diagnostic and the built-in mock still generate from four templates and remain
   labelled local demo.
 - Complete verified foundation curriculum and trainer/support expansions.
@@ -257,15 +283,15 @@ Blocked release sequence, to run the moment push access exists:
 
 ## Tests
 
-Run in this session on the tree of `83c8948`. Every line below was executed on that tree;
+Run in this session on the tree of `2b7f5d9`. Every line below was executed on that tree;
 nothing is marked passing from memory.
 
 | Check | Command | Result |
 |---|---|---|
 | Root typecheck | `pnpm typecheck` | **pass** (was `TS2554` before this batch) |
 | Lint | `pnpm lint` | **pass**, 0 warnings |
-| Unit/component/contract tests | `pnpm test` | **pass**, 30 files / 272 tests (was 12 / 59) |
-| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 361.18 KiB |
+| Unit/component/contract tests | `pnpm test` | **pass**, 34 files / 329 tests (was 12 / 59) |
+| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 361.39 KiB |
 | Pages-configuration build | `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` | **pass**, 11-entry precache, 361.07 KiB |
 | Functions typecheck | `pnpm --dir functions typecheck` | **pass** |
 | Functions build | `pnpm --dir functions build` | **pass** |
@@ -340,7 +366,12 @@ Limitations of this run:
 - New `blueprintCells` collection: client-read, client-write-denied. `examTemplates` is now
   write-denied for every client including administrators, because publication must run
   through `publishMockExam`, which recomputes coverage first.
-- `QuestionSchema` gains optional `cellId` and `questionType`. It deliberately has no
+- `QuestionSchema` now **requires** `cellId` and `questionType`: an item that answers no
+  stated requirement cannot be imported.
+- Questions carry `contentVersion` (bumped by every content write) and
+  `verifiedContentVersion` (what a reviewer read). Coverage requires the two to match.
+- `verificationStatus` gains `pending-review`, where authored content waits for a human.
+- The former statement that `QuestionSchema` gains optional `cellId` and `questionType` It deliberately has no
   verification fields, and the rules additionally refuse `verificationStatus`, `reviewer`
   and `reviewedAt` on `questions` writes, so an import cannot declare itself reviewed.
 - `examTemplates` documents now also carry `blueprintCellIds`, `language` and `seed`. A
@@ -471,8 +502,9 @@ Limitations of this run:
 
 Unblocked work, in order:
 
-1. E7 — add cell and question-type selection to the admin editor, then author and review
-   enough items to cover one narrow slice end to end (see "Next Exact Task").
+1. E8 — a one-step import of `DRAFT_QUESTION_SEED`, so a reviewer is not retyping 17 items.
+2. Human review of those 17 items (see "Next Exact Task"), which is what turns the first
+   six cells covered.
 2. Extend the explanation language beyond the vocabulary trainer to lessons, practice
    feedback and formula copy, with the same stated fallback.
 3. Phase I — privacy policy, terms, retention, data export and account deletion, before any
