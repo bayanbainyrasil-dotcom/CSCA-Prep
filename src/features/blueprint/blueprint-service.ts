@@ -1,6 +1,7 @@
 import { httpsCallable } from 'firebase/functions';
 import { z } from 'zod';
 import { functions } from '@/lib/firebase';
+import type { BlueprintCell } from './blueprint';
 
 /**
  * Client side of blueprint administration.
@@ -82,6 +83,51 @@ export async function fetchBlueprintCoverage(input: {
   const call = httpsCallable(requireFunctions(), 'getBlueprintCoverage');
   const response = await call(input);
   return CoverageReportSchema.parse(response.data);
+}
+
+/**
+ * Uploads the blueprint requirement seed through the trusted callable, one cell
+ * at a time so a rejected cell is reported rather than silently skipped. The
+ * server writes every cell as `draft`; nothing here can certify anything.
+ */
+export async function seedBlueprintCells(
+  cells: BlueprintCell[],
+  onProgress?: (done: number, total: number) => void,
+): Promise<{ created: number; failures: { cellId: string; message: string }[] }> {
+  const call = httpsCallable(requireFunctions(), 'upsertBlueprintCell');
+  const failures: { cellId: string; message: string }[] = [];
+  let created = 0;
+
+  for (const [index, cell] of cells.entries()) {
+    try {
+      await call({
+        cellId: cell.id,
+        subject: cell.subject,
+        module: cell.module,
+        topicId: cell.topicId,
+        topic: cell.topic,
+        skillId: cell.skillId,
+        skill: cell.skill,
+        microSkillId: cell.microSkillId,
+        microSkill: cell.microSkill,
+        prerequisiteCellIds: cell.prerequisiteCellIds,
+        difficultyLevels: cell.difficultyLevels,
+        questionTypes: cell.questionTypes,
+        minimumItems: cell.minimumItems,
+        supportedLanguages: cell.supportedLanguages,
+        allowedExamModes: cell.allowedExamModes,
+        sourceType: cell.sourceType,
+        sourceReference: cell.sourceReference,
+        knownLimitations: cell.knownLimitations,
+      });
+      created += 1;
+    } catch (error) {
+      failures.push({ cellId: cell.id, message: error instanceof Error ? error.message : 'Rejected by the server.' });
+    }
+    onProgress?.(index + 1, cells.length);
+  }
+
+  return { created, failures };
 }
 
 export async function setContentVerification(input: {

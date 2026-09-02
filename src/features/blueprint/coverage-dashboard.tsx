@@ -4,7 +4,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { FieldLabel, Input } from '@/components/ui/field';
-import { fetchBlueprintCoverage, type CoverageCell, type CoverageReport } from './blueprint-service';
+import { BLUEPRINT_CELL_SEED } from '@/data/blueprint-cells';
+import { fetchBlueprintCoverage, seedBlueprintCells, type CoverageCell, type CoverageReport } from './blueprint-service';
 
 /**
  * Blueprint coverage for administrators.
@@ -35,6 +36,8 @@ export function BlueprintCoverageDashboard() {
   const [status, setStatus] = useState<StatusFilter>('all');
   const [search, setSearch] = useState('');
   const [reloadToken, setReloadToken] = useState(0);
+  const [seeding, setSeeding] = useState<{ done: number; total: number } | null>(null);
+  const [seedResult, setSeedResult] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -291,6 +294,41 @@ export function BlueprintCoverageDashboard() {
           </table>
         </div>
       </CardContent></Card>
+
+      {report.cells.length === 0 ? (
+        <Card className="mt-4"><CardContent className="p-5 sm:p-6">
+          <h3 className="font-display text-lg font-semibold tracking-tight">Load the curriculum requirements</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            The repository carries a drafted blueprint of {BLUEPRINT_CELL_SEED.length} micro-skills derived from the
+            recorded CSCA topic list. Uploading it states what the curriculum requires; every cell is written as
+            <strong> draft</strong> with no reviewer and no review date, and certifies nothing on its own.
+          </p>
+          <Button
+            className="mt-4"
+            disabled={seeding !== null}
+            onClick={() => {
+              setSeedResult(null);
+              setSeeding({ done: 0, total: BLUEPRINT_CELL_SEED.length });
+              void seedBlueprintCells(BLUEPRINT_CELL_SEED, (done, total) => setSeeding({ done, total }))
+                .then((outcome) => {
+                  setSeedResult(
+                    outcome.failures.length === 0
+                      ? `${outcome.created} blueprint cells written as draft.`
+                      : `${outcome.created} written, ${outcome.failures.length} rejected: ${outcome.failures.slice(0, 3).map((entry) => `${entry.cellId} (${entry.message})`).join('; ')}`,
+                  );
+                  setReloadToken((value) => value + 1);
+                })
+                .catch((cause: unknown) => {
+                  setSeedResult(cause instanceof Error ? cause.message : 'The blueprint could not be uploaded.');
+                })
+                .finally(() => setSeeding(null));
+            }}
+          >
+            {seeding ? `Uploading ${seeding.done} / ${seeding.total}…` : `Upload ${BLUEPRINT_CELL_SEED.length} draft cells`}
+          </Button>
+          {seedResult ? <p className="mt-3 text-sm text-muted-foreground" role="status">{seedResult}</p> : null}
+        </CardContent></Card>
+      ) : null}
 
       {report.orphanQuestionIds.length > 0 ? (
         <Card className="mt-4"><CardContent className="p-5 sm:p-6">
