@@ -545,6 +545,57 @@ tutor Function alone. No key belongs in React, a `VITE_*` variable, Git, a log,
 the bundle, this document or a screenshot. Until then the fake provider is what
 runs, and the flag stays off.
 
+## Accessibility, privacy and account deletion (this batch)
+
+Verified on `736848c`.
+
+**Accessibility.** Three real defects, each fixed and asserted against rendered
+output rather than source:
+
+- No skip link existed, so a keyboard user had to tab through the sidebar and
+  header on every page. One is now first in the tab order, hidden until focused,
+  landing on the single `main` landmark. A Playwright test presses Tab once in a
+  real browser and follows it.
+- `Progress` took an optional `label`, and the onboarding bar passed none, so it
+  announced a bare percentage. The prop is now required: a usage that omits one
+  does not compile.
+- Onboarding announced a date validation error but left focus where it was.
+  Focus now moves to the field, which is marked `aria-invalid` while the error
+  stands.
+- The onboarding screen renders outside the app shell and had no `main` landmark
+  at all. It has one now.
+
+Still open on the accessibility list: a contrast audit and a reduced-motion
+sweep beyond the existing `prefers-reduced-motion` block.
+
+**Privacy and account.** `docs/legal/` now holds four documents:
+
+- `DATA_INVENTORY.md` — every localStorage key, every user collection and every
+  operational record, read from the source. An engineering document, updated in
+  the same commit as any storage change.
+- `PRIVACY_POLICY.draft.md` and `TERMS.draft.md` — engineer-written drafts,
+  labelled as such at the top, with `[…]` placeholders wherever only the
+  operator or a lawyer can answer. **Neither is legal advice and neither may be
+  published until a qualified person has reviewed it.**
+- `AI_DISCLOSURE.md` — accurate about today (no tutor, no provider, no key,
+  nothing model-generated in the app) and precise about what a tutor would send
+  and never send.
+
+`deleteMyAccount` is new. Export and reset already existed; deletion did not, so
+the policy draft had nothing honest to point at. It requires the word DELETE
+typed out, a sign-in no older than five minutes checked from `auth_time` in the
+verified token, and App Check. It deletes the study collections, then the user
+document recursively, then uploaded files, and removes the Firebase Auth user
+last so a partial failure leaves an account that can retry. The client
+re-authenticates with a popup before calling and clears the device only after
+the server confirms.
+
+Checks on this batch, run separately: `pnpm typecheck` pass, `pnpm lint` pass,
+`pnpm test` 46 files / 515 tests pass, `pnpm build` pass, Functions typecheck and
+build pass, `scripts/check-bundle-secrets.mjs` pass (82 files, 34 solution
+strings absent), Playwright desktop 15 passed / iPhone 4 / iPad 3 with the rest
+skipped by design.
+
 ## Files Changed This Batch
 
 `a74916a`:
