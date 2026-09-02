@@ -1,8 +1,8 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-01 20:50 +05:00
+Last updated: 2026-09-02 09:05 +05:00
 Branch: `main`
-Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, `b9c1ccc`, `f08a39e`, `8111394`, `e47c9e2`, and this documentation commit — see "Deployment Status".
+Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, `b9c1ccc`, `f08a39e`, `8111394`, `e47c9e2`, `840a6c4`, `83c8948`, and this documentation commit — see "Deployment Status".
 Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492`
 Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
 
@@ -35,7 +35,7 @@ published site is older than `origin/main`:
 
 Then Phase D, the server-authoritative mock, in two commits:
 
-Then Phase E, the curriculum blueprint, in three commits:
+Then Phase E, the curriculum blueprint, in four commits:
 
 9.  **`f08a39e` — model and validator.** `BlueprintCell` (subject, module, topic, skill,
     micro-skill, prerequisites, difficulty levels, question types, minimum verified items,
@@ -54,6 +54,12 @@ Then Phase E, the curriculum blueprint, in three commits:
     the gate rather than trusting publication time. Rules: `blueprintCells` is
     client-write-denied, `examTemplates` is write-denied even for admins so publication must
     go through the gate, and `questions` writes refuse verification fields.
+12. **`83c8948` — requirement seed.** 105 cells (46 Mathematics, 59 Physics) built from the
+    repository's own topic lists, every one `draft`, unreviewed and undated, with a source
+    reference that names the file it came from and states it is not an official CSCA
+    specification. The dashboard offers to upload the seed through `upsertBlueprintCell`,
+    which still writes everything as draft. 22 tests cover ids, namespacing, the honest
+    provenance, the prerequisite graph, and the rejections that must keep holding.
 11. **`e47c9e2` — admin coverage dashboard.** Filterable matrix with per-cell verified counts,
     missing languages, difficulties and question types, blockers and warnings with their
     issue codes, and orphan published questions. Nothing shows green unless the cell is
@@ -117,24 +123,23 @@ Not blocked: Phase D is code-complete. See "Next Exact Task".
 
 ## Next Exact Task
 
-**Resume here.** Phase E is complete except for the content itself. The next action is
-**E6 — author the Mathematics and Physics blueprint cells.**
+**Resume here.** Phase E machinery and its requirement seed are both done. What remains is
+content: **E7 — author and review real questions against the blueprint.**
 
-Exact next step: create `src/data/blueprint-cells.ts` exporting a typed
-`BlueprintCell[]` seed built from the topic lists already in `src/data/curriculum.ts`
-(19 Mathematics topics, 34 Physics topics). One cell per micro-skill, each with
-`prerequisiteCellIds`, `difficultyLevels`, `questionTypes`, `minimumItems`,
-`supportedLanguages` and `allowedExamModes`. Every seeded cell must carry
-`verificationStatus: "draft"`, `reviewer: null` and `reviewedAt: null` — the seed states
-what the curriculum requires; it certifies nothing. Then add a test asserting the seed
-parses with `BlueprintCellSchema`, has no duplicate ids, no orphan prerequisites and no
-cycles (`analysePrerequisites`), and a small admin action that upserts the seed through
-`upsertBlueprintCell`.
+Exact next step: extend the admin question editor (`src/pages/admin-page.tsx`) with a
+blueprint-cell selector and a question-type selector, so an imported question carries
+`cellId` and `questionType` — `QuestionSchema` already accepts both, and without them a
+published question is reported as belonging to no blueprint cell. Then author items for one
+narrow slice first, for example the six Mathematics cells under `math-foundation` and
+`math-linear`, mark each reviewed through `setContentVerification` (which stamps reviewer
+and date server-side), and watch those cells turn from empty to covered in the dashboard.
+One covered slice is what makes the first `publishMockExam` call succeed.
 
-Until cells and reviewed items exist, `getBlueprintCoverage` reports every cell empty and
-both `publishMockExam` and `startMockExam` refuse with `insufficient-verified-coverage`.
-That is the intended behaviour, not a defect: no server-graded mock can run until real
-verified content exists.
+Coverage today: **0 of 105 cells covered.** All 105 are empty — 46 Mathematics, 59 Physics
+— because no reviewer-verified question exists. `publishMockExam` and `startMockExam`
+therefore both refuse with `insufficient-verified-coverage`. That is the intended
+behaviour, not a defect: no server-graded mock can run until real verified content exists.
+The local demo keeps working throughout and stays labelled a demo.
 
 Superseded, for reference — the previous next task was **Phase E, the content blueprint**: This is now the single
 biggest gap between the app and a usable exam preparation tool, and it also blocks the
@@ -235,9 +240,12 @@ Blocked release sequence, to run the moment push access exists:
   matrix, and the admin coverage gate that blocks publishing an incomplete mock.
 - The explanation language is applied on the vocabulary trainer; lessons, practice feedback
   and formula copy still render their English fields only.
-- **No blueprint cell has been authored yet.** Every cell is therefore empty, coverage is
-  zero, and `publishMockExam` and `startMockExam` both refuse. The machinery is complete;
-  the content is not. This is the single remaining blocker for the server-graded mock.
+- **No reviewed question exists yet.** The blueprint now declares 105 requirements, and all
+  105 are empty, so coverage is zero and `publishMockExam` and `startMockExam` both refuse.
+  The machinery and the requirements are complete; the reviewed content is not. This is the
+  single remaining blocker for the server-graded mock.
+- The admin question editor cannot yet set `cellId` or `questionType`, so a question
+  authored there would be reported as belonging to no blueprint cell.
 - The diagnostic and the built-in mock still generate from four templates and remain
   labelled local demo.
 - Complete verified foundation curriculum and trainer/support expansions.
@@ -249,15 +257,15 @@ Blocked release sequence, to run the moment push access exists:
 
 ## Tests
 
-Run in this session on the tree of `e47c9e2`. Every line below was executed on that tree;
+Run in this session on the tree of `83c8948`. Every line below was executed on that tree;
 nothing is marked passing from memory.
 
 | Check | Command | Result |
 |---|---|---|
 | Root typecheck | `pnpm typecheck` | **pass** (was `TS2554` before this batch) |
 | Lint | `pnpm lint` | **pass**, 0 warnings |
-| Unit/component/contract tests | `pnpm test` | **pass**, 29 files / 250 tests (was 12 / 59) |
-| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 361.16 KiB |
+| Unit/component/contract tests | `pnpm test` | **pass**, 30 files / 272 tests (was 12 / 59) |
+| Production build | `pnpm build` | **pass**, 14-entry PWA precache, 361.18 KiB |
 | Pages-configuration build | `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` | **pass**, 11-entry precache, 361.07 KiB |
 | Functions typecheck | `pnpm --dir functions typecheck` | **pass** |
 | Functions build | `pnpm --dir functions build` | **pass** |
@@ -463,8 +471,8 @@ Limitations of this run:
 
 Unblocked work, in order:
 
-1. E6 — author the blueprint cells (see "Next Exact Task"), then review and verify enough
-   items for one Mathematics and one Physics mock.
+1. E7 — add cell and question-type selection to the admin editor, then author and review
+   enough items to cover one narrow slice end to end (see "Next Exact Task").
 2. Extend the explanation language beyond the vocabulary trainer to lessons, practice
    feedback and formula copy, with the same stated fallback.
 3. Phase I — privacy policy, terms, retention, data export and account deletion, before any
