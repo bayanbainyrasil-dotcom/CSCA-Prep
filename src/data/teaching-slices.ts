@@ -178,6 +178,45 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-evaluate',
+    english: 'evaluate',
+    russian: 'вычислить значение',
+    simpleExplanation: text(
+      'Work the expression out to a single number. It does not mean rearrange, simplify or solve — nothing here has an unknown in it.',
+      'Довести выражение до одного числа. Это не значит преобразовать, упростить или решить: неизвестного здесь нет.',
+    ),
+    exampleSentence: 'Evaluate the expression, giving your answer as an integer.',
+    category: 'question-command',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-order-of-operations',
+    english: 'order of operations',
+    russian: 'порядок действий',
+    simpleExplanation: text(
+      'Brackets first, then powers, then multiplication and division left to right, then addition and subtraction left to right.',
+      'Сначала скобки, затем степени, затем умножение и деление слева направо, затем сложение и вычитание слева направо.',
+    ),
+    exampleSentence: 'The order of operations decides which sign the answer carries.',
+    category: 'math',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-minus-sign',
+    english: 'minus sign',
+    russian: 'знак минус',
+    simpleExplanation: text(
+      'The same symbol does two jobs: it makes a number negative, and it subtracts. Reading which job it is doing decides the answer.',
+      'Один и тот же знак выполняет две роли: делает число отрицательным и обозначает вычитание. От того, какую роль вы прочитали, зависит ответ.',
+    ),
+    exampleSentence: 'In −7 + 12 the minus sign belongs to the seven.',
+    category: 'math',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -288,6 +327,26 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     ...draftMeta(),
   }),
   FormulaSchema.parse({
+    id: 'formula-sign-rules',
+    subject: 'mathematics',
+    topicId: 'math-foundation',
+    name: text('Signs in a product or quotient', 'Знаки в произведении и частном'),
+    katex: '(-a)(-b) = ab,\\quad (-a)(b) = -ab,\\quad \\frac{-a}{-b} = \\frac{a}{b}',
+    calculates: text(
+      'The sign of a product or a quotient, from the signs of the two numbers in it.',
+      'Знак произведения или частного по знакам двух чисел в нём.',
+    ),
+    variables: [
+      { symbol: 'a', meaning: text('the size of the first number, without its sign', 'величина первого числа без знака'), siUnit: null },
+      { symbol: 'b', meaning: text('the size of the second number, without its sign', 'величина второго числа без знака'), siUnit: null },
+    ],
+    limitations: text(
+      'For multiplication and division only. Addition and subtraction have no such rule: −5 + 3 and −5 − 3 differ in size as well as sign, and each has to be worked out rather than read off. The rule also says nothing about which operation comes first, which is where most sign errors actually start.',
+      'Только для умножения и деления. Для сложения и вычитания такого правила нет: −5 + 3 и −5 − 3 отличаются и знаком, и величиной, и каждое нужно вычислять, а не считывать. Правило также ничего не говорит о порядке действий, а именно оттуда чаще всего и берутся ошибки в знаках.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
     id: 'formula-heat-transfer',
     subject: 'physics',
     topicId: 'phys-thermodynamics',
@@ -314,6 +373,66 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
 // --- Lessons ----------------------------------------------------------------
 
 export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
+  LessonSchema.parse({
+    id: 'lesson-math-foundation-integer-operations',
+    topicId: 'math-foundation',
+    subject: 'mathematics',
+    title: text('Signs and the order they are applied in', 'Знаки и порядок, в котором их применяют'),
+    summary: text(
+      'Do the operations in order, and read each minus sign as either a negative number or a subtraction before using it.',
+      'Выполнять действия по порядку и перед вычислением понимать, что означает каждый минус: отрицательное число или вычитание.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need to add and subtract whole numbers and to know what a square is. Nothing else: this is the first cell in the chain, and every later lesson assumes what is here rather than the other way round.',
+        'Нужно уметь складывать и вычитать целые числа и знать, что такое квадрат. Больше ничего: это первая ячейка цепочки, и все последующие уроки опираются на неё, а не наоборот.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Apply brackets, powers, multiplication and division, and then addition and subtraction, in that order and left to right within each level; decide for every minus sign whether it makes a number negative or subtracts; and give the sign of a product or quotient without recomputing it.',
+        'Применять скобки, степени, умножение и деление, затем сложение и вычитание — в этом порядке и слева направо внутри каждого уровня; для каждого минуса определять, делает ли он число отрицательным или означает вычитание; называть знак произведения или частного, не пересчитывая его.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'Almost every wrong answer in this cell is right arithmetic done in the wrong order, or a minus sign attached to the wrong thing. Neither is a gap in knowledge, which is why they survive so long: the working looks correct line by line. The fix is to decide the order and the signs before computing anything, not while computing.',
+        'Почти каждый неверный ответ в этой ячейке — верная арифметика, выполненная не в том порядке, или минус, отнесённый не к тому. Ни то, ни другое не пробел в знаниях, и именно поэтому такие ошибки держатся долго: построчно решение выглядит верным. Лечится это тем, что порядок и знаки определяют до вычислений, а не во время них.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“Evaluate” means work it out to a single number. It is not “simplify”, which may leave letters in the answer, and not “solve”, which needs an unknown to find. If a prompt says “giving your answer as an integer”, a decimal in the options is there for someone who divided in the wrong order.',
+        '«Evaluate» значит довести до одного числа. Это не «simplify», где в ответе могут остаться буквы, и не «solve», где нужно найти неизвестное. Если в задании сказано «giving your answer as an integer», десятичная дробь среди вариантов предназначена тому, кто разделил не в том порядке.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'evaluate — вычислить значение; order of operations — порядок действий; minus sign — знак минус.',
+        'evaluate — вычислить значение; order of operations — порядок действий; minus sign — знак минус.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'Two negatives multiplied or divided give a positive; one negative gives a negative. This holds for multiplication and division only — addition and subtraction have no such rule, and each has to be worked out.',
+        'Два отрицательных числа при умножении или делении дают положительное; одно отрицательное даёт отрицательное. Это верно только для умножения и деления: у сложения и вычитания такого правила нет, там нужно вычислять.',
+      ), { katex: ['(-a)(-b) = ab', '(-a)(b) = -ab'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'Evaluate −15 ÷ 3 + (−7) × 2.\n\nDecide the order first. There are no brackets to open and no powers, so division and multiplication come before addition: −15 ÷ 3 and (−7) × 2 are both done before anything is added. Then read the signs: −15 divided by a positive is negative, giving −5; a negative times a positive is negative, giving −14. Only now the addition: −5 + (−14) = −19.\n\nThe common wrong answer here is not an arithmetic slip. It comes from adding left to right, which turns the expression into a different one entirely.',
+        'Вычислите −15 ÷ 3 + (−7) × 2.\n\nСначала определите порядок. Скобок раскрывать нечего, степеней нет, значит деление и умножение выполняются до сложения: и −15 ÷ 3, и (−7) × 2 считаются раньше любого сложения. Теперь знаки: −15, делённое на положительное, даёт отрицательное −5; отрицательное на положительное даёт отрицательное −14. И только теперь сложение: −5 + (−14) = −19.\n\nЧастый неверный ответ здесь — не арифметическая ошибка. Он получается из сложения слева направо, которое превращает выражение в совсем другое.',
+      ), { estimatedMinutes: 4 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'Evaluate 10 − (−3)² × 2. First: what is inside the bracket, and does the square apply to the sign as well as the number? Second: which operation is at the highest level here, and what does that mean for the order? Third: is the minus in front of the square a subtraction or part of a negative number? Fourth: compute, and say your answer aloud with its sign.',
+        'Вычислите 10 − (−3)² × 2. Первое: что стоит в скобке и относится ли квадрат к знаку, а не только к числу? Второе: какое действие здесь на высшем уровне и что это значит для порядка? Третье: минус перед квадратом — это вычитание или часть отрицательного числа? Четвёртое: вычислите и проговорите ответ вместе со знаком.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'Evaluate (−2)³ + 18 ÷ (−9), then −5 − (−11) + (−3) × 3. In the second one, decide what each of the four minus signs is doing before you compute anything. Write the order you will work in, then work in it.',
+        'Вычислите (−2)³ + 18 ÷ (−9), затем −5 − (−11) + (−3) × 3. Во втором сначала определите, что делает каждый из четырёх минусов, и только потом считайте. Запишите порядок действий, затем действуйте по нему.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'Every option in this cell is reachable by a real mistake: one for working left to right, one for losing a sign, one for applying a power to the number but not to its sign. That is why an option matching your answer is not confirmation — it is the design. Recompute the expression in a different order of your own choosing and see whether you land in the same place.',
+        'Каждый вариант в этой ячейке получается из реальной ошибки: один — из вычисления слева направо, другой — из потерянного знака, третий — из степени, применённой к числу, но не к его знаку. Поэтому совпадение вашего ответа с вариантом — не подтверждение, а замысел составителя. Пересчитайте выражение в другом порядке по своему выбору и посмотрите, придёте ли вы туда же.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Three expressions in three minutes. Before the timer starts, write the order of operations at the top of the page and keep it visible. Reading it is faster than remembering it, and this is the cell where being fast and being wrong cost the same.',
+        'Три выражения за три минуты. До запуска таймера выпишите порядок действий сверху страницы и держите его перед глазами. Прочитать быстрее, чем вспомнить, а это как раз та ячейка, где «быстро» и «неверно» стоят одинаково.',
+      ), { estimatedMinutes: 3 }),
+    ],
+    vocabularyIds: ['vocab-evaluate', 'vocab-order-of-operations', 'vocab-minus-sign'],
+    formulaIds: ['formula-sign-rules'],
+    prerequisiteLessonIds: [],
+    ...draftMeta(),
+  }),
   LessonSchema.parse({
     id: 'lesson-math-linear-isolate-unknown',
     topicId: 'math-linear',
@@ -558,6 +677,7 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 
 /** The blueprint cell each authored lesson teaches toward. */
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
+  'lesson-math-foundation-integer-operations': 'math-foundation-integer-operations',
   'lesson-math-linear-isolate-unknown': 'math-linear-isolate-unknown',
   'lesson-math-linear-multi-step-linear': 'math-linear-multi-step-linear',
   'lesson-math-linear-linear-word-problem': 'math-linear-linear-word-problem',

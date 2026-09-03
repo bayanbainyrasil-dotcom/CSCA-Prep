@@ -16,6 +16,7 @@ export const pagesEntrypoints = [
   // The authored teaching slices. Their cell ids are fixed, so a fresh deep link
   // resolves through a real page file instead of the 404 fallback. Adding a
   // slice means adding its route here; the test below checks every one.
+  'slice/math-foundation-integer-operations',
   'slice/math-linear-isolate-unknown',
   'slice/math-linear-multi-step-linear',
   'slice/math-linear-linear-word-problem',

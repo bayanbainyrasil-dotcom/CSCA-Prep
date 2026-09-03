@@ -138,10 +138,25 @@ describe('both languages are written out', () => {
   });
 });
 
+/** Every single-letter symbol the rendered relation actually uses. */
+function symbolsIn(katex: string): string[] {
+  // Drop LaTeX commands first, or `\frac` would contribute f, r, a and c.
+  const bare = katex.replace(/\\[a-zA-Z]+/g, ' ');
+  return [...new Set(bare.match(/[a-zA-Z]/g) ?? [])];
+}
+
 describe('formulas explain themselves', () => {
   it('gives every variable a meaning in both languages and an SI unit where one exists', () => {
     for (const formula of SLICE_FORMULAS) {
-      expect(formula.variables.length, formula.id).toBeGreaterThanOrEqual(3);
+      // Not a count: what matters is that the learner can look up every symbol
+      // they can see. A two-symbol identity is a relation like any other.
+      expect(formula.variables.length, formula.id).toBeGreaterThan(0);
+      for (const symbol of symbolsIn(formula.katex)) {
+        expect(
+          formula.variables.some((variable) => variable.symbol.includes(symbol)),
+          `${formula.id} renders ${symbol} without explaining it`,
+        ).toBe(true);
+      }
       for (const variable of formula.variables) {
         expect(shown(variable.meaning, 'ru'), `${formula.id}/${variable.symbol}`).toMatch(/[А-Яа-я]/);
       }
