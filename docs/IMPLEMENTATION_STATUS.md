@@ -262,6 +262,31 @@ running origin whether it serves what the config promises), `scripts/preview-wit
 (serves `dist/` with those headers locally) and `docs/DEPLOYMENT.md` (the deployment runbook
 and its eight owner decisions).
 
+## Operational monitoring (P1-4, 2026-09-03)
+
+`functions/src/monitoring.ts` covers the five things the audit named: callable errors,
+sync failures, import conflicts, account-deletion failures and mock submission latency.
+
+Redaction works from an **allow-list**, not a deny-list. A deny-list leaks every field
+nobody thought to forbid; an allow-list drops a new field until someone adds it
+deliberately, and adding it means writing it into a table a reviewer can read. Every
+allowed key is a bounded identifier, an enum, a count or a duration, and a test asserts
+none is even *named* in a way that could hold a sentence.
+
+- Redaction happens inside the recorder, so a call site cannot forget it. Handed a whole
+  learner record — question, answer, solution, note, email, uid, free text — it emits `{}`.
+- A value needing trimming is dropped rather than truncated: a truncated sentence is still
+  a sentence.
+- Latency is bucketed. A raw millisecond figure beside a user reference is a timing
+  fingerprint; `over-10s` answers the operational question without being one.
+- The actor reference is a salted hash that does not contain the uid and differs between
+  deployments, so repeated failures by one account are visible without identifying whose.
+- The module imports nothing, so it cannot reach a database or a network. A test holds it.
+
+**Not wired into the callables yet.** The recorder and its rules exist and are tested; the
+call sites in `index.ts` and the sync engine still have to be added, and the sink has to be
+chosen when the Firebase project exists.
+
 ## Verified state
 
 - Web typecheck: pass.
