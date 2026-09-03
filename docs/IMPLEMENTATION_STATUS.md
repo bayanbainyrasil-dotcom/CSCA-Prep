@@ -316,6 +316,26 @@ passes client input to the sink.
 but no Firebase project is deployed, so no real event has been emitted and no alert has ever
 fired. Monitoring is written, not working.
 
+## Readiness stays an internal metric (P1-5, 2026-09-03)
+
+Readiness is a weighted blend of mastery, accuracy and speed against content never
+calibrated against a real exam outcome. The dashboard already said so; the progress page
+showed the same number as a **trend line over time with no caveat at all**, which is the
+form most likely to be read as a forecast.
+
+The wording now lives in `src/features/dashboard/readiness-language.ts` and is imported by
+both screens — a caveat that drifts between screens is a caveat a learner stops reading. The
+history form is longer on purpose: a trend implies a trajectory, so it says plainly that it
+shows whether practice is moving, not what you would score.
+
+`FORBIDDEN_READINESS_CLAIMS` names the vocabulary of prediction (predicted score, pass
+probability, likely to pass, expected score, guarantee). One test scans every shipped source
+for it; another finds each screen that renders the number and fails if it does not import
+the shared wording or keeps a hand-written copy that could drift.
+
+This closes the labelling half of audit P1-5. The calibration half stays open and needs real
+outcome data, which does not exist.
+
 ## Verified state
 
 - Web typecheck: pass.
