@@ -1,9 +1,11 @@
 # CSCA Prep Implementation Status
 
-Last updated: 2026-09-02 09:40 +05:00
+Last updated: 2026-09-03
 Branch: `main`
-Verified commits awaiting push: `a74916a`, `cdac000`, `22f7c18`, `7295134`, `4917069`, `cbacedb`, `83f7fd9`, `e3e5bc9`, `a555917`, `9a62d26`, `b9c1ccc`, `f08a39e`, `8111394`, `e47c9e2`, `840a6c4`, `83c8948`, `c503edf`, `ed1e212`, `2b7f5d9`, and this documentation commit — see "Deployment Status".
-Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492`
+Local verified head: `14ae4cd` (38 bundle-delivered commits through
+`da4c2c4c7eeda4825e67ce6dcc6d98bd98ab32e1`, plus one CI fix made this session).
+Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492` — **unchanged**;
+the push is still externally blocked, so nothing new is published.
 Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
 
 ## Current Phase
@@ -383,15 +385,88 @@ Limitations of this run:
 
 ## Deployment Status
 
-- `origin/main` is `24be373`. Its CI and Pages runs both failed.
-- GitHub Pages currently serves `a17e759` (proven by asset-hash reproduction, above).
-- Local verified commits awaiting push: `a74916a`, `cdac000`.
-- **External blocker:** the session git proxy denies pushes to
-  `bayanbainyrasil-dotcom/CSCA-Prep` ("not in this session's authorized repository set").
-  The repository must be added to the session's authorized sources with write access.
+Bundle delivery attempt, 2026-09-03.
+
+- The 38-commit bundle was verified (`git bundle verify` -> "okay", "records a complete
+  history") and its `refs/heads/main` is exactly
+  `da4c2c4c7eeda4825e67ce6dcc6d98bd98ab32e1`, as expected.
+- `origin/main` is an ancestor of that commit: 38 ahead, 0 behind, so the delivery is a
+  pure fast-forward. No merge commit and no force-push is needed or was used.
+- `origin/main` is still `24be373`. Its CI run and its Pages run both failed, on
+  `functions/src/schemas.ts(110,4): error TS2554` — the Zod 3/4 skew fixed by `a74916a`,
+  which is inside the bundle and therefore not yet on GitHub.
+- GitHub Pages still serves `a17e759`. The published site is two commits behind
+  `origin/main` and 39 behind the verified local head.
+
+**External blocker — the delivery could not be published.** Both write paths are refused:
+
+- `git push origin HEAD:main` -> HTTP 403, "Claude doesn't have GitHub access to
+  `bayanbainyrasil-dotcom/CSCA-Prep` for your organization".
+- The GitHub API path is refused the same way: `create_branch` ->
+  `403 Resource not accessible by integration`. Read access works and the API authenticates
+  as `bayanbainyrasil-dotcom`, so this is a missing *contents: write* permission on the
+  Claude GitHub App installation, not a credential or a branch-protection problem.
+- Because branch creation is refused too, the pull-request fallback is unavailable: a PR
+  cannot be opened without first pushing a branch.
+- Remedy, by the account owner: install or re-authorize the Claude GitHub App for this
+  repository at https://github.com/apps/claude/installations/select_target, or reconnect
+  GitHub from claude.ai Settings -> Connectors. Then re-run the fast-forward push.
+
 - Firebase production: blocked by the Google account MFA requirement before Console access.
 - Vercel production: GitHub app installation confirmed; the Vercel account still requires
   email login plus a one-time verification code before GitHub can be linked.
+
+## Verification Run — 2026-09-03
+
+Run on the bundle-delivered head, from clean dependencies, each check separately.
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Web install | `pnpm install --frozen-lockfile` | pass |
+| Functions install | `pnpm --dir functions install --frozen-lockfile` | pass |
+| Typecheck | `pnpm typecheck` | pass |
+| Lint | `pnpm lint` | pass (`--max-warnings 0`) |
+| Unit tests | `pnpm test` | pass — 515 tests in 46 files |
+| Production build | `pnpm build` | pass — PWA precache 14 entries, 361.82 KiB |
+| Functions typecheck | `pnpm --dir functions typecheck` | pass |
+| Functions build | `pnpm --dir functions build` | pass |
+| End-to-end | `pnpm test:e2e` | pass — 22 passed, 32 skipped |
+
+The end-to-end run used `PLAYWRIGHT_CHROMIUM_PATH`, the documented restricted-machine
+fallback: this container has a Chromium that does not match the pinned Playwright build and
+cannot download browsers. The 32 skipped cases are the ones that need real WebKit. CI, which
+installs Chromium and WebKit properly, is still the authoritative end-to-end signal.
+
+### CI defect found and fixed this session — `14ae4cd`
+
+The web sources import the shared engines, schemas and seeds out of `functions/src`
+(`blueprint.ts` re-exports `blueprint-engine`, and the tests import `mock-engine`,
+`import-callables` and `index.ts`). So `tsc -b`, `vitest` and `vite build` all need
+`functions/node_modules` resolvable — but only the dedicated Functions job installed it.
+
+Reproduced by removing `functions/node_modules` and running `pnpm typecheck`: **89 errors**,
+every one of them a missing Functions dependency (`firebase-admin/*`, `firebase-functions/*`)
+or an `any` that follows from those. The same gap is what let the root typecheck resolve the
+root's Zod 4 instead of the Functions' Zod 3 on `origin/main`.
+
+`14ae4cd` adds `pnpm --dir functions install --frozen-lockfile` to all three jobs that build
+the web app — CI `quality`, CI `e2e` (its Playwright web server runs `pnpm build`) and the
+Pages deploy — and adds `functions/pnpm-lock.yaml` to each job's dependency cache key. Both
+workflow files still parse as valid YAML.
+
+This fix is **required** for the delivered head, not optional: `a74916a` fixes the Zod call
+site, but the newer commits pull `firebase-admin`-backed modules into the web program, which
+no call-site change can satisfy.
+
+### Live site smoke test — not performed
+
+`https://bayanbainyrasil-dotcom.github.io/CSCA-Prep/onboarding` could not be opened from this
+session: the network egress proxy refuses `bayanbainyrasil-dotcom.github.io`
+(`curl` -> "CONNECT tunnel failed, response 403"; the fetch tool -> `EGRESS_BLOCKED`). Nothing
+was published this session in any case, so the live site still serves `a17e759` and a smoke
+test would not have described the delivered work. The routes, onboarding flow, console
+cleanliness and the desktop / iPhone / iPad viewport behaviour were instead exercised by the
+Playwright suite above, against a real production build served by `pnpm preview`.
 
 ## Important Decisions
 
@@ -710,9 +785,22 @@ Unblocked work, in order:
    validation errors, 48px targets) and the deep-link HTTP 200 / SEO decision.
 5. Firestore Rules emulator abuse tests, wherever the emulator jar can be downloaded.
 
+### Next exact step
+
+Grant the Claude GitHub App *contents: write* on `bayanbainyrasil-dotcom/CSCA-Prep`
+(https://github.com/apps/claude/installations/select_target, or reconnect GitHub from
+claude.ai Settings -> Connectors). Then, with no rebase and no force:
+
+    git fetch origin
+    git merge-base --is-ancestor origin/main <local head>   # must still succeed
+    git push origin HEAD:main
+
+and watch the CI and Pages runs on the pushed head. If `origin/main` has moved on in the
+meantime, stop and diff both sides first — do not overwrite it.
+
 Blocked on repository write access:
 
-5. Push the six verified commits and confirm CI and Pages go green on the pushed head.
+5. Push the 39 verified commits and confirm CI and Pages go green on the pushed head.
 6. Confirm the live bundle hash matches the released commit's build output.
 7. Bump the deprecated Pages actions (`configure-pages`, `upload-pages-artifact`,
    `deploy-pages`, `upload-artifact`, `dependency-review-action`) and confirm Pages stays green.
