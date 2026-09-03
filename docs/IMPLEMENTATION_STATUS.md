@@ -459,6 +459,22 @@ Not done, and not attempted: moving zod and the domain schemas (22.9 KB gzipped)
 first load. That needs the data layer restructured so nothing on the shell path parses, and
 the regression risk is not worth 23 KB in a session that cannot run a real device test.
 
+## Fourth vertical slice (P2-1, 2026-09-03)
+
+`math-linear-linear-word-problem` had three authored items and no teaching — the same gap as
+the cell before it. It is now a complete slice, and it is mostly a lesson about English,
+because that is where this cell loses marks: "per" multiplies, "fixed" and "flat" add once,
+"in total" names what the equation equals, and "how many" expects a count, so a fractional
+answer is a mistranslation rather than a number to round. The relation records its own
+failure case — a tariff that changes after a threshold, or a second rate, needs a different
+equation.
+
+The worked example is a phone bill, 900 + 45m = 3150, because none of the three practice
+items in the cell uses any of those numbers.
+
+Four of 109 cells now have a teaching slice, all four `draft` and unreviewed, and coverage
+still reads 0 approved.
+
 ## Third vertical slice (P2-1, 2026-09-03)
 
 `math-linear-multi-step-linear` had three authored practice items and no teaching — the
@@ -481,7 +497,8 @@ reads 0 approved.
 The card and access tests now take their counts from `SLICE_LESSONS` instead of the literal
 2, so the next slice is a content change rather than eight failing rendering assertions.
 
-Three of 109 cells now have a teaching slice.
+Three of 109 cells had a teaching slice after this batch; a fourth followed immediately
+after.
 
 ### Checks, each run separately on `5957c69`
 
@@ -587,7 +604,7 @@ public Git history and therefore cannot become confidential mock content even af
 ### P2 — scale and polish
 
 1. Expand reviewed lessons and questions as complete vertical slices rather than isolated
-   questions. Three of 109 cells now have one; all three await human review.
+   questions. Four of 109 cells now have one; all four await human review.
 2. ~~Add learner-visible reviewed/unreviewed coverage confidence.~~ Done in code; the
    numbers it reports stay all-zero until a deployment and a human review exist.
 3. Add original short concept videos only where they improve a specific blueprint cell.
@@ -604,12 +621,14 @@ as verified.
 **Done in this batch:** learner-visible coverage confidence (audit P2-4), the first-load
 budget and its guard (audit P2-5), and a third vertical slice (audit P2-1).
 
-**Next code task that can proceed independently:** continue P2-1 — a fourth slice, and the
-first physics one since the thermodynamics slice. `math-linear-linear-word-problem` already
-has three authored items and no lesson, which is the same gap this batch just closed one
-cell along; after that, a physics cell with items but no teaching. Everything authored stays
-`draft`/`pending-review` — Claude does not mark its own content verified, and no reviewer,
-source or review date may be invented.
+**Next code task that can proceed independently:** continue P2-1. Of the seven cells with
+authored items, four now have a lesson; the three left are the number-foundation cells
+(`math-foundation-integer-operations`, `math-foundation-fraction-decimal-percent`,
+`math-foundation-estimate-magnitude`), and the first of them is named as a prerequisite by
+the linear-equations lesson, so it is the next one to write. There is no physics cell with
+items but no teaching: a further physics slice needs its questions authored first.
+Everything authored stays `draft`/`pending-review` — Claude does not mark its own content
+verified, and no reviewer, source or review date may be invented.
 
 Still blocked in this environment, unchanged: emulator abuse tests (P1-2) need a download
 this sandbox refuses; real-device Safari (P1-4) and every live check need the deployment.
