@@ -69,6 +69,8 @@ export {
 
 export { recordOutlineReview, readOutlineReviews } from "./outline-callables";
 
+export { reportOperationalEvent } from "./report-callables";
+
 const standardCallableOptions = {
   enforceAppCheck: true,
   cors: true,

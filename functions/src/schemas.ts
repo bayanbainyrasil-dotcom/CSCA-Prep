@@ -548,6 +548,43 @@ export const ResetMyProgressSchema = z
  * the source: `ownSummary` and `differenceNote` are bounded and are the
  * reviewer's own words about a document, never the document.
  */
+/**
+ * The one thing a browser may report about itself.
+ *
+ * A client-writable telemetry endpoint is attack surface, so this is as small as
+ * it can be and still be useful: a fixed event name, a fixed reason, an entity
+ * type and a small attempt count. Every field is an enum or a bounded integer.
+ * There is deliberately no string field at all — nothing here can carry a URL,
+ * an email, a uid, an IP, a question id, an answer or a document.
+ */
+export const ClientOperationalEventSchema = z
+  .object({
+    kind: z.literal("sync-failure"),
+    reason: z.enum([
+      "network-unavailable",
+      "conflict-unresolved",
+      "outbox-stalled",
+      "version-gap",
+      "storage-full",
+      "unknown",
+    ]),
+    entityType: z.enum([
+      "attempt",
+      "mistake",
+      "mastery",
+      "daily-plan",
+      "mock-attempt",
+      "vocabulary-progress",
+      "formula-progress",
+      "note",
+      "bookmark",
+      "study-plan",
+      "slice-progress",
+    ]),
+    attempt: z.number().int().min(1).max(50),
+  })
+  .strict();
+
 export const OutlineReviewStatusSchema = z.enum([
   "matches-source",
   "difference-found",

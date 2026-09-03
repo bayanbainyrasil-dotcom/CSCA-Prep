@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import { ClientOperationalEventSchema } from '../../../functions/src/schemas';
 import {
   actorRef,
   latencyBucket,
@@ -159,5 +162,83 @@ describe('the module itself stays dependency-free', () => {
     expect([...source.matchAll(/(?:^|\n)import\s/g)]).toEqual([]);
     expect(source).not.toContain('firebase');
     expect(source).not.toContain('db.collection');
+  });
+});
+
+describe('the one thing a browser may report', () => {
+  const valid = { kind: 'sync-failure', reason: 'outbox-stalled', entityType: 'attempt', attempt: 3 };
+
+  it('accepts a well-formed report', () => {
+    expect(ClientOperationalEventSchema.safeParse(valid).success).toBe(true);
+  });
+
+  it('has no string field at all, so nothing can carry free text', () => {
+    for (const forged of [
+      { message: 'sync failed on document users/learner-1/notes/abc' },
+      { url: 'https://example.test/practice?q=why' },
+      { email: 'learner@example.test' },
+      { uid: 'learner-1' },
+      { ip: '203.0.113.9' },
+      { questionId: 'math-linear-isolate-unknown-001' },
+      { answer: 'a' },
+      { document: { text: 'a note the learner wrote' } },
+      { userAgent: 'Mozilla/5.0' },
+      { stack: 'Error: at foo' },
+    ]) {
+      expect(ClientOperationalEventSchema.safeParse({ ...valid, ...forged }).success, JSON.stringify(forged)).toBe(false);
+    }
+  });
+
+  it('refuses an unknown event kind or reason', () => {
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, kind: 'callable-error' }).success).toBe(false);
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, kind: 'mock-submission' }).success).toBe(false);
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, reason: 'because-i-said-so' }).success).toBe(false);
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, entityType: 'questionSolutions' }).success).toBe(false);
+  });
+
+  it('bounds the attempt count, so it cannot be used to smuggle a number out', () => {
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, attempt: 0 }).success).toBe(false);
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, attempt: 51 }).success).toBe(false);
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, attempt: 1.5 }).success).toBe(false);
+    expect(ClientOperationalEventSchema.safeParse({ ...valid, attempt: 50 }).success).toBe(true);
+  });
+
+  it('requires every field: a partial report is not a report', () => {
+    for (const key of Object.keys(valid)) {
+      const partial: Record<string, unknown> = { ...valid };
+      delete partial[key];
+      expect(ClientOperationalEventSchema.safeParse(partial).success, key).toBe(false);
+    }
+  });
+});
+
+describe('the reporting callable', () => {
+  const source = readFileSync(join('functions', 'src', 'report-callables.ts'), 'utf8');
+
+  it('requires authentication, App Check and a rate limit', () => {
+    expect(source).toContain('requireAuth(request)');
+    expect(source).toContain('enforceAppCheck: true');
+    expect(source).toContain('consumeAppCheckToken: true');
+    expect(source).toContain('enforceRateLimit("reportOperationalEvent"');
+  });
+
+  it('writes to no collection and returns no state', () => {
+    expect(source).not.toContain('db.collection');
+    expect(source).not.toContain('firestore');
+    expect(source).toContain('return { received: true }');
+  });
+
+  it('passes a salted reference rather than the uid', () => {
+    expect(source).toContain('actorRef(principal.uid, ACTOR_SALT)');
+    expect(source).not.toMatch(/uid: principal\.uid/);
+  });
+
+  it('is the only client-facing entry to the monitoring sink', () => {
+    const files = readdirSync(join('functions', 'src')).filter((entry) => entry.endsWith('.ts'));
+    const clientReportable = files.filter((file) => {
+      const body = readFileSync(join('functions', 'src', file), 'utf8');
+      return /monitor\(\s*input\./.test(body) || /monitor\(\s*request\./.test(body);
+    });
+    expect(clientReportable).toEqual(['report-callables.ts']);
   });
 });
