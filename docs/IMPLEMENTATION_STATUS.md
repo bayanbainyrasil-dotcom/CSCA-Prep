@@ -336,6 +336,85 @@ the shared wording or keeps a hand-written copy that could drift.
 This closes the labelling half of audit P1-5. The calibration half stays open and needs real
 outcome data, which does not exist.
 
+## Learner-visible coverage confidence (P2-4, 2026-09-03)
+
+"How far along am I?" is four different questions, and the honest answer keeps them apart.
+The progress page now shows four counts side by side, each with its own numerator and
+denominator, for the totals and for Mathematics and Physics separately:
+
+- **Studied by you** — blueprint cells this learner has started in a teaching slice.
+- **Approved by a reviewer** — cells `evaluateBlueprintCoverage` reports as `covered`.
+- **Demo or practice only** — cells with material that can never secure a mock, because it
+  is demo content or its answers are public.
+- **Not measured** — cells with no questions and no work from this learner.
+
+They are never summed and there is no total. A single blended number is what turns "you have
+practised a lot" into "you are ready", which is the claim this product cannot make: there is
+no `score`, `percent` or `total` field in the returned object, so no screen can compute one
+from it. A test asserts the rendered text matches no percentage and contains none of "pass
+probability", "predicted score", "likely to pass" or "ready to pass".
+
+Today it reads **0 approved out of the deployed blueprint**, with a line saying the secure
+mock exam is unavailable and that only a human review moves that number. Studying does not
+make a cell approved, and approval does not mean the learner has studied it — both
+directions are tested.
+
+### The learner-safe coverage read
+
+`getBlueprintCoverage` is an administrator's tool and returns reviewer names, review dates,
+source references, known limitations, per-cell issues and orphan question ids. Rather than
+relax its permission check, `getCoverageSummary` is a separate callable: sign-in and App
+Check required, no arguments at all, rate-limited per caller, and six fields per cell — id,
+subject, status, `totalItems`, `demoItems`, `publicKeyItems`.
+
+The private answers are not merely withheld from the response, they are never loaded.
+`loadBlueprintState` now takes `answerLabels`, and this path passes `false`, so
+`questionSolutions` is not read at all. The Firestore test double gained read tracking so
+that can be asserted directly, with the administrator report as the control that proves the
+assertion is capable of failing.
+
+`functions/src/blueprint-summary.ts` carries the blueprint cell counts and nothing else, so
+the browser has a documented denominator without importing the seed. It is on the leak
+contract's allow-list together with a test that it stays free of content.
+
+### What the panel refuses to do
+
+- A failed read shows an error and a retry, never zeros. "Nothing is verified" and "we could
+  not find out" are different statements.
+- A cached read is served only when the live read fails, and is labelled on screen as
+  possibly out of date. A live read always wins over the cache.
+- The response schema is `.strict()`, so a future server that started returning a reviewer
+  name on this path would fail parsing rather than render it.
+- "Studied" is not inferred from practice attempts. A practice question carries a topic, not
+  a blueprint requirement, so counting those cells would be a guess; the definition on
+  screen says exactly what is and is not counted.
+
+### Checks, each run separately on `00e47e8`
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Web typecheck | `pnpm typecheck` | passed |
+| Lint | `pnpm lint` | passed, 0 warnings |
+| Web unit tests | `pnpm vitest run` | 797 passed, 65 files |
+| Pages entrypoints | `pnpm test:pages` | 2 passed |
+| Web build | `pnpm build` | built, PWA precache 14 entries |
+| Functions typecheck | `npx tsc --noEmit` in `functions/` | passed |
+| Functions build | `pnpm build` in `functions/` | passed |
+| Bundle secret scan | `node scripts/check-bundle-secrets.mjs` | passed, 86 files, 42 solution strings absent |
+| Production audit (web) | `pnpm audit --prod` | no known vulnerabilities |
+| Production audit (functions) | `pnpm audit --prod` | no known vulnerabilities |
+| Browser tests | `PLAYWRIGHT_CHROMIUM_PATH=… pnpm test:e2e` | 26 passed, 34 skipped by project design, 0 failed |
+
+The browser run used the container's own Chromium through the documented
+`PLAYWRIGHT_CHROMIUM_PATH` fallback, because this environment cannot download the browser
+build this Playwright version expects. Every project therefore ran on Chromium: the iPhone
+and iPad rows are viewport and input profiles, **not** real Safari or WebKit, and iOS
+behaviour remains unproven.
+
+This closes audit P2-4 as far as it can be closed without a deployment. The callable's code
+path exists and is exercised by tests against an in-memory Firestore; it has never answered
+a real request, because Firebase is not deployed.
+
 ## Verified state
 
 - Web typecheck: pass.
@@ -423,7 +502,8 @@ public Git history and therefore cannot become confidential mock content even af
 
 1. Expand reviewed lessons and questions as complete vertical slices rather than isolated
    questions.
-2. Add learner-visible reviewed/unreviewed coverage confidence.
+2. ~~Add learner-visible reviewed/unreviewed coverage confidence.~~ Done in code; the
+   numbers it reports stay all-zero until a deployment and a human review exist.
 3. Add original short concept videos only where they improve a specific blueprint cell.
 4. Calibrate readiness/score confidence using reviewed difficulty and real outcomes.
 5. Further split the initial Firebase and heavy visualization/math JavaScript.
@@ -434,17 +514,19 @@ public Git history and therefore cannot become confidential mock content even af
 blueprint before approving content. Do not invent a reviewer or self-mark generated content
 as verified.
 
-**Done in this batch:** the administrator official-outline comparison workflow. Source URL,
-edition and date, server-stamped reviewer and last-checked date, five review states, a
-version guard, an audit log, and no storage of official text.
+**Done in this batch:** learner-visible coverage confidence (audit P2-4). Four separate
+counts with no blended score, a learner-safe `getCoverageSummary` callable that never reads
+the private answer collection, and an honest error state in place of zeros when coverage
+cannot be read.
 
-**Next code task that can proceed independently:** Firestore/Auth/Functions/Storage
-emulator abuse tests (audit P1-2). The source-contract tests assert the rules file; they do
-not prove the rules engine refuses a real hostile request. This environment cannot download
-the emulator suite, so the first step is to check whether it can be vendored or whether this
-becomes an owner-run task. If it cannot run here, the next independent task is the reviewed
-content pipeline: one Mathematics and one Physics vertical slice authored entirely as
-unreviewed drafts.
+**Next code task that can proceed independently:** audit P2-5, splitting the initial Firebase
+and the heavy visualization/maths JavaScript out of the first load. The build still warns
+that chunks exceed 500 kB, and the progress page now pulls Recharts and the coverage read
+into the same route. This is measurable here — bundle sizes are a local fact — unlike the
+remaining P1 items, which need a deployment.
+
+Still blocked in this environment, unchanged: emulator abuse tests (P1-2) need a download
+this sandbox refuses; real-device Safari (P1-4) and every live check need the deployment.
 
 ## Interruption-safe continuation rules
 
