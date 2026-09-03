@@ -459,6 +459,48 @@ Not done, and not attempted: moving zod and the domain schemas (22.9 KB gzipped)
 first load. That needs the data layer restructured so nothing on the shell path parses, and
 the regression risk is not worth 23 KB in a session that cannot run a real device test.
 
+## Third vertical slice (P2-1, 2026-09-03)
+
+`math-linear-multi-step-linear` had three authored practice items and no teaching — the
+isolated-question pattern the audit asked to stop. It is now a complete slice on the same
+shape as the other two: three vocabulary entries (like terms, expand, common denominator),
+one relation with its own failure case written into `limitations` (a = c, where the unknowns
+cancel and the equation is true for every x or for none), and an eleven-section lesson from
+prerequisites through a timed set, in English and Russian.
+
+The worked example solves 8x − 5 = 3x + 20 because none of the three practice items in the
+cell uses those numbers. `lesson-answer-overlap.test.ts` enforces that a worked example does
+not share every quantity with an item in its own cell, and this is the second time that test
+has decided a choice of numbers rather than merely recorded one.
+
+Everything stays `status: 'draft'`, `demo: false`, unreviewed. No reviewer, source or review
+date has been invented. Nothing here moves blueprint coverage: coverage counts
+reviewer-verified questions, and a lesson is not a question, so the coverage panel still
+reads 0 approved.
+
+The card and access tests now take their counts from `SLICE_LESSONS` instead of the literal
+2, so the next slice is a content change rather than eight failing rendering assertions.
+
+Three of 109 cells now have a teaching slice.
+
+### Checks, each run separately on `5957c69`
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Web typecheck | `pnpm typecheck` | passed |
+| Lint | `pnpm lint` | passed, 0 warnings |
+| Web unit tests | `pnpm vitest run` | 797 passed, 65 files |
+| Pages entrypoints | `pnpm test:pages` | 2 passed |
+| Budget script tests | `pnpm test:budget` | 6 passed |
+| Web build | `pnpm build` | built |
+| Functions typecheck | `npx tsc --noEmit` in `functions/` | passed |
+| Bundle secret scan | `pnpm check:bundle` | passed, 86 files, 42 solution strings absent |
+| First-load budget | `pnpm check:budget` | 189.0 KB gz JS, 19.7 KB gz CSS, within budget |
+| Browser tests | `PLAYWRIGHT_CHROMIUM_PATH=… pnpm test:e2e` | 26 passed, 34 skipped by project design, 0 failed |
+
+The browser run again used the container's Chromium, so the iPhone and iPad rows are
+viewport profiles rather than Safari.
+
 ## Verified state
 
 - Web typecheck: pass.
@@ -545,7 +587,7 @@ public Git history and therefore cannot become confidential mock content even af
 ### P2 — scale and polish
 
 1. Expand reviewed lessons and questions as complete vertical slices rather than isolated
-   questions.
+   questions. Three of 109 cells now have one; all three await human review.
 2. ~~Add learner-visible reviewed/unreviewed coverage confidence.~~ Done in code; the
    numbers it reports stay all-zero until a deployment and a human review exist.
 3. Add original short concept videos only where they improve a specific blueprint cell.
@@ -559,16 +601,15 @@ public Git history and therefore cannot become confidential mock content even af
 blueprint before approving content. Do not invent a reviewer or self-mark generated content
 as verified.
 
-**Done in this batch:** learner-visible coverage confidence (audit P2-4) and the first-load
-budget (audit P2-5). Four separate counts with no blended score, a learner-safe
-`getCoverageSummary` callable that never reads the private answer collection, an honest
-error state in place of zeros, and a checked-in guard on what the first load may contain.
+**Done in this batch:** learner-visible coverage confidence (audit P2-4), the first-load
+budget and its guard (audit P2-5), and a third vertical slice (audit P2-1).
 
-**Next code task that can proceed independently:** audit P2-1, expanding the reviewed content
-as complete vertical slices rather than isolated questions. Two slices exist
-(`math-linear-isolate-unknown`, `phys-thermodynamics-heat-transfer`); the blueprint has 109
-cells. Everything authored stays `pending-review` — Claude does not mark its own content
-verified, and no reviewer, source or review date may be invented.
+**Next code task that can proceed independently:** continue P2-1 — a fourth slice, and the
+first physics one since the thermodynamics slice. `math-linear-linear-word-problem` already
+has three authored items and no lesson, which is the same gap this batch just closed one
+cell along; after that, a physics cell with items but no teaching. Everything authored stays
+`draft`/`pending-review` — Claude does not mark its own content verified, and no reviewer,
+source or review date may be invented.
 
 Still blocked in this environment, unchanged: emulator abuse tests (P1-2) need a download
 this sandbox refuses; real-device Safari (P1-4) and every live check need the deployment.
