@@ -44,10 +44,18 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            functions/pnpm-lock.yaml
 
       - name: Install web dependencies
         run: pnpm install --frozen-lockfile
+
+      # The web sources import the shared engines and schemas out of
+      # `functions/src`, so the root typecheck, the unit tests and the build all
+      # need the Functions dependencies resolvable from this job as well.
+      - name: Install function dependencies
+        run: pnpm --dir functions install --frozen-lockfile
 
       - name: Typecheck web app
         run: pnpm typecheck
@@ -114,10 +122,17 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            functions/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # The Playwright web server runs `pnpm build`, which typechecks the shared
+      # `functions/src` modules the web app imports.
+      - name: Install function dependencies
+        run: pnpm --dir functions install --frozen-lockfile
 
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps chromium webkit

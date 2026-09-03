@@ -35,10 +35,17 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            functions/pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      # `pnpm build` typechecks the shared `functions/src` modules the web app
+      # imports, so this job needs the Functions dependencies too.
+      - name: Install function dependencies
+        run: pnpm --dir functions install --frozen-lockfile
 
       - name: Configure GitHub Pages
         uses: actions/configure-pages@v5
