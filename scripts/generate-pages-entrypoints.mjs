@@ -18,6 +18,7 @@ export const pagesEntrypoints = [
   // slice means adding its route here; the test below checks every one.
   'slice/math-linear-isolate-unknown',
   'slice/math-linear-multi-step-linear',
+  'slice/math-linear-linear-word-problem',
   'slice/phys-thermodynamics-heat-transfer',
   'practice',
   'practice/session',

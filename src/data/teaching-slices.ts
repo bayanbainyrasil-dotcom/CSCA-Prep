@@ -139,6 +139,45 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-per',
+    english: 'per',
+    russian: 'за каждый, на каждый',
+    simpleExplanation: text(
+      'For each one. A price “per kilometre” is multiplied by the number of kilometres, never added once.',
+      'За каждый один. Цена «per kilometre» умножается на число километров, а не прибавляется один раз.',
+    ),
+    exampleSentence: 'The taxi charges 120 tenge per kilometre.',
+    category: 'comparison',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-fixed-charge',
+    english: 'fixed charge',
+    russian: 'фиксированная плата',
+    simpleExplanation: text(
+      'An amount paid once regardless of size or quantity — the constant term in the equation, not the rate.',
+      'Сумма, которая платится один раз независимо от количества — свободный член уравнения, а не коэффициент.',
+    ),
+    exampleSentence: 'There is a fixed charge of 500 tenge plus a rate for each kilometre.',
+    category: 'math',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-let-be',
+    english: 'let x be',
+    russian: 'пусть x — это',
+    simpleExplanation: text(
+      'The phrase that names the unknown. Write what x stands for, including its unit, before writing any equation.',
+      'Фраза, которая называет неизвестное. Запишите, что именно обозначает x, вместе с единицей, прежде чем писать уравнение.',
+    ),
+    exampleSentence: 'Let n be the number of tins in the crate.',
+    category: 'question-command',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -223,6 +262,28 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     limitations: text(
       'Undefined when a equals c: the unknowns cancel, and the equation is then either true for every x or for none. It is a shortcut for a rearrangement, not a substitute for it — a bracket or a fraction must be cleared before the coefficients can be read off.',
       'Не определено при a = c: неизвестные сокращаются, и уравнение верно либо при любом x, либо ни при каком. Это сокращённая запись преобразования, а не замена ему: скобки и дроби нужно раскрыть до того, как коэффициенты можно будет считать.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
+    id: 'formula-fixed-plus-rate',
+    subject: 'mathematics',
+    topicId: 'math-linear',
+    name: text('A fixed amount plus a rate', 'Фиксированная сумма плюс тариф'),
+    katex: 'T = f + rn \\iff n = \\frac{T - f}{r}',
+    calculates: text(
+      'How many units were bought, travelled or used, when a total is made of one fixed amount and one amount charged for each unit.',
+      'Сколько единиц куплено, пройдено или израсходовано, когда итог складывается из одной фиксированной суммы и суммы за каждую единицу.',
+    ),
+    variables: [
+      { symbol: 'T', meaning: text('the total', 'итоговая величина'), siUnit: null },
+      { symbol: 'f', meaning: text('the fixed amount, paid once', 'фиксированная часть, платится один раз'), siUnit: null },
+      { symbol: 'r', meaning: text('the amount for each unit', 'величина за одну единицу'), siUnit: null },
+      { symbol: 'n', meaning: text('the number of units', 'число единиц'), siUnit: null },
+    ],
+    limitations: text(
+      'Only for a situation with exactly one fixed part and one constant rate. A tariff that changes after a threshold, a discount above some quantity, or a second rate needs a different equation — and n must come out as a whole number when the units are countable, which is a check, not an assumption.',
+      'Только для ситуации с ровно одной фиксированной частью и одним постоянным тарифом. Тариф, меняющийся после порога, скидка от количества или второй тариф требуют другого уравнения. Кроме того, при счётных единицах n должно получиться целым — это проверка, а не допущение.',
     ),
     ...draftMeta(),
   }),
@@ -374,6 +435,66 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
     ...draftMeta(),
   }),
   LessonSchema.parse({
+    id: 'lesson-math-linear-linear-word-problem',
+    topicId: 'math-linear',
+    subject: 'mathematics',
+    title: text('Turning a sentence into an equation', 'Превращаем условие в уравнение'),
+    summary: text(
+      'Name the unknown with its unit, translate each phrase into one term, solve, then answer the question that was actually asked.',
+      'Назвать неизвестное вместе с единицей, перевести каждую фразу в одно слагаемое, решить и ответить именно на заданный вопрос.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need to solve an equation with the unknown on both sides without thinking about it, because here the solving is the easy half. If clearing a bracket or a fraction still takes attention, do the multi-step cell first.',
+        'Нужно уметь решать уравнение с неизвестным в обеих частях не задумываясь: здесь решение — самая простая половина работы. Если раскрытие скобки или дроби ещё требует внимания, сначала пройдите многошаговую ячейку.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Write down what the unknown stands for and in what unit, turn each phrase of the sentence into one term of an equation, solve it, and then check the answer against the sentence rather than against your own working.',
+        'Записать, что обозначает неизвестное и в каких единицах, превратить каждую фразу условия в одно слагаемое уравнения, решить его и проверить ответ по условию, а не по собственным выкладкам.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'A word problem is a translation task with a small piece of algebra at the end. Most marks are lost in the translation, not in the algebra: a rate read as a one-off charge, or an answer given for the wrong quantity. So the equation is written slowly and solved quickly, not the other way round.',
+        'Текстовая задача — это перевод, в конце которого немного алгебры. Больше всего баллов теряется на переводе, а не на алгебре: тариф принимают за разовую плату или отвечают не на тот вопрос. Поэтому уравнение записывают медленно, а решают быстро, а не наоборот.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“Per” means for each one, so it multiplies. “Fixed”, “flat” and “standing” all mean paid once, so they add. “In total” marks the value the whole equation equals. “How many” expects a count, so a fractional answer is a signal that something was mistranslated, not a number to round.',
+        '«Per» значит за каждый, поэтому это умножение. «Fixed», «flat», «standing» значат «платится один раз», поэтому это прибавление. «In total» указывает величину, которой равно всё уравнение. «How many» ожидает счёт, поэтому дробный ответ — признак ошибки перевода, а не число для округления.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'per — за каждый; fixed charge — фиксированная плата; let x be — пусть x — это.',
+        'per — за каждый; fixed charge — фиксированная плата; let x be — пусть x — это.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'When a total is one fixed amount plus one amount for each unit, T = f + rn, so n = (T − f) ÷ r. Subtract the fixed part before dividing, never after.',
+        'Когда итог складывается из фиксированной суммы и суммы за каждую единицу, T = f + rn, откуда n = (T − f) ÷ r. Фиксированную часть вычитают до деления, а не после.',
+      ), { katex: ['T = f + rn \\iff n = \\frac{T - f}{r}'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'A phone plan costs 900 tenge each month plus 45 tenge for every minute of calls. One month the bill is 3150 tenge. How many minutes were called?\n\nLet m be the number of minutes called. The monthly 900 is paid once, so it is a constant; the 45 is charged for every minute, so it multiplies m. That gives 900 + 45m = 3150. Subtract the fixed part first: 45m = 2250, so m = 50.\n\nCheck against the sentence, not the working: 900 + 45 × 50 = 900 + 2250 = 3150, and 50 is a whole number of minutes, which the question expects.',
+        'Тарифный план стоит 900 тенге в месяц плюс 45 тенге за каждую минуту разговора. За месяц счёт составил 3150 тенге. Сколько минут проговорили?\n\nПусть m — число минут. Ежемесячные 900 платятся один раз, значит это свободный член; 45 берут за каждую минуту, значит это множитель при m. Получаем 900 + 45m = 3150. Сначала вычитаем фиксированную часть: 45m = 2250, откуда m = 50.\n\nПроверяем по условию, а не по выкладкам: 900 + 45 × 50 = 900 + 2250 = 3150, и 50 — целое число минут, как и ожидает вопрос.',
+      ), { estimatedMinutes: 5 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'A printer charges a setup fee and then a price for each page. Setting up costs 1400 tenge, each page costs 35 tenge, and an order comes to 4200 tenge. First: write what your unknown stands for, with its unit. Second: decide for each number whether it is paid once or for each page. Third: write the equation before doing any arithmetic. Fourth: solve it, then read the question again and answer that.',
+        'Типография берёт плату за подготовку и затем цену за каждую страницу. Подготовка стоит 1400 тенге, страница — 35 тенге, заказ вышел на 4200 тенге. Первое: запишите, что обозначает ваше неизвестное и в каких единицах. Второе: для каждого числа решите, платится оно один раз или за каждую страницу. Третье: запишите уравнение до любых вычислений. Четвёртое: решите его, затем перечитайте вопрос и ответьте именно на него.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'A gym membership is 8000 tenge to join plus 2500 tenge each month, and someone has paid 28000 tenge in total: how many months? A courier charges 600 tenge plus 90 tenge for each kilometre, and a delivery cost 2130 tenge: how far was it? In both, write the sentence naming your unknown before the equation, and state the unit in your answer.',
+        'Абонемент в зал: 8000 тенге за вступление плюс 2500 тенге в месяц, всего уплачено 28000 тенге — сколько месяцев? Курьер берёт 600 тенге плюс 90 тенге за километр, доставка обошлась в 2130 тенге — какое расстояние? В обеих задачах сначала запишите предложение с неизвестным, потом уравнение, и укажите единицу в ответе.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'The distractor built from dividing the total without removing the fixed part is always present, and it is always close to the right answer, which is what makes it dangerous. So substitute back into the sentence: the wrong value fails the sentence even when it looks reasonable. Check the unit too — an option in the wrong unit is a common way to lose a mark on work that was correct.',
+        'Вариант, полученный делением всего итога без вычитания фиксированной части, присутствует всегда и всегда близок к верному ответу — именно поэтому он опасен. Поэтому подставляйте обратно в условие: неверное значение не проходит проверку по условию, даже если выглядит правдоподобно. Проверяйте и единицу: вариант в неверной единице — частый способ потерять балл при верном решении.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Three fixed-plus-rate problems in five minutes. Write the equation for all three first, then solve all three. Separating translation from arithmetic is faster than alternating between them, and it is where the marks are.',
+        'Три задачи вида «фиксированная часть плюс тариф» за пять минут. Сначала запишите уравнения для всех трёх, затем решите все три. Разделять перевод и вычисления быстрее, чем чередовать их, и именно там находятся баллы.',
+      ), { estimatedMinutes: 5 }),
+    ],
+    vocabularyIds: ['vocab-per', 'vocab-fixed-charge', 'vocab-let-be'],
+    formulaIds: ['formula-fixed-plus-rate'],
+    prerequisiteLessonIds: ['lesson-math-linear-multi-step-linear'],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
     id: 'lesson-phys-thermodynamics-heat-transfer',
     topicId: 'phys-thermodynamics',
     subject: 'physics',
@@ -439,5 +560,6 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
   'lesson-math-linear-isolate-unknown': 'math-linear-isolate-unknown',
   'lesson-math-linear-multi-step-linear': 'math-linear-multi-step-linear',
+  'lesson-math-linear-linear-word-problem': 'math-linear-linear-word-problem',
   'lesson-phys-thermodynamics-heat-transfer': 'phys-thermodynamics-heat-transfer',
 };

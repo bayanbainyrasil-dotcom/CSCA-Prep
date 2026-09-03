@@ -33,6 +33,7 @@ test('generates a real entrypoint for each authored teaching slice', async () =>
   const slices = [
     'slice/math-linear-isolate-unknown',
     'slice/math-linear-multi-step-linear',
+    'slice/math-linear-linear-word-problem',
     'slice/phys-thermodynamics-heat-transfer',
   ];
   for (const route of slices) {

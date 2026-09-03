@@ -94,6 +94,7 @@ describe('an unknown cell', () => {
   it('recognises exactly the authored slices and nothing else', () => {
     expect([...KNOWN].sort()).toEqual([
       'math-linear-isolate-unknown',
+      'math-linear-linear-word-problem',
       'math-linear-multi-step-linear',
       'phys-thermodynamics-heat-transfer',
     ]);
