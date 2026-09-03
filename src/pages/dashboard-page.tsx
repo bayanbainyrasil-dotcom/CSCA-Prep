@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { ReadinessOrbit } from '@/features/dashboard/readiness-orbit';
+import { READINESS_CAVEAT, READINESS_EYEBROW } from '@/features/dashboard/readiness-language';
 import { useAuth } from '@/features/auth/auth-provider';
 import { daysUntilDate, greetingFor, weekdayFor } from '@/lib/date';
 import { MissedDaysPrompt } from '@/features/plan/missed-days-prompt';
@@ -99,13 +100,13 @@ export default function DashboardPage() {
           <Card className="h-full">
             <CardHeader className="pb-2">
               <div className="flex items-center justify-between gap-3">
-                <div><p className="data-label">Internal metric</p><CardTitle id="readiness-title" className="mt-1.5">CSCA readiness</CardTitle></div>
+                <div><p className="data-label">{READINESS_EYEBROW}</p><CardTitle id="readiness-title" className="mt-1.5">CSCA readiness</CardTitle></div>
                 <Badge variant="outline">{metrics.questionsSolved} answers</Badge>
               </div>
             </CardHeader>
             <CardContent className="flex flex-col items-center">
               <ReadinessOrbit score={metrics.readinessScore} />
-              <p className="mt-1 text-center text-xs leading-relaxed text-muted-foreground">A planning signal from mastery, accuracy and speed — not an official CSCA score.</p>
+              <p className="mt-1 text-center text-xs leading-relaxed text-muted-foreground">{READINESS_CAVEAT}</p>
             </CardContent>
           </Card>
         </section>
