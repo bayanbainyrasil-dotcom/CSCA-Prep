@@ -2,11 +2,13 @@
 
 Last updated: 2026-09-03
 Branch: `main`
-Local verified head: `14ae4cd` (38 bundle-delivered commits through
-`da4c2c4c7eeda4825e67ce6dcc6d98bd98ab32e1`, plus one CI fix made this session).
-Last commit on `origin/main`: `24be373fda7b462301ca5b9b10de4f5a90899492` — **unchanged**;
-the push is still externally blocked, so nothing new is published.
-Last commit actually published to GitHub Pages: `a17e759792da83e04038782758737fe1dd19864c`
+Last commit on `origin/main`: `32e36f0237a16320ddd9972b76fec3b610caa1e4` — **published**.
+Last commit actually published to GitHub Pages: `32e36f0237a16320ddd9972b76fec3b610caa1e4`
+(Pages build and publish both green; see "Deployment Status").
+
+The 38 bundle-delivered commits through `da4c2c4c7eeda4825e67ce6dcc6d98bd98ab32e1` reached
+GitHub as a pure fast-forward, followed by `14ae4cd` (CI fix) and this documentation commit.
+The long-standing repository write blocker is **cleared**.
 
 ## Current Phase
 
@@ -385,32 +387,54 @@ Limitations of this run:
 
 ## Deployment Status
 
-Bundle delivery attempt, 2026-09-03.
+Bundle delivery, 2026-09-03 — **completed**.
 
-- The 38-commit bundle was verified (`git bundle verify` -> "okay", "records a complete
-  history") and its `refs/heads/main` is exactly
+- The 38-commit bundle verified (`git bundle verify` -> "okay", "records a complete
+  history") and its `refs/heads/main` was exactly
   `da4c2c4c7eeda4825e67ce6dcc6d98bd98ab32e1`, as expected.
-- `origin/main` is an ancestor of that commit: 38 ahead, 0 behind, so the delivery is a
-  pure fast-forward. No merge commit and no force-push is needed or was used.
-- `origin/main` is still `24be373`. Its CI run and its Pages run both failed, on
-  `functions/src/schemas.ts(110,4): error TS2554` — the Zod 3/4 skew fixed by `a74916a`,
-  which is inside the bundle and therefore not yet on GitHub.
-- GitHub Pages still serves `a17e759`. The published site is two commits behind
-  `origin/main` and 39 behind the verified local head.
+- `origin/main` was an ancestor of it: 38 ahead, 0 behind. Published as a pure
+  fast-forward, `24be373..32e36f0`. No force, no rebase, no merge commit.
+- `origin/main` and `origin/claude/csca-prep-bundle-delivery-4ew43v` are both `32e36f0`.
 
-**External blocker — the delivery could not be published.** Both write paths are refused:
+Green on the published head `32e36f0`:
 
-- `git push origin HEAD:main` -> HTTP 403, "Claude doesn't have GitHub access to
-  `bayanbainyrasil-dotcom/CSCA-Prep` for your organization".
-- The GitHub API path is refused the same way: `create_branch` ->
-  `403 Resource not accessible by integration`. Read access works and the API authenticates
-  as `bayanbainyrasil-dotcom`, so this is a missing *contents: write* permission on the
-  Claude GitHub App installation, not a credential or a branch-protection problem.
-- Because branch creation is refused too, the pull-request fallback is unavailable: a PR
-  cannot be opened without first pushing a branch.
-- Remedy, by the account owner: install or re-authorize the Claude GitHub App for this
-  repository at https://github.com/apps/claude/installations/select_target, or reconnect
-  GitHub from claude.ai Settings -> Connectors. Then re-run the fast-forward push.
+| Run | Jobs | Result |
+| --- | --- | --- |
+| [CI #27](https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33732956076) | quality; Cloud Functions; Playwright | success (all three) |
+| [Pages #9](https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33732956114) | Build site; Publish site | success |
+
+This is the first green CI on `main` since `a17e759`, and the first Pages publish of the
+verified work. The Playwright job is the authoritative end-to-end signal: unlike the local
+run it installs real Chromium **and** WebKit, so the 32 cases skipped locally were actually
+executed here.
+
+The earlier write blocker — `git push` 403 and `create_branch`
+`403 Resource not accessible by integration` — was cleared by the account owner granting the
+Claude GitHub App read/write on repository contents. Both refs pushed on the first attempt
+afterwards.
+
+### Live site smoke test — still not performed from this session
+
+`https://bayanbainyrasil-dotcom.github.io/CSCA-Prep/onboarding` cannot be opened from this
+container: the network egress proxy refuses `bayanbainyrasil-dotcom.github.io`
+(`curl` -> "CONNECT tunnel failed, response 403"; the fetch tool -> `EGRESS_BLOCKED`). The
+published Pages artifact was not reachable either — its blob host is refused the same way —
+so the live bundle hash could not be compared against the released build output. That
+comparison and a human look at the live page are still **open**, and are the one part of the
+release checklist not covered by automation.
+
+What was verified instead, and what it does and does not prove:
+
+- The Pages workflow's own `Build site` and `Publish site` steps are green on `32e36f0`, so
+  GitHub built and deployed that exact commit.
+- The Pages build configuration was reproduced locally —
+  `VITE_BASE_PATH=/CSCA-Prep/ VITE_DEPLOYMENT_MODE=local-demo pnpm build` — and succeeds,
+  emitting `/CSCA-Prep/`-prefixed asset URLs.
+- Routes, onboarding, console cleanliness and desktop / iPhone / iPad viewport behaviour are
+  covered by the Playwright suite, which passed in CI against a real production build.
+
+None of that substitutes for loading the real URL in a browser. Someone with ordinary network
+access should still open it once.
 
 - Firebase production: blocked by the Google account MFA requirement before Console access.
 - Vercel production: GitHub app installation confirmed; the Vercel account still requires
@@ -458,15 +482,9 @@ This fix is **required** for the delivered head, not optional: `a74916a` fixes t
 site, but the newer commits pull `firebase-admin`-backed modules into the web program, which
 no call-site change can satisfy.
 
-### Live site smoke test — not performed
+Confirmed in CI: on `32e36f0` the Pages `Build site` job runs `Install function dependencies`
+as step 6 and all three CI jobs pass, where the same workflows were red on `24be373`.
 
-`https://bayanbainyrasil-dotcom.github.io/CSCA-Prep/onboarding` could not be opened from this
-session: the network egress proxy refuses `bayanbainyrasil-dotcom.github.io`
-(`curl` -> "CONNECT tunnel failed, response 403"; the fetch tool -> `EGRESS_BLOCKED`). Nothing
-was published this session in any case, so the live site still serves `a17e759` and a smoke
-test would not have described the delivered work. The routes, onboarding flow, console
-cleanliness and the desktop / iPhone / iPad viewport behaviour were instead exercised by the
-Playwright suite above, against a real production build served by `pnpm preview`.
 
 ## Important Decisions
 
@@ -787,21 +805,18 @@ Unblocked work, in order:
 
 ### Next exact step
 
-Grant the Claude GitHub App *contents: write* on `bayanbainyrasil-dotcom/CSCA-Prep`
-(https://github.com/apps/claude/installations/select_target, or reconnect GitHub from
-claude.ai Settings -> Connectors). Then, with no rebase and no force:
+Open `https://bayanbainyrasil-dotcom.github.io/CSCA-Prep/onboarding` in a real browser from a
+network that is not behind this session's egress proxy, and confirm: the page loads, the
+onboarding flow runs, the console shows no errors, deep links resolve, and the layout is sane
+on desktop and on a phone. Then compare the live `assets/index-*.js` filename against the
+build output of `32e36f0` to confirm the published bundle is that commit.
 
-    git fetch origin
-    git merge-base --is-ancestor origin/main <local head>   # must still succeed
-    git push origin HEAD:main
+No longer blocked — repository write access is granted and both refs are pushed.
 
-and watch the CI and Pages runs on the pushed head. If `origin/main` has moved on in the
-meantime, stop and diff both sides first — do not overwrite it.
+Still open:
 
-Blocked on repository write access:
-
-5. Push the 39 verified commits and confirm CI and Pages go green on the pushed head.
-6. Confirm the live bundle hash matches the released commit's build output.
+6. Confirm the live bundle hash matches the released commit's build output (needs a client
+   that can reach `github.io`; see "Live site smoke test").
 7. Bump the deprecated Pages actions (`configure-pages`, `upload-pages-artifact`,
    `deploy-pages`, `upload-artifact`, `dependency-review-action`) and confirm Pages stays green.
 
