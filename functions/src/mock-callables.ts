@@ -20,7 +20,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 
 import { assertExamIsPublishable } from "./blueprint-callables";
 import type { BlueprintLanguage } from "./blueprint-engine";
-import { enforceRateLimit, parseInput, requireAuth } from "./callable";
+import { enforceRateLimit, monitored, monotonicNow, parseInput, requireAuth } from "./callable";
 import {
   applyAnswer,
   gradeMockAttempt,
@@ -32,6 +32,8 @@ import {
   type PromptOnlyQuestion,
   type StoredAnswer,
 } from "./mock-engine";
+import { latencyBucket } from "./monitoring";
+import { monitor } from "./monitoring-sink";
 import { db } from "./platform";
 import {
   ResumeMockExamSchema,
@@ -237,7 +239,7 @@ async function findOpenAttempt(uid: string, mockExamId: string) {
   return snapshot.docs.find((doc) => doc.data()?.payload?.mockExamId === mockExamId);
 }
 
-export const startMockExam = onCall(standardCallableOptions, async (request) => {
+export const startMockExam = onCall(standardCallableOptions, monitored("startMockExam", async (request) => {
   const principal = requireAuth(request);
   const input = parseInput(StartMockExamSchema, request.data);
   await enforceRateLimit("startMockExam", principal.uid, 20, 60 * 60);
@@ -336,9 +338,9 @@ export const startMockExam = onCall(standardCallableOptions, async (request) => 
 
   await attemptRef.set(envelope(principal.uid, payload, attemptRef.id));
   return { resumed: false, attempt: openAttemptView(payload, prompts, nowMs) };
-});
+}));
 
-export const resumeMockExam = onCall(standardCallableOptions, async (request) => {
+export const resumeMockExam = onCall(standardCallableOptions, monitored("resumeMockExam", async (request) => {
   const principal = requireAuth(request);
   const input = parseInput(ResumeMockExamSchema, request.data);
   await enforceRateLimit("resumeMockExam", principal.uid, 120, 60 * 60);
@@ -351,9 +353,9 @@ export const resumeMockExam = onCall(standardCallableOptions, async (request) =>
     attempt: openAttemptView(payload, prompts, nowMs),
     expired: payload.status === "in-progress" && isExpired(clockFor(payload, nowMs)),
   };
-});
+}));
 
-export const saveMockAnswer = onCall(standardCallableOptions, async (request) => {
+export const saveMockAnswer = onCall(standardCallableOptions, monitored("saveMockAnswer", async (request) => {
   const principal = requireAuth(request);
   const input = parseInput(SaveMockAnswerSchema, request.data);
   await enforceRateLimit("saveMockAnswer", principal.uid, 1_200, 60 * 60);
@@ -464,9 +466,14 @@ export const saveMockAnswer = onCall(standardCallableOptions, async (request) =>
       remainingSeconds: next.remainingSeconds,
     };
   });
-});
+}));
 
-export const submitMockExam = onCall(standardCallableOptions, async (request) => {
+export const submitMockExam = onCall(standardCallableOptions, monitored("submitMockExam", async (request) => {
+  // Monotonic, so a clock change mid-submission cannot produce a nonsensical
+  // duration. Only its bucket is ever recorded, never the figure itself.
+  const startedAt = monotonicNow();
+  let submissionStage = "refused";
+  try {
   const principal = requireAuth(request);
   const input = parseInput(SubmitMockExamSchema, request.data);
   await enforceRateLimit("submitMockExam", principal.uid, 40, 60 * 60);
@@ -475,18 +482,31 @@ export const submitMockExam = onCall(standardCallableOptions, async (request) =>
   const payload = readAttemptPayload(await attemptRef.get(), principal.uid);
   const outcome = await finalizeAttempt(principal.uid, attemptRef, payload, input.mutationId);
 
+  submissionStage = outcome.alreadySubmitted ? "already-submitted" : "submitted";
   return {
     alreadySubmitted: outcome.alreadySubmitted,
     status: outcome.payload.status,
     submittedAt: outcome.payload.submittedAt,
     result: outcome.payload.result,
   };
-});
+  } finally {
+    // Exactly one event per call, on success and on a controlled refusal alike.
+    // The bucket answers "is submission slow?"; the precise figure beside an
+    // actor reference would be a timing fingerprint.
+    monitor("mock-submission", {
+      details: {
+        operation: "submitMockExam",
+        stage: submissionStage,
+        latencyBucket: latencyBucket(monotonicNow() - startedAt),
+      },
+    });
+  }
+}));
 
 /**
  * Detailed solutions become readable only after the attempt is finalized.
  */
-export const reviewMockExam = onCall(standardCallableOptions, async (request) => {
+export const reviewMockExam = onCall(standardCallableOptions, monitored("reviewMockExam", async (request) => {
   const principal = requireAuth(request);
   const input = parseInput(ReviewMockExamSchema, request.data);
   await enforceRateLimit("reviewMockExam", principal.uid, 120, 60 * 60);
@@ -543,4 +563,4 @@ export const reviewMockExam = onCall(standardCallableOptions, async (request) =>
     result: payload.result,
     questions,
   };
-});
+}));

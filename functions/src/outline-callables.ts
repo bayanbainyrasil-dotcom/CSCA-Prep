@@ -15,7 +15,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
-import { enforceRateLimit, parseInput, requireAdmin, writeAuditLog } from "./callable";
+import { enforceRateLimit, monitored, parseInput, requireAdmin, writeAuditLog } from "./callable";
 import {
   EMPTY_OUTLINE_REVIEW,
   validateOutlineReview,
@@ -55,7 +55,7 @@ function toRecord(cellId: string, data: Record<string, unknown> | undefined): Ou
   };
 }
 
-export const recordOutlineReview = onCall(adminCallableOptions, async (request) => {
+export const recordOutlineReview = onCall(adminCallableOptions, monitored("recordOutlineReview", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(RecordOutlineReviewSchema, request.data);
   await enforceRateLimit("recordOutlineReview", principal.uid, 300, 60 * 60);
@@ -124,9 +124,9 @@ export const recordOutlineReview = onCall(adminCallableOptions, async (request) 
   });
 
   return { cellId: input.cellId, status: stored.status, version: stored.version, reviewedCellVersion: stored.reviewedCellVersion };
-});
+}));
 
-export const readOutlineReviews = onCall(adminCallableOptions, async (request) => {
+export const readOutlineReviews = onCall(adminCallableOptions, monitored("readOutlineReviews", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(ReadOutlineReviewsSchema, request.data);
   await enforceRateLimit("readOutlineReviews", principal.uid, 300, 60 * 60);
@@ -156,4 +156,4 @@ export const readOutlineReviews = onCall(adminCallableOptions, async (request) =
   return {
     cells: cells.map((cell) => ({ ...cell, review: reviews.get(cell.id) ?? { cellId: cell.id, ...EMPTY_OUTLINE_REVIEW } })),
   };
-});
+}));

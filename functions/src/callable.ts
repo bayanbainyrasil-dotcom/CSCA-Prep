@@ -5,6 +5,7 @@ import type { CallableRequest } from "firebase-functions/v2/https";
 import { HttpsError } from "firebase-functions/v2/https";
 import type { z } from "zod";
 
+import { monitor } from "./monitoring-sink";
 import { db } from "./platform";
 
 export interface Principal {
@@ -134,4 +135,40 @@ export function jsonSafe(value: unknown): unknown {
     return output;
   }
   return value;
+}
+
+/**
+ * The single place a callable failure becomes an operational event.
+ *
+ * Every exported handler is wrapped with this, so there is one `try/catch` in
+ * the codebase rather than one per callable, and no call site can forget to
+ * record — or record twice, since only this wrapper records.
+ *
+ * What reaches the log is the operation name and, for an `HttpsError`, its
+ * code. An unknown error becomes `internal`: its message could contain
+ * anything, including a fragment of the document that caused it. The error
+ * itself is re-thrown untouched, so the status and code the client receives are
+ * exactly what they were before monitoring existed.
+ */
+export function monitored<T, R>(
+  operation: string,
+  handler: (request: CallableRequest<T>) => Promise<R>,
+): (request: CallableRequest<T>) => Promise<R> {
+  return async (request) => {
+    try {
+      return await handler(request);
+    } catch (cause) {
+      // `code` on an HttpsError is a fixed enum such as "permission-denied".
+      // Nothing else from the error is read, and the payload is never touched.
+      const code = cause instanceof HttpsError ? cause.code : "internal";
+      monitor("callable-error", { details: { operation, code } });
+      throw cause;
+    }
+  };
+}
+
+/** A monotonic reading in milliseconds, unaffected by a clock change. */
+export function monotonicNow(): number {
+  const [seconds, nanoseconds] = process.hrtime();
+  return seconds * 1_000 + nanoseconds / 1_000_000;
 }

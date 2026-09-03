@@ -23,7 +23,7 @@ import { HttpsError, onCall } from "firebase-functions/v2/https";
 import { BLUEPRINT_CELL_SEED, BLUEPRINT_SEED_VERSION } from "./blueprint-seed";
 import { validateQuestionAgainstCell, type BlueprintCell } from "./blueprint-engine";
 import { loadBlueprintCell } from "./blueprint-callables";
-import { enforceRateLimit, parseInput, requireAdmin, writeAuditLog } from "./callable";
+import { enforceRateLimit, monitored, parseInput, requireAdmin, writeAuditLog } from "./callable";
 import {
   auditDetailsFor,
   classifyImport,
@@ -33,6 +33,7 @@ import {
   type ExistingRecord,
   type ImportDecision,
 } from "./import-engine";
+import { monitor } from "./monitoring-sink";
 import { db } from "./platform";
 import {
   DRAFT_QUESTION_SEED,
@@ -92,9 +93,14 @@ async function recordBatch(
   });
 }
 
-function refuseIfBlocked(decisions: ImportDecision[]): void {
+function refuseIfBlocked(decisions: ImportDecision[], operation: string): void {
   const summary = summariseImport(decisions);
   if (!summary.blocked) return;
+  // Counts only: which items conflicted is in the error the operator sees, and
+  // an item id there could name content this log has no business holding.
+  monitor("import-conflict", {
+    details: { operation, count: summary.conflict + summary.invalid },
+  });
   throw new HttpsError("aborted", "The batch was not applied: some items cannot be written safely.", {
     summary,
     problems: decisions
@@ -104,7 +110,7 @@ function refuseIfBlocked(decisions: ImportDecision[]): void {
   });
 }
 
-export const importBlueprintDraft = onCall(adminCallableOptions, async (request) => {
+export const importBlueprintDraft = onCall(adminCallableOptions, monitored("importBlueprintDraft", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(ImportBlueprintDraftSchema, request.data);
   await enforceRateLimit("importBlueprintDraft", principal.uid, 30, 60 * 60);
@@ -131,7 +137,7 @@ export const importBlueprintDraft = onCall(adminCallableOptions, async (request)
   if (input.dryRun) {
     return { dryRun: true, summary, decisions, seedVersion: BLUEPRINT_SEED_VERSION };
   }
-  refuseIfBlocked(decisions);
+  refuseIfBlocked(decisions, "importBlueprintDraft");
 
   const writable = writableDecisions(decisions);
   const byId = new Map(BLUEPRINT_CELL_SEED.map((cell) => [cell.id, cell]));
@@ -170,7 +176,7 @@ export const importBlueprintDraft = onCall(adminCallableOptions, async (request)
   await recordBatch(input.batchId, principal.uid, "blueprint-draft", { summary, seedVersion: BLUEPRINT_SEED_VERSION });
   await writeAuditLog(principal.uid, "blueprint.imported", auditDetailsFor(input.batchId, BLUEPRINT_SEED_VERSION, decisions));
   return result;
-});
+}));
 
 interface PreparedQuestion {
   id: string;
@@ -286,7 +292,7 @@ async function applyQuestionWrites(
   }
 }
 
-export const importPublicQuestionSeed = onCall(adminCallableOptions, async (request) => {
+export const importPublicQuestionSeed = onCall(adminCallableOptions, monitored("importPublicQuestionSeed", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(ImportPublicQuestionSeedSchema, request.data);
   await enforceRateLimit("importPublicQuestionSeed", principal.uid, 30, 60 * 60);
@@ -349,7 +355,7 @@ export const importPublicQuestionSeed = onCall(adminCallableOptions, async (requ
       allowedModes: [...PUBLIC_SEED_ALLOWED_MODES],
     };
   }
-  refuseIfBlocked(decisions);
+  refuseIfBlocked(decisions, "importPublicQuestionSeed");
   await applyQuestionWrites(prepared, decisions, principal.uid);
 
   const result = {
@@ -367,9 +373,9 @@ export const importPublicQuestionSeed = onCall(adminCallableOptions, async (requ
     auditDetailsFor(input.batchId, PUBLIC_SEED_VERSION, decisions),
   );
   return result;
-});
+}));
 
-export const importPrivateQuestions = onCall(adminCallableOptions, async (request) => {
+export const importPrivateQuestions = onCall(adminCallableOptions, monitored("importPrivateQuestions", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(ImportPrivateQuestionsSchema, request.data);
   await enforceRateLimit("importPrivateQuestions", principal.uid, 30, 60 * 60);
@@ -389,7 +395,7 @@ export const importPrivateQuestions = onCall(adminCallableOptions, async (reques
   const summary = summariseImport(decisions);
 
   if (input.dryRun) return { dryRun: true, summary, decisions };
-  refuseIfBlocked(decisions);
+  refuseIfBlocked(decisions, "importPrivateQuestions");
   await applyQuestionWrites(prepared, decisions, principal.uid);
 
   const result = { dryRun: false, summary, decisions };
@@ -397,4 +403,4 @@ export const importPrivateQuestions = onCall(adminCallableOptions, async (reques
   // No question text, no key and no solution reaches the audit log.
   await writeAuditLog(principal.uid, "questions.privateImported", auditDetailsFor(input.batchId, "private", decisions));
   return result;
-});
+}));

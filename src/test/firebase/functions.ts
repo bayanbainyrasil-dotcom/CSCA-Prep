@@ -22,6 +22,8 @@ export interface CallableRequest<T = unknown> {
   auth?: { uid: string; token: Record<string, unknown> };
   app?: { appId: string };
   rawRequest?: unknown;
+  /** Present on the real type; the double carries it so the two are assignable. */
+  acceptsStreaming?: boolean;
 }
 
 export interface CallableOptions {

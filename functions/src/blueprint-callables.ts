@@ -23,7 +23,7 @@ import {
   type BlueprintQuestionRecord,
   type BlueprintSubject,
 } from "./blueprint-engine";
-import { enforceRateLimit, parseInput, requireAdmin, writeAuditLog } from "./callable";
+import { enforceRateLimit, monitored, parseInput, requireAdmin, writeAuditLog } from "./callable";
 import { db } from "./platform";
 import {
   BlueprintCoverageSchema,
@@ -147,7 +147,7 @@ export async function loadBlueprintState(): Promise<{
   return { cells, items };
 }
 
-export const getBlueprintCoverage = onCall(adminCallableOptions, async (request) => {
+export const getBlueprintCoverage = onCall(adminCallableOptions, monitored("getBlueprintCoverage", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(BlueprintCoverageSchema, request.data);
   await enforceRateLimit("getBlueprintCoverage", principal.uid, 120, 60 * 60);
@@ -196,9 +196,9 @@ export const getBlueprintCoverage = onCall(adminCallableOptions, async (request)
       reasons: entry.reasons,
     })),
   };
-});
+}));
 
-export const upsertBlueprintCell = onCall(adminCallableOptions, async (request) => {
+export const upsertBlueprintCell = onCall(adminCallableOptions, monitored("upsertBlueprintCell", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(UpsertBlueprintCellSchema, request.data);
   await enforceRateLimit("upsertBlueprintCell", principal.uid, 300, 60 * 60);
@@ -237,14 +237,14 @@ export const upsertBlueprintCell = onCall(adminCallableOptions, async (request) 
   });
 
   return { cellId: input.cellId, verificationStatus: "draft" as const };
-});
+}));
 
 /**
  * The only path that can mark content verified. The reviewer identity and the
  * review time are server-side facts, so a caller cannot certify content by
  * claiming someone else reviewed it, or backdate a review.
  */
-export const setContentVerification = onCall(adminCallableOptions, async (request) => {
+export const setContentVerification = onCall(adminCallableOptions, monitored("setContentVerification", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(SetContentVerificationSchema, request.data);
   await enforceRateLimit("setContentVerification", principal.uid, 600, 60 * 60);
@@ -323,7 +323,7 @@ export const setContentVerification = onCall(adminCallableOptions, async (reques
     reviewedAt: verified ? reviewedAt : null,
     verifiedContentVersion: verified ? outcome.contentVersion : null,
   };
-});
+}));
 
 export interface BlueprintGateResult {
   cellIds: string[];
@@ -384,7 +384,7 @@ export async function assertExamIsPublishable(input: {
   };
 }
 
-export const publishMockExam = onCall(adminCallableOptions, async (request) => {
+export const publishMockExam = onCall(adminCallableOptions, monitored("publishMockExam", async (request) => {
   const principal = requireAdmin(request);
   const input = parseInput(PublishMockExamSchema, request.data);
   await enforceRateLimit("publishMockExam", principal.uid, 60, 60 * 60);
@@ -438,4 +438,4 @@ export const publishMockExam = onCall(adminCallableOptions, async (request) => {
   });
 
   return { mockExamId: input.mockExamId, questionCount: gate.questionIds.length, cellIds: gate.cellIds };
-});
+}));

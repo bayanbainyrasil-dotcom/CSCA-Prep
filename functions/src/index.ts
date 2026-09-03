@@ -11,16 +11,11 @@ import { logger } from "firebase-functions";
 import { defineSecret } from "firebase-functions/params";
 import { HttpsError, onCall } from "firebase-functions/v2/https";
 
-import {
-  enforceRateLimit,
-  jsonSafe,
-  parseInput,
-  requireAdmin,
-  requireAuth,
-  writeAuditLog,
-} from "./callable";
+import { enforceRateLimit, jsonSafe, monitored, parseInput, requireAdmin, requireAuth, writeAuditLog } from "./callable";
 import { validateQuestionAgainstCell } from "./blueprint-engine";
 import { loadBlueprintCell } from "./blueprint-callables";
+import { actorRef } from "./monitoring";
+import { monitor } from "./monitoring-sink";
 import { auth, db } from "./platform";
 import {
   BootstrapAdminSchema,
@@ -38,6 +33,13 @@ import {
 } from "./schemas";
 
 const ADMIN_BOOTSTRAP_CODE = defineSecret("ADMIN_BOOTSTRAP_CODE");
+
+/**
+ * Salt for actor references in operational events. The project id is not a
+ * secret, but salting with it means a reference cannot be compared across
+ * deployments, and it is not reversible to a uid.
+ */
+const ACTOR_SALT = process.env.GCLOUD_PROJECT ?? "csca-prep";
 
 // Server-authoritative mock exam lifecycle. Kept in its own module so the
 // answer-key boundary stays reviewable in one place.
@@ -165,7 +167,7 @@ async function assignBootstrapOwner(uid: string): Promise<void> {
 
 export const ensureUserProfile = onCall(
   standardCallableOptions,
-  async (request) => {
+  monitored("ensureUserProfile", async (request) => {
     const principal = requireAuth(request);
     const input = parseInput(EnsureUserProfileSchema, request.data);
     const authUser = await auth.getUser(principal.uid);
@@ -208,14 +210,14 @@ export const ensureUserProfile = onCall(
 
     return result;
   },
-);
+));
 
 export const bootstrapAdmin = onCall(
   {
     ...sensitiveCallableOptions,
     secrets: [ADMIN_BOOTSTRAP_CODE],
   },
-  async (request) => {
+  monitored("bootstrapAdmin", async (request) => {
     const principal = requireAuth(request);
     const firebaseClaim =
       principal.token.firebase !== null &&
@@ -296,11 +298,11 @@ export const bootstrapAdmin = onCall(
 
     return { role: "admin", alreadyConfigured: false, refreshToken: true };
   },
-);
+));
 
 export const setUserRole = onCall(
   sensitiveCallableOptions,
-  async (request) => {
+  monitored("setUserRole", async (request) => {
     const principal = requireAdmin(request);
     const input = parseInput(SetUserRoleSchema, request.data);
     if (input.targetUid === principal.uid && input.role !== "admin") {
@@ -348,7 +350,7 @@ export const setUserRole = onCall(
     });
     return { targetUid: input.targetUid, role: input.role, refreshToken: true };
   },
-);
+));
 
 function pageResult(documents: QueryDocumentSnapshot<DocumentData>[]) {
   return {
@@ -363,7 +365,7 @@ function pageResult(documents: QueryDocumentSnapshot<DocumentData>[]) {
 
 export const exportMyData = onCall(
   standardCallableOptions,
-  async (request) => {
+  monitored("exportMyData", async (request) => {
     const principal = requireAuth(request);
     const input = parseInput(ExportMyDataSchema, request.data);
     await enforceRateLimit("exportMyData", principal.uid, 120, 60 * 60);
@@ -390,7 +392,7 @@ export const exportMyData = onCall(
     const snapshot = await query.get();
     return { collection: input.collection, ...pageResult(snapshot.docs) };
   },
-);
+));
 
 function splitQuestion(question: QuestionInput) {
   const {
@@ -541,7 +543,7 @@ function buildTrustedMastery(input: {
 
 export const importQuestionBank = onCall(
   sensitiveCallableOptions,
-  async (request) => {
+  monitored("importQuestionBank", async (request) => {
     const principal = requireAdmin(request);
     const input = parseInput(ImportQuestionBankSchema, request.data);
     await enforceRateLimit("importQuestionBank", principal.uid, 30, 60 * 60);
@@ -659,11 +661,11 @@ export const importQuestionBank = onCall(
     });
     return { dryRun: false, imported: input.items.length, versions: result };
   },
-);
+));
 
 export const exportQuestionBank = onCall(
   standardCallableOptions,
-  async (request) => {
+  monitored("exportQuestionBank", async (request) => {
     const principal = requireAdmin(request);
     const input = parseInput(ExportQuestionBankSchema, request.data);
     await enforceRateLimit("exportQuestionBank", principal.uid, 120, 60 * 60);
@@ -714,11 +716,11 @@ export const exportQuestionBank = onCall(
           : null,
     };
   },
-);
+));
 
 export const gradeQuestion = onCall(
   standardCallableOptions,
-  async (request) => {
+  monitored("gradeQuestion", async (request) => {
     const principal = requireAuth(request);
     const input = parseInput(GradeQuestionSchema, request.data);
     await enforceRateLimit("gradeQuestion", principal.uid, 600, 60 * 60);
@@ -917,11 +919,11 @@ export const gradeQuestion = onCall(
       commonMistakes: solution.commonMistakes,
     };
   },
-);
+));
 
 export const classifyMistake = onCall(
   standardCallableOptions,
-  async (request) => {
+  monitored("classifyMistake", async (request) => {
     const principal = requireAuth(request);
     const input = parseInput(ClassifyMistakeSchema, request.data);
     await enforceRateLimit("classifyMistake", principal.uid, 600, 60 * 60);
@@ -981,11 +983,11 @@ export const classifyMistake = onCall(
 
     return { record: jsonSafe(record) };
   },
-);
+));
 
 export const finalizeDiagnostic = onCall(
   standardCallableOptions,
-  async (request) => {
+  monitored("finalizeDiagnostic", async (request) => {
     const principal = requireAuth(request);
     const input = parseInput(FinalizeDiagnosticSchema, request.data);
     await enforceRateLimit("finalizeDiagnostic", principal.uid, 20, 60 * 60);
@@ -1054,7 +1056,7 @@ export const finalizeDiagnostic = onCall(
     });
     return { baseline: payload };
   },
-);
+));
 
 export const resetMyProgress = onCall(
   {
@@ -1063,7 +1065,7 @@ export const resetMyProgress = onCall(
     memory: "512MiB",
     maxInstances: 5,
   },
-  async (request) => {
+  monitored("resetMyProgress", async (request) => {
     const principal = requireAuth(request);
     parseInput(ResetMyProgressSchema, request.data);
     await enforceRateLimit("resetMyProgress", principal.uid, 3, 60 * 60);
@@ -1097,7 +1099,7 @@ export const resetMyProgress = onCall(
       preserved: ["Firebase Auth account", `users/${principal.uid}`],
     };
   },
-);
+));
 
 /** How recently the caller must have signed in for account deletion to proceed. */
 const REAUTHENTICATION_WINDOW_SECONDS = 5 * 60;
@@ -1120,7 +1122,7 @@ export const deleteMyAccount = onCall(
     memory: "512MiB",
     maxInstances: 5,
   },
-  async (request) => {
+  monitored("deleteMyAccount", async (request) => {
     const principal = requireAuth(request);
     parseInput(DeleteMyAccountSchema, request.data);
     await enforceRateLimit("deleteMyAccount", principal.uid, 5, 60 * 60);
@@ -1157,7 +1159,12 @@ export const deleteMyAccount = onCall(
     } catch (cause) {
       // A storage failure must not leave the account half-deleted with no way
       // to retry, so it is recorded and the deletion continues.
-      logger.warn("account deletion: storage cleanup failed", { uid: principal.uid, cause: String(cause) });
+      // The uid and the cause text are deliberately not recorded: the cause can
+      // contain a storage path, and a path can contain a file a learner named.
+      monitor("account-deletion-failure", {
+        actorRef: actorRef(principal.uid, ACTOR_SALT),
+        details: { operation: "deleteMyAccount", stage: "storage-cleanup" },
+      });
     }
 
     // Counts and the uid only: nothing a learner wrote reaches the audit trail.
@@ -1171,4 +1178,4 @@ export const deleteMyAccount = onCall(
 
     return { deleted: true, filesDeleted };
   },
-);
+));
