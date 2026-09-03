@@ -148,9 +148,32 @@ All of it is `status: 'draft'`, `demo: false` — distinct from `DEMO_LESSONS`, 
 demo. A test asserts the authored content names no reviewer, no review date and nothing
 verified.
 
-Still outstanding for the slices: wiring the plan and dashboard to route a learner through
-lesson → guided → independent → timed for these two cells, and the progress-restoration
-tests over that path. The content exists; the routing does not yet use it.
+**Stage engine** in `src/features/slices/slice-progress.ts` — the rules of the path
+lesson → guided → independent → timed, with no storage, no React and no clock it is not
+given, so the rules are testable directly. Twenty tests cover:
+
+- A stage cannot be skipped; progress is a prefix of the sequence.
+- Completing a stage twice is the same as once — a retried request, a double tap or a
+  replayed offline mutation advances nothing and counts no answer twice.
+- Reload resumes at the unfinished stage; a finished slice reports finished.
+- Progress is keyed on learner **and** cell, and carries its owner on the record.
+- An offline merge takes the union of finished stages and keeps the earlier completion
+  time, so it is order-independent and idempotent, and a replayed copy cannot move a date.
+- Guided practice never reveals the answer, whatever the hint count; independent practice
+  and the timed set reveal only after submission; the lesson may show its worked example.
+
+**A false claim removed.** The lesson page labelled every published lesson "Verified
+content", which included the demo lessons — a claim no human had made. Each state now says
+what it is: *Published* (with a note that publication is not subject-matter verification),
+*Awaiting review*, *Demo content*, *Built-in*. `resolveLesson` gained a `pending-review`
+kind rather than a boolean, so a caller that forgets to handle authored content fails to
+compile, and draft content can never be returned as published.
+
+**Still outstanding:** the screen itself. The engine, the content and the trust labels
+exist; the route that walks a learner through the four stages, persists progress through
+the repository layer, and surfaces the two slices on the dashboard and daily plan has not
+been built. That is the next task, and until it exists the slices are reachable only as a
+lesson page.
 
 ### Callable-layer security tests (P3, same batch)
 
