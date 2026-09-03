@@ -107,6 +107,29 @@ Playwright ran with `PLAYWRIGHT_CHROMIUM_PATH` pointed at a local Chromium, so t
 and tablet projects exercised their viewport profile on Chromium rather than real WebKit.
 That is weaker evidence and does not replace the real-device checklist.
 
+### Callable-layer security tests (P3, same batch)
+
+Eleven properties exercised against the real deployed handlers with the in-memory
+Firestore: App Check enforced on every exported callable; anonymous callers refused
+everywhere; a learner cannot promote themselves or reach any of the twelve
+administrator-only callables, each refusal being an authorization refusal rather than a
+validation one; rate limits exhaust and are keyed per identity; `resetMyProgress` and
+`deleteMyAccount` touch only the caller's subtree; `deleteMyAccount` refuses a stale
+sign-in and deletes nothing; exactly one sign-in is removed and it is the caller's; the
+audit trail carries no reviewer note.
+
+**A correction worth recording.** The first version of the App Check sweep asserted that
+every callable consumes the token, and eleven appeared to fail. They do not.
+`enforceAppCheck` is true on all six option objects; `consumeAppCheckToken` is replay
+protection, deliberately reserved for infrequent consequential calls because it costs a
+round trip. The sweep now asserts the universal property separately from the stronger one
+and pins the list of calls that must keep replay protection.
+
+**What this does not prove.** It proves what the server code refuses, not what the
+Firestore rules engine refuses. `dl.google.com` and `storage.googleapis.com` are blocked
+here and no emulator jar is cached, so rules-engine abuse tests remain owner-run work on
+the release gate.
+
 ### Delivery note
 
 `git push` from this sandbox session is refused by its credential proxy:
