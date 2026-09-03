@@ -226,8 +226,8 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
         'Если x + b = c, то x = c − b. Если ax = c, то x = c ÷ a.',
       ), { katex: ['x + b = c \\iff x = c - b', 'ax = c \\iff x = \\frac{c}{a}'] }),
       section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
-        'Solve x + 9 = 4. Nine was added to x, so subtract nine from both sides: x = 4 − 9 = −5. Check: −5 + 9 = 4. Correct.',
-        'Решите x + 9 = 4. К x прибавили девять, значит вычитаем девять из обеих частей: x = 4 − 9 = −5. Проверка: −5 + 9 = 4. Верно.',
+        'Solve x + 6 = 2. Six was added to x, so subtract six from both sides: x = 2 − 6 = −4. Check: −4 + 6 = 2. Correct.',
+        'Решите x + 6 = 2. К x прибавили шесть, значит вычитаем шесть из обеих частей: x = 2 − 6 = −4. Проверка: −4 + 6 = 2. Верно.',
       )),
       section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
         'Solve 7x = 42. First: what was done to x? Second: what undoes it? Third: apply it to both sides. Fourth: substitute your answer back.',
@@ -286,8 +286,8 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
         'Q = mcΔT, где Q в джоулях, m в килограммах, c в Дж/(кг·К) и ΔT в кельвинах. В преобразованном виде c = Q ÷ (mΔT).',
       ), { katex: ['Q = mc\\Delta T', 'c = \\frac{Q}{m\\Delta T}'] }),
       section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
-        '0.50 kg of water, c = 4200 J/(kg·K), raised by 20 K. Q = 0.50 × 4200 × 20 = 42000 J = 42 kJ. Sanity check: half a kilogram of water takes about 2 kJ per kelvin, so 20 K is about 42 kJ.',
-        '0,50 кг воды, c = 4200 Дж/(кг·К), нагрев на 20 К. Q = 0,50 × 4200 × 20 = 42000 Дж = 42 кДж. Проверка порядка: полкилограмма воды берёт около 2 кДж на кельвин, значит 20 К — около 42 кДж.',
+        '0.30 kg of water, c = 4200 J/(kg·K), raised by 15 K. Q = 0.30 × 4200 × 15 = 18900 J = 18.9 kJ. Sanity check: water takes about 4.2 kJ per kilogram per kelvin, so 0.3 kg over 15 K is roughly 19 kJ.',
+        '0,30 кг воды, c = 4200 Дж/(кг·К), нагрев на 15 К. Q = 0,30 × 4200 × 15 = 18900 Дж = 18,9 кДж. Проверка порядка: вода берёт около 4,2 кДж на килограмм на кельвин, значит 0,3 кг на 15 К — примерно 19 кДж.',
       )),
       section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
         '0.20 kg of water goes from 20 °C to 100 °C. First: is 100 the change or the final value? Second: compute ΔT. Third: multiply m, c and ΔT. Fourth: convert to kilojoules.',

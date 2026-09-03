@@ -47,7 +47,10 @@ import {
   type VocabularyProgress,
   type UserSettings,
   type VocabularyEntry,
+  SliceProgressSchema,
+  type SliceProgress,
 } from "../domain";
+import { completeStage, emptySliceProgress, type SliceStage } from "../features/slices/slice-progress";
 import {
   applyFormulaReview,
   applyVocabularyReview,
@@ -126,6 +129,7 @@ export interface HydrationPayload {
   studyPlan?: unknown;
   vocabularyProgress?: unknown;
   formulaProgress?: unknown;
+  sliceProgress?: unknown;
   mockExams?: unknown;
   activeMock?: unknown;
   activePractice?: unknown;
@@ -144,6 +148,8 @@ export interface CscaAppState {
   mistakes: Record<string, MistakeRecord>;
   bookmarks: Record<string, Bookmark>;
   notes: Record<string, UserNote>;
+  /** Teaching-slice progress, keyed by cell id for the learner in `profile`. */
+  sliceProgress: Record<string, SliceProgress>;
   dailyPlan: DailyPlan | null;
   studyPlan: StudyPlan | null;
   vocabularyProgress: Record<string, VocabularyProgress>;
@@ -180,6 +186,19 @@ export interface CscaAppState {
   resolveMistake: (mistakeId: string) => Promise<void>;
   toggleBookmark: (targetType: Bookmark["targetType"], targetId: string) => Promise<void>;
   saveNote: (topicId: string, text: string) => Promise<void>;
+  /**
+   * Records a finished slice stage. Returns whether it was applied: a repeated
+   * or out-of-order call is refused by the engine and persists nothing, so a
+   * double tap or a replayed mutation cannot advance the path twice.
+   */
+  completeSliceStage: (input: {
+    cellId: string;
+    lessonId: string;
+    stage: SliceStage;
+    answered: number;
+    correct: number;
+    durationSeconds: number;
+  }) => Promise<{ applied: boolean; reason: string | null }>;
   startMock: (attempt: unknown) => Promise<void>;
   recoverMock: (attempt: unknown) => void;
   answerMockQuestion: (questionId: string, selectedAnswer: string | null, durationSeconds: number) => Promise<void>;
@@ -355,6 +374,7 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
   return (set, get) => ({
     hydrated: false,
     profile: null,
+    sliceProgress: {},
     topics: [],
     lessons: [],
     questions: [],
@@ -402,6 +422,16 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
         mistakes: nextMistakes,
         bookmarks: payload.bookmarks === undefined ? get().bookmarks : toRecord(z.array(BookmarkSchema).parse(payload.bookmarks)),
         notes: payload.notes === undefined ? get().notes : toRecord(z.array(UserNoteSchema).parse(payload.notes)),
+        sliceProgress:
+          payload.sliceProgress === undefined
+            ? get().sliceProgress
+            // A record that fails to parse is dropped rather than crashing the
+            // hydration: a corrupted slice must not cost the learner the rest
+            // of their data. The path simply restarts from the lesson.
+            : keyBy(
+                z.array(SliceProgressSchema).catch([]).parse(payload.sliceProgress),
+                (item) => item.cellId,
+              ),
         dailyPlan: payload.dailyPlan === undefined || payload.dailyPlan === null ? null : DailyPlanSchema.parse(payload.dailyPlan),
         studyPlan:
           payload.studyPlan === undefined
@@ -777,6 +807,29 @@ function createStateCreator(initialPersistence: StorePersistence | null = null):
       });
       set({ notes: { ...get().notes, [note.id]: note } });
       await persistAndSync("note", note, false);
+    },
+
+    completeSliceStage: async ({ cellId, lessonId, stage, answered, correct, durationSeconds }) => {
+      const profile = get().profile;
+      if (!profile) throw new Error("A profile is required to record slice progress");
+      const now = new Date().toISOString();
+      const existing = get().sliceProgress[cellId]
+        ?? emptySliceProgress({ userId: profile.uid, cellId, lessonId, now });
+
+      // A record belonging to someone else must never be advanced: it can only
+      // be here through a hydration bug, and continuing would attribute one
+      // learner's work to another.
+      if (existing.userId !== profile.uid) {
+        throw new Error("Refusing to record progress onto another learner's slice");
+      }
+
+      const outcome = completeStage(existing, { stage, answered, correct, durationSeconds, now });
+      if (!outcome.applied) return { applied: false, reason: outcome.reason };
+
+      const parsed = SliceProgressSchema.parse(outcome.progress);
+      set({ sliceProgress: { ...get().sliceProgress, [cellId]: parsed } });
+      await persistAndSync("slice-progress", parsed, false);
+      return { applied: true, reason: null };
     },
 
     startMock: async (input) => {

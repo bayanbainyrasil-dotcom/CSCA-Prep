@@ -2,6 +2,8 @@ import { Brain, Check, ChevronRight, Clock3, Languages, Play, Target, Zap } from
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
 import { PageHeading } from '@/components/layout/page-heading';
+import { SliceCards } from '@/features/slices/slice-cards';
+import { useAuth } from '@/features/auth/auth-provider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -23,6 +25,8 @@ export default function TodayPage() {
   const plan = useAppStore((state) => state.dailyPlan);
   const lessons = useAppStore((state) => state.lessons);
   const completeBlock = useAppStore((state) => state.completeDailyPlanBlock);
+  const sliceProgress = useAppStore((state) => state.sliceProgress);
+  const { user, isDemo } = useAuth();
 
   if (!plan) {
     return <div><PageHeading eyebrow="Today" title="Building your next session…" description="The plan appears after local progress and published topics finish loading." /><Card><CardContent className="p-10 text-center text-sm text-muted-foreground">Your saved work is being checked first.</CardContent></Card></div>;
@@ -78,6 +82,7 @@ export default function TodayPage() {
           <Card className="sticky top-24 border-primary/25 bg-primary/[0.045]"><CardContent className="p-6">{next ? <><p className="data-label">Up next</p><h2 className="mt-2 font-display text-2xl font-semibold tracking-tight">{next.title}</h2><p className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground"><Clock3 className="h-4 w-4" />{next.targetMinutes} minutes · {next.reason}</p><Button size="lg" className="mt-6 w-full" asChild><Link to={pathFor(next)}><Play className="h-4 w-4 fill-current" /> Start now</Link></Button><p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">Finish one block at a time. Every completion is saved locally first.</p></> : <><span className="grid h-12 w-12 place-items-center rounded-2xl bg-success/10 text-success"><Check className="h-5 w-5" /></span><h2 className="mt-5 font-display text-2xl font-semibold">Today is complete</h2><p className="mt-2 text-sm text-muted-foreground">Your next plan will use today’s answers and review schedule.</p></>}</CardContent></Card>
         </aside>
       </div>
+      <SliceCards progress={sliceProgress} isDemo={isDemo} role={user?.role} />
     </div>
   );
 }

@@ -16,6 +16,7 @@ const Diagnostic=lazy(()=>import('@/pages/diagnostic-page'));
 const Mock=lazy(()=>import('@/pages/mock-page'));
 const MockExam=lazy(()=>import('@/pages/mock-exam-page'));
 const MockResults=lazy(()=>import('@/pages/mock-results-page'));
+const Slice=lazy(()=>import('@/pages/slice-page'));
 const Vocabulary=lazy(()=>import('@/pages/vocabulary-page'));
 const Formulas=lazy(()=>import('@/pages/formulas-page'));
 const MentalMath=lazy(()=>import('@/pages/mental-math-page'));
@@ -45,6 +46,7 @@ export const router=createBrowserRouter([
       {path:'mathematics',element:<Page><Subject subject="mathematics"/></Page>},
       {path:'physics',element:<Page><Subject subject="physics"/></Page>},
       {path:'lesson/:lessonId',element:<Page><Lesson/></Page>},
+      {path:'slice/:cellId',element:<Page><Slice/></Page>},
       {path:'practice',element:<Page><Practice/></Page>},
       {path:'practice/session',element:<Page><PracticeSession/></Page>},
       {path:'diagnostic',element:<Page><Diagnostic/></Page>},

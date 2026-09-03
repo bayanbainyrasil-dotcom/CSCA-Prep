@@ -119,3 +119,30 @@ test('a keyboard user reaches main content with one keystroke', async ({ page },
   await expect(page).toHaveURL(/#main-content$/);
   await expect(page.locator('main#main-content')).toBeVisible();
 });
+
+test('a teaching slice deep link survives a refresh and is honestly labelled', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop', 'The deep link is checked once.');
+  await seedLocalSession(page);
+
+  // A fresh navigation, not a client-side route change: this is the case that
+  // used to fall through to the 404 handler on GitHub Pages.
+  const response = await page.goto('/slice/math-linear-isolate-unknown');
+  expect(response?.status()).toBe(200);
+  await page.waitForLoadState('networkidle');
+
+  await expect(page.getByText('Awaiting human review').first()).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Lesson', level: 2 })).toBeVisible();
+
+  await page.reload();
+  await page.waitForLoadState('networkidle');
+  await expect(page.getByRole('heading', { name: 'Lesson', level: 2 })).toBeVisible();
+});
+
+test('the slice route has no horizontal overflow on any profile', async ({ page }) => {
+  await seedLocalSession(page);
+  await page.goto('/slice/phys-thermodynamics-heat-transfer');
+  await page.waitForLoadState('networkidle');
+
+  const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflow).toBeLessThanOrEqual(0);
+});

@@ -26,3 +26,11 @@ test('generates a 200-capable Pages entrypoint for every static application rout
     await rm(outDir, { recursive: true, force: true });
   }
 });
+
+test('generates a real entrypoint for each authored teaching slice', async () => {
+  // A learner following a shared link to a slice must land on a page file, not
+  // on the 404 fallback, so the deep link survives a refresh on GitHub Pages.
+  for (const route of ['slice/math-linear-isolate-unknown', 'slice/phys-thermodynamics-heat-transfer']) {
+    assert.ok(pagesEntrypoints.includes(route), `${route} should have an entrypoint`);
+  }
+});
