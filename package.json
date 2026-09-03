@@ -10,10 +10,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "pnpm build && node scripts/generate-pages-entrypoints.mjs",
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint . --max-warnings 0",
-    "test": "vitest run",
+    "test": "vitest run && pnpm test:pages",
+    "test:pages": "node --test scripts/generate-pages-entrypoints.test.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",

@@ -54,10 +54,7 @@ jobs:
         env:
           VITE_BASE_PATH: /CSCA-Prep/
           VITE_DEPLOYMENT_MODE: local-demo
-        run: pnpm build
-
-      - name: Add deep-link fallback
-        run: cp dist/index.html dist/404.html
+        run: pnpm build:pages
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4

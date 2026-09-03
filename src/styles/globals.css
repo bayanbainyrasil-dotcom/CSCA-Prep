@@ -96,14 +96,14 @@
   .content-grid { @apply grid gap-4 lg:grid-cols-12 lg:gap-6; }
   .data-label { @apply font-mono text-[0.67rem] font-medium uppercase tracking-[0.15em] text-muted-foreground; }
   .glass-panel { @apply border border-white/30 bg-card/80 backdrop-blur-xl dark:border-white/[0.06]; }
-  .tap-target { min-height: 44px; min-width: 44px; }
+  .tap-target { min-height: 48px; min-width: 48px; }
   .skip-link {
     position: absolute;
     left: 0.75rem;
     top: -3rem;
     z-index: 100;
     display: inline-flex;
-    min-height: 44px;
+    min-height: 48px;
     align-items: center;
     border-radius: 0.75rem;
     background: hsl(var(--primary));
