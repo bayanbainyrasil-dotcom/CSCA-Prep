@@ -459,6 +459,47 @@ Not done, and not attempted: moving zod and the domain schemas (22.9 KB gzipped)
 first load. That needs the data layer restructured so nothing on the shell path parses, and
 the regression risk is not worth 23 KB in a session that cannot run a real device test.
 
+## Fifth vertical slice (P2-1, 2026-09-03)
+
+`math-foundation-integer-operations` is the cell the linear-equations lesson names as its
+prerequisite, and it had three authored items and no teaching. It is now a slice built
+around what actually goes wrong there: correct arithmetic done in the wrong order, and a
+minus sign attached to the wrong thing. Neither is a knowledge gap, which is why they
+survive — the working looks right line by line — so the lesson asks for the order and the
+signs to be settled before anything is computed. The CSCA-style section says outright that
+every distractor in this cell is reachable by a real mistake, so an option matching your
+answer is the design rather than a confirmation.
+
+The worked example evaluates −15 ÷ 3 + (−7) × 2, chosen because it shares no full set of
+numbers with any of the three items in the cell.
+
+### A test changed, and why that was not a weakening
+
+`teaching-slices.test.ts` required every formula to have at least three variables. That
+number is a proxy for "a learner can look up every symbol they can see", and the two-symbol
+sign rule satisfies the intent while failing the proxy. Rather than pad the relation with a
+third symbol it does not have, the test now parses the symbols out of the rendered KaTeX and
+requires each one to appear in `variables`. That is stricter than the count it replaced: a
+relation could previously list three variables and still render a fourth symbol unexplained.
+
+Five of 109 cells now have a teaching slice, all `draft` and unreviewed. Coverage still
+reads 0 approved.
+
+### Checks, each run separately on `6b37683`
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Web typecheck | `pnpm typecheck` | passed |
+| Lint | `pnpm lint` | passed, 0 warnings |
+| Web unit tests | `pnpm vitest run` | 797 passed, 65 files |
+| Pages entrypoints | `pnpm test:pages` | 2 passed |
+| Budget script tests | `pnpm test:budget` | 6 passed |
+| Web build | `pnpm build` | built |
+| Functions typecheck | `npx tsc --noEmit` in `functions/` | passed |
+| Bundle secret scan | `pnpm check:bundle` | passed, 86 files, 42 solution strings absent |
+| First-load budget | `pnpm check:budget` | 189.0 KB gz JS, 19.7 KB gz CSS, within budget |
+| Browser tests | `PLAYWRIGHT_CHROMIUM_PATH=… pnpm test:e2e` | 26 passed, 34 skipped by project design, 0 failed |
+
 ## Fourth vertical slice (P2-1, 2026-09-03)
 
 `math-linear-linear-word-problem` had three authored items and no teaching — the same gap as
@@ -472,8 +513,8 @@ equation.
 The worked example is a phone bill, 900 + 45m = 3150, because none of the three practice
 items in the cell uses any of those numbers.
 
-Four of 109 cells now have a teaching slice, all four `draft` and unreviewed, and coverage
-still reads 0 approved.
+Four of 109 cells had a teaching slice after this batch, all `draft` and unreviewed, and
+coverage still read 0 approved.
 
 ## Third vertical slice (P2-1, 2026-09-03)
 
@@ -604,7 +645,7 @@ public Git history and therefore cannot become confidential mock content even af
 ### P2 — scale and polish
 
 1. Expand reviewed lessons and questions as complete vertical slices rather than isolated
-   questions. Four of 109 cells now have one; all four await human review.
+   questions. Five of 109 cells now have one; all five await human review.
 2. ~~Add learner-visible reviewed/unreviewed coverage confidence.~~ Done in code; the
    numbers it reports stay all-zero until a deployment and a human review exist.
 3. Add original short concept videos only where they improve a specific blueprint cell.
@@ -622,13 +663,12 @@ as verified.
 budget and its guard (audit P2-5), and a third vertical slice (audit P2-1).
 
 **Next code task that can proceed independently:** continue P2-1. Of the seven cells with
-authored items, four now have a lesson; the three left are the number-foundation cells
-(`math-foundation-integer-operations`, `math-foundation-fraction-decimal-percent`,
-`math-foundation-estimate-magnitude`), and the first of them is named as a prerequisite by
-the linear-equations lesson, so it is the next one to write. There is no physics cell with
-items but no teaching: a further physics slice needs its questions authored first.
-Everything authored stays `draft`/`pending-review` — Claude does not mark its own content
-verified, and no reviewer, source or review date may be invented.
+authored items, five now have a lesson; the two left are
+`math-foundation-fraction-decimal-percent` and `math-foundation-estimate-magnitude`. After
+those, every authored item has teaching around it, and further slices need their questions
+written first — including any further physics slice, since no physics cell has items without
+teaching. Everything authored stays `draft`/`pending-review` — Claude does not mark its own
+content verified, and no reviewer, source or review date may be invented.
 
 Still blocked in this environment, unchanged: emulator abuse tests (P1-2) need a download
 this sandbox refuses; real-device Safari (P1-4) and every live check need the deployment.
