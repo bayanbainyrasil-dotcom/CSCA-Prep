@@ -107,6 +107,34 @@ Playwright ran with `PLAYWRIGHT_CHROMIUM_PATH` pointed at a local Chromium, so t
 and tablet projects exercised their viewport profile on Chromium rather than real WebKit.
 That is weaker evidence and does not replace the real-device checklist.
 
+### Physics vertical slice (P4, same batch)
+
+`phys-thermodynamics-heat-transfer` had no authored questions. It now has four, covering
+both difficulties the cell requires (2 and 3) and both question types
+(`single-step-calculation`, `multi-step-calculation`), against a minimum of three.
+
+- Every distractor is a named mistake mapped to the option it produces: dropping the mass,
+  reading a final temperature as a change, using the initial temperature, a
+  grams-for-kilograms slip, a factor of ten. A test asserts every wrong option is explained
+  and the correct one never is.
+- Every answer is recomputed independently in `src/data/draft-questions.test.ts` from the
+  item's own `templateParameters`, written from `Q = mcΔT` rather than by copying the
+  solution text, so a wrong solution cannot validate itself.
+- English prompt plus a real Russian rendering, a full solution, a short revision solution
+  and an explanation, all length-checked.
+- All four options of an item share one unit, so the comparison is between numbers.
+- An item that asks for the specific heat capacity must not also state it. That invariant
+  came from a wrong first assertion, which item 002 caught.
+
+**These are public practice items.** Their keys are in this repository, so a test confirms
+that even fully reviewed they are refused for a mock (`excludedForMode`) and count only for
+practice. **Coverage is unchanged at 0 of 109.**
+
+Still outstanding for a complete slice, in both subjects: the lesson, vocabulary and
+formula entries, the guided/independent/timed path wired through the plan, and the same
+treatment for `math-linear-isolate-unknown`, whose three questions already cover its
+required difficulties but which has no lesson of its own.
+
 ### Callable-layer security tests (P3, same batch)
 
 Eleven properties exercised against the real deployed handlers with the in-memory
@@ -196,7 +224,9 @@ and its eight owner decisions).
 - Blueprint: 109 draft cells — 47 Mathematics, 62 Physics. Four were added on 2026-09-03
   to close required-area gaps; their requirement is itself unconfirmed (see below).
 - Human-verified cells: **0/109**.
-- Public authored questions: 17, all still awaiting human review.
+- Public authored questions: 21 across 7 cells, all still awaiting human review. Slice 1 is
+  six Mathematics cells (17 items); slice 2 is `phys-thermodynamics-heat-transfer` (4 items,
+  authored 2026-09-03), the first Physics content in the bank.
 - Confidential production mock questions: **0**.
 - Production mock coverage: **0**; publication/start correctly refuse with
   `insufficient-verified-coverage`.
