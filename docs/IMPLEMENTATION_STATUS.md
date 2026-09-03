@@ -130,10 +130,27 @@ both difficulties the cell requires (2 and 3) and both question types
 that even fully reviewed they are refused for a mock (`excludedForMode`) and count only for
 practice. **Coverage is unchanged at 0 of 109.**
 
-Still outstanding for a complete slice, in both subjects: the lesson, vocabulary and
-formula entries, the guided/independent/timed path wired through the plan, and the same
-treatment for `math-linear-isolate-unknown`, whose three questions already cover its
-required difficulties but which has no lesson of its own.
+**Teaching content authored for both slices** in `src/data/teaching-slices.ts`: two lessons,
+six vocabulary entries and two formulas, typed against the existing `LessonSchema`,
+`VocabularyEntrySchema` and `FormulaSchema` rather than a parallel model.
+
+Each lesson runs the whole path in order — prerequisites, objectives, the idea, the English
+of the question wording, vocabulary, the relation, a worked example, guided practice with
+ordered hints, independent practice, CSCA-style reading advice, a timed set. Tests assert
+the *order*, not just the presence, because the order is the teaching. Both languages are
+written out, and a test rejects Russian that is the English copied across.
+
+Formulas carry every variable's meaning in both languages, SI units where the relation is
+dimensional, and where each stops applying: `Q = mcΔT` states that it does not hold through
+melting or boiling.
+
+All of it is `status: 'draft'`, `demo: false` — distinct from `DEMO_LESSONS`, which stay
+demo. A test asserts the authored content names no reviewer, no review date and nothing
+verified.
+
+Still outstanding for the slices: wiring the plan and dashboard to route a learner through
+lesson → guided → independent → timed for these two cells, and the progress-restoration
+tests over that path. The content exists; the routing does not yet use it.
 
 ### Callable-layer security tests (P3, same batch)
 
