@@ -229,6 +229,80 @@ export function readImportProblems(error: unknown): { id: string; outcome: strin
   return parsed.success ? (parsed.data.problems ?? []) : [];
 }
 
+const OutlineReviewRecordSchema = z
+  .object({
+    cellId: z.string(),
+    status: z.enum(['unreviewed', 'matches-source', 'difference-found', 'needs-specialist', 'superseded']),
+    sourceUrl: z.string().nullable(),
+    sourceTitle: z.string().nullable(),
+    sourceEdition: z.string().nullable(),
+    sourcePublishedAt: z.string().nullable(),
+    lastCheckedAt: z.string().nullable(),
+    reviewer: z.string().nullable(),
+    reviewerUid: z.string().nullable(),
+    reviewedAt: z.string().nullable(),
+    differenceNote: z.string(),
+    ownSummary: z.string(),
+    reviewedCellVersion: z.number().nullable(),
+    version: z.number(),
+  })
+  .strict();
+export type OutlineReviewRecord = z.infer<typeof OutlineReviewRecordSchema>;
+
+const OutlineCellSchema = z
+  .object({
+    id: z.string(),
+    subject: z.string(),
+    module: z.string(),
+    topic: z.string(),
+    skill: z.string(),
+    microSkill: z.string(),
+    version: z.number(),
+    review: OutlineReviewRecordSchema,
+  })
+  .strict();
+export type OutlineCell = z.infer<typeof OutlineCellSchema>;
+
+/** The comparison screen's data: every cell with whatever review it carries. */
+export async function fetchOutlineReviews(subject?: 'mathematics' | 'physics'): Promise<OutlineCell[]> {
+  const call = httpsCallable(requireFunctions(), 'readOutlineReviews');
+  const response = await call(subject ? { subject } : {});
+  return z.object({ cells: z.array(OutlineCellSchema) }).strict().parse(response.data).cells;
+}
+
+/**
+ * Records one judgement. The reviewer, the times and the reviewed cell version
+ * are stamped by the server; nothing here can send them.
+ */
+export async function recordOutlineReview(input: {
+  cellId: string;
+  status: 'matches-source' | 'difference-found' | 'needs-specialist' | 'superseded';
+  expectedCellVersion: number;
+  sourceUrl: string | null;
+  sourceTitle: string | null;
+  sourceEdition: string | null;
+  sourcePublishedAt: string | null;
+  differenceNote: string;
+  ownSummary: string;
+  ownWordsAttested: true;
+}) {
+  const call = httpsCallable(requireFunctions(), 'recordOutlineReview');
+  const response = await call(input);
+  return z
+    .object({ cellId: z.string(), status: z.string(), version: z.number(), reviewedCellVersion: z.number() })
+    .strict()
+    .parse(response.data);
+}
+
+/** Reads the per-item problems a refused review returned. */
+export function readOutlineProblems(error: unknown): { code: string; message: string }[] {
+  const details = (error as { details?: unknown })?.details;
+  const parsed = z
+    .object({ problems: z.array(z.object({ code: z.string(), message: z.string() })).optional() })
+    .safeParse(details);
+  return parsed.success ? (parsed.data.problems ?? []) : [];
+}
+
 export async function publishMockExam(input: {
   mockExamId: string;
   title: string;

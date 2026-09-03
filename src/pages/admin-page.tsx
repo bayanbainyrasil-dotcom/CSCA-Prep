@@ -13,6 +13,7 @@ import { BlueprintCoverageDashboard } from '@/features/blueprint/coverage-dashbo
 import { fetchBlueprintCoverage, type CoverageCell } from '@/features/blueprint/blueprint-service';
 import { EMPTY_DRAFT, QuestionEditor, type QuestionDraftValue } from '@/features/blueprint/question-editor';
 import { ImportPanel } from '@/features/blueprint/import-panel';
+import { OutlineReviewPanel } from '@/features/blueprint/outline-review';
 import { ReviewQueue } from '@/features/blueprint/review-queue';
 import { BLUEPRINT_SEED_VERSION, PUBLIC_SEED_VERSION } from '../../functions/src/seed-versions';
 import { auth, firestore, functions } from '@/lib/firebase';
@@ -200,6 +201,8 @@ export default function AdminPage() {
         publicSeedVersion={PUBLIC_SEED_VERSION}
         onImported={() => setRefreshToken((value) => value + 1)}
       />
+
+      <OutlineReviewPanel />
 
       <ReviewQueue onReviewed={() => setRefreshToken((value) => value + 1)} />
 
