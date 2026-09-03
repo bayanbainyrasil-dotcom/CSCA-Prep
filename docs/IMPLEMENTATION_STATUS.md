@@ -415,6 +415,50 @@ This closes audit P2-4 as far as it can be closed without a deployment. The call
 path exists and is exercised by tests against an in-memory Firestore; it has never answered
 a real request, because Firebase is not deployed.
 
+## First-load budget (P2-5, 2026-09-03)
+
+The audit asked for the initial Firebase and the heavy visualization and maths JavaScript to
+be split out of the first load. Measured on `db132dc`, they already are. What `index.html`
+itself asks for is:
+
+| Asset | Gzipped |
+| --- | --- |
+| Application entry and shell | 147.1 KB |
+| Domain schemas (zod) | 22.9 KB |
+| Icon factory | 9.3 KB |
+| Domain models | 4.6 KB |
+| React runtime shim, router runtime, date, preload helper, Firebase re-export stub | 4.5 KB |
+| **Total JavaScript** | **189.0 KB** |
+| Stylesheet | 19.7 KB |
+
+Recharts (357 KB raw), KaTeX (265 KB raw) and the Firebase SDK (~900 KB raw across its
+chunks) are all in chunks no eager module imports. Every page is behind `React.lazy`, and
+only two lazy pages import Recharts.
+
+That was true by accident, not by construction, so `scripts/check-bundle-budget.mjs` now
+makes it a check: it reads the assets `index.html` asks for, gzips them, and fails if the
+first load exceeds its budget or if any chunk in it contains Recharts, KaTeX or Firebase.
+The markers are case-sensitive because the entry chunk lists every lazy chunk by *filename*
+— lowercase "katex" and "firebase" appear there with none of either library present, while
+`KaTeX` and `@firebase` appear only inside the libraries.
+
+### Manual vendor chunking was tried and rejected
+
+Grouping React, Recharts, KaTeX and Firebase into named vendor chunks made the first load
+**worse**: with this bundler a manual chunk attracts shared modules, and Recharts — imported
+by two lazy routes only — was pulled into the eager graph, taking the first load from 189 KB
+to 298 KB gzipped. React-only chunking was neutral on first load (188.2 KB) and would have
+bought caching stability across deploys, but not at the cost of carrying the failed grouping
+alongside it. The automatic splitting wins here, so the guard defends it rather than
+replacing it.
+
+The bundle secret scan also runs in CI now. It existed and passed, but nothing ran it
+automatically, which is a check with a shelf life.
+
+Not done, and not attempted: moving zod and the domain schemas (22.9 KB gzipped) out of the
+first load. That needs the data layer restructured so nothing on the shell path parses, and
+the regression risk is not worth 23 KB in a session that cannot run a real device test.
+
 ## Verified state
 
 - Web typecheck: pass.
@@ -506,7 +550,8 @@ public Git history and therefore cannot become confidential mock content even af
    numbers it reports stay all-zero until a deployment and a human review exist.
 3. Add original short concept videos only where they improve a specific blueprint cell.
 4. Calibrate readiness/score confidence using reviewed difficulty and real outcomes.
-5. Further split the initial Firebase and heavy visualization/math JavaScript.
+5. ~~Further split the initial Firebase and heavy visualization/math JavaScript.~~ Measured:
+   already split. A budget check now defends it. Moving zod off the shell path stays open.
 
 ## Next exact task
 
@@ -514,16 +559,16 @@ public Git history and therefore cannot become confidential mock content even af
 blueprint before approving content. Do not invent a reviewer or self-mark generated content
 as verified.
 
-**Done in this batch:** learner-visible coverage confidence (audit P2-4). Four separate
-counts with no blended score, a learner-safe `getCoverageSummary` callable that never reads
-the private answer collection, and an honest error state in place of zeros when coverage
-cannot be read.
+**Done in this batch:** learner-visible coverage confidence (audit P2-4) and the first-load
+budget (audit P2-5). Four separate counts with no blended score, a learner-safe
+`getCoverageSummary` callable that never reads the private answer collection, an honest
+error state in place of zeros, and a checked-in guard on what the first load may contain.
 
-**Next code task that can proceed independently:** audit P2-5, splitting the initial Firebase
-and the heavy visualization/maths JavaScript out of the first load. The build still warns
-that chunks exceed 500 kB, and the progress page now pulls Recharts and the coverage read
-into the same route. This is measurable here — bundle sizes are a local fact — unlike the
-remaining P1 items, which need a deployment.
+**Next code task that can proceed independently:** audit P2-1, expanding the reviewed content
+as complete vertical slices rather than isolated questions. Two slices exist
+(`math-linear-isolate-unknown`, `phys-thermodynamics-heat-transfer`); the blueprint has 109
+cells. Everything authored stays `pending-review` — Claude does not mark its own content
+verified, and no reviewer, source or review date may be invented.
 
 Still blocked in this environment, unchanged: emulator abuse tests (P1-2) need a download
 this sandbox refuses; real-device Safari (P1-4) and every live check need the deployment.
