@@ -459,6 +459,54 @@ Not done, and not attempted: moving zod and the domain schemas (22.9 KB gzipped)
 first load. That needs the data layer restructured so nothing on the shell path parses, and
 the regression risk is not worth 23 KB in a session that cannot run a real device test.
 
+## Every authored item now sits inside a slice (P2-1, 2026-09-03)
+
+`math-foundation-fraction-decimal-percent` and `math-foundation-estimate-magnitude` were the
+last two cells with authored items and no teaching. Both now have a slice, so every authored
+question in the repository has a lesson, vocabulary and a relation around it. Seven of 109
+cells have a teaching slice; all seven are `draft` and unreviewed, and coverage still reads
+0 approved.
+
+The conversion lesson rests on one claim — fraction, decimal and percentage are three ways
+of writing one number, not three kinds of number — which makes every conversion a single
+operation rather than a calculation to be reasoned out again. Most of its English section is
+about which notation the question wants back, because that is what its distractors are made
+of.
+
+The estimation lesson argues that an estimate is not a worse answer given in a hurry: when
+the options are an order of magnitude apart the digits decide nothing and only the exponent
+does, so rounding hard is the correct move. Its timed set allows ninety seconds for three
+items precisely because exact arithmetic will not fit in that.
+
+### A missing item was authored rather than the test lowered
+
+`math-foundation-estimate-magnitude` held two items, which meets its own `minimumItems: 2`,
+but a slice has four stages and `teaching-slices.test.ts` requires at least three items
+behind one. Both the test and the blueprint were right about different things, so the gap
+was closed by writing the third item: a division in standard form, its key recomputed
+independently by `draft-questions.test.ts`, and every distractor an exponent slip the lesson
+names. `PUBLIC_SEED_VERSION` moved to `2026-09-03.1` with it, so an administrator cannot ask
+a server holding the older seed to import what they are looking at.
+
+The public seed now holds 22 items across seven cells — 18 Mathematics and 4 Physics. They
+remain permanently public and practice-only.
+
+### Checks, each run separately on `35e0e32`
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Web typecheck | `pnpm typecheck` | passed |
+| Lint | `pnpm lint` | passed, 0 warnings |
+| Web unit tests | `pnpm vitest run` | 797 passed, 65 files |
+| Pages entrypoints | `pnpm test:pages` | 2 passed |
+| Budget script tests | `pnpm test:budget` | 6 passed |
+| Web build | `pnpm build` | built |
+| Functions typecheck | `npx tsc --noEmit` in `functions/` | passed |
+| Functions build | `pnpm build` in `functions/` | passed |
+| Bundle secret scan | `pnpm check:bundle` | passed, 86 files, 44 solution strings absent |
+| First-load budget | `pnpm check:budget` | 189.0 KB gz JS, 19.7 KB gz CSS, within budget |
+| Browser tests | `PLAYWRIGHT_CHROMIUM_PATH=… pnpm test:e2e` | 26 passed, 34 skipped by project design, 0 failed |
+
 ## Fifth vertical slice (P2-1, 2026-09-03)
 
 `math-foundation-integer-operations` is the cell the linear-equations lesson names as its
@@ -482,8 +530,7 @@ third symbol it does not have, the test now parses the symbols out of the render
 requires each one to appear in `variables`. That is stricter than the count it replaced: a
 relation could previously list three variables and still render a fourth symbol unexplained.
 
-Five of 109 cells now have a teaching slice, all `draft` and unreviewed. Coverage still
-reads 0 approved.
+Five of 109 cells had a teaching slice after this batch, all `draft` and unreviewed.
 
 ### Checks, each run separately on `6b37683`
 
@@ -593,11 +640,11 @@ viewport profiles rather than Safari.
 - Lessons, practice, diagnostic, mock demo, mistakes, progress, bookmarks and settings.
 - Server-authoritative mock lifecycle: trusted composition, timer, answer save, resume,
   submit, grade and review contracts.
-- 105-cell prerequisite blueprint, server coverage calculation and fail-closed publication.
+- 109-cell prerequisite blueprint, server coverage calculation and fail-closed publication.
 - Blueprint-first administrator editor, import dry runs, review queue, content versioning and
   stale-approval invalidation.
-- 17 original public practice questions covering six Mathematics cells, with independently
-  recomputed answers and full explanation packets.
+- 22 original public practice questions covering seven cells, with independently recomputed
+  answers and full explanation packets, and a teaching slice around every one of them.
 - Private question import that keeps answer keys/solutions out of learner-readable records.
 - AI tutor safety seam: provider abstraction, strict schemas, quotas, shared budget, cache,
   kill switch, injection fencing, exam-mode refusal and verified fallback. The live provider
@@ -610,14 +657,16 @@ viewport profiles rather than Safari.
 - Blueprint: 109 draft cells — 47 Mathematics, 62 Physics. Four were added on 2026-09-03
   to close required-area gaps; their requirement is itself unconfirmed (see below).
 - Human-verified cells: **0/109**.
-- Public authored questions: 21 across 7 cells, all still awaiting human review. Slice 1 is
-  six Mathematics cells (17 items); slice 2 is `phys-thermodynamics-heat-transfer` (4 items,
-  authored 2026-09-03), the first Physics content in the bank.
+- Public authored questions: 22 across 7 cells, all still awaiting human review — 18 across
+  six Mathematics cells and 4 in `phys-thermodynamics-heat-transfer`, the only Physics
+  content in the bank.
+- Teaching slices: 7, one for each of those cells, all `draft` and unreviewed. A lesson is
+  not a question and moves no coverage.
 - Confidential production mock questions: **0**.
 - Production mock coverage: **0**; publication/start correctly refuse with
   `insufficient-verified-coverage`.
 
-The public 17-question seed can be used only for practice. Its answer keys have existed in
+The public seed can be used only for practice. Its answer keys have existed in
 public Git history and therefore cannot become confidential mock content even after review.
 
 ## Critical blockers
@@ -626,9 +675,9 @@ public Git history and therefore cannot become confidential mock content even af
 
 1. Deploy the configured Firebase and Vercel production environments.
 2. Create a real administrator account and verify the admin bootstrap.
-3. Have a qualified human review the 105-cell blueprint against current official CSCA
+3. Have a qualified human review the 109-cell blueprint against current official CSCA
    sources, recording source date, reviewer and unresolved differences.
-4. Import and human-review the 17 public practice items.
+4. Import and human-review the 22 public practice items.
 5. Author and independently review a never-public private question bank covering every mock
    cell, language, difficulty and question-type requirement.
 6. Finalize privacy/terms for the actual operator, processors and production domain.
@@ -645,7 +694,8 @@ public Git history and therefore cannot become confidential mock content even af
 ### P2 — scale and polish
 
 1. Expand reviewed lessons and questions as complete vertical slices rather than isolated
-   questions. Five of 109 cells now have one; all five await human review.
+   questions. Seven of 109 cells now have one; all seven await human review, and every
+   authored item sits inside a slice.
 2. ~~Add learner-visible reviewed/unreviewed coverage confidence.~~ Done in code; the
    numbers it reports stay all-zero until a deployment and a human review exist.
 3. Add original short concept videos only where they improve a specific blueprint cell.
@@ -660,15 +710,16 @@ blueprint before approving content. Do not invent a reviewer or self-mark genera
 as verified.
 
 **Done in this batch:** learner-visible coverage confidence (audit P2-4), the first-load
-budget and its guard (audit P2-5), and a third vertical slice (audit P2-1).
+budget and its guard (audit P2-5), and five more vertical slices (audit P2-1) — every
+authored item in the repository now sits inside one.
 
-**Next code task that can proceed independently:** continue P2-1. Of the seven cells with
-authored items, five now have a lesson; the two left are
-`math-foundation-fraction-decimal-percent` and `math-foundation-estimate-magnitude`. After
-those, every authored item has teaching around it, and further slices need their questions
-written first — including any further physics slice, since no physics cell has items without
-teaching. Everything authored stays `draft`/`pending-review` — Claude does not mark its own
-content verified, and no reviewer, source or review date may be invented.
+**Next code task that can proceed independently:** an eighth slice now means authoring its
+questions first, because no cell is left with items and no teaching. The physics side is the
+thinner one — one cell of 62 — so the next slice should be physics, written question-first:
+items, then the lesson around them, and the item count taken from that cell's own
+`minimumItems` rather than assumed. Everything authored stays `draft`/`pending-review` —
+Claude does not mark its own content verified, and no reviewer, source or review date may be
+invented.
 
 Still blocked in this environment, unchanged: emulator abuse tests (P1-2) need a download
 this sandbox refuses; real-device Safari (P1-4) and every live check need the deployment.
