@@ -20,6 +20,41 @@ import type { LessonSection } from '@/domain';
 
 const steps = ['Big idea', 'Visual', 'English', 'Vocabulary', 'Formula', 'Worked example', 'Guided practice', 'Independent', 'CSCA-style', 'Speed round'];
 
+type TrustLevel = 'published' | 'pending-review' | 'demo' | 'built-in';
+
+/**
+ * How each kind of lesson is described to a learner. Nothing here claims a human
+ * has checked the material unless one has: `published` means an administrator
+ * published it, which is a weaker statement than blueprint verification, and the
+ * note says so.
+ */
+const TRUST: Record<TrustLevel, { eyebrow: string; label: string; tone: 'success' | 'outline' | 'warning'; note: string }> = {
+  published: {
+    eyebrow: 'Published lesson',
+    label: 'Published',
+    tone: 'success',
+    note: 'Published by an administrator. Publication is not the same as subject-matter verification: check the coverage view to see whether this topic has reviewer-approved questions.',
+  },
+  'pending-review': {
+    eyebrow: 'Awaiting review',
+    label: 'Awaiting review',
+    tone: 'warning',
+    note: 'Written for this app and not yet read by a subject-matter reviewer. Use it to learn, but treat it as a draft: it does not count toward verified coverage.',
+  },
+  demo: {
+    eyebrow: 'Demo lesson',
+    label: 'Demo content',
+    tone: 'outline',
+    note: 'Demonstration content that exists to show how a lesson works. It is not exam preparation material.',
+  },
+  'built-in': {
+    eyebrow: 'Foundation',
+    label: 'Built-in lesson',
+    tone: 'outline',
+    note: 'A built-in foundation lesson shipped with the app, not part of the reviewed content pipeline.',
+  },
+};
+
 export default function LessonPage() {
   const { lessonId = 'newtons-laws' } = useParams();
   const { user, isDemo } = useAuth();
@@ -27,6 +62,17 @@ export default function LessonPage() {
   const publishedLessons = useAppStore((state) => state.lessons);
   const resolution = resolveLesson(lessonId, publishedLessons, isDemo);
   const publishedLesson = resolution?.lesson ?? undefined;
+  /**
+   * What this lesson actually is. The badge used to say "Verified content" for
+   * anything published, which included the demo lessons — a claim no human had
+   * made. Each state now says what it is.
+   */
+  const trust: TrustLevel =
+    resolution === null ? 'built-in'
+      : resolution.kind === 'built-in' ? 'built-in'
+      : resolution.kind === 'pending-review' ? 'pending-review'
+      : resolution.lesson.demo ? 'demo'
+      : 'published';
   const isMath = publishedLesson
     ? publishedLesson.subject === 'mathematics'
     : resolution?.builtIn === 'quadratic';
@@ -64,7 +110,8 @@ export default function LessonPage() {
   return (
     <div>
       <div className="mb-5 flex items-center justify-between gap-3"><Button variant="ghost" asChild><Link to={isMath ? '/mathematics' : '/physics'}><ArrowLeft className="h-4 w-4" /> Topic map</Link></Button><div className="flex items-center gap-2"><Button variant={bookmarked ? 'secondary' : 'ghost'} size="icon" onClick={() => void toggleLessonBookmark()} aria-label={bookmarked ? 'Remove bookmark' : 'Bookmark lesson'}><Bookmark className={`h-4 w-4 ${bookmarked ? 'fill-current' : ''}`} /></Button><Button variant="outline" onClick={() => setRescue(!rescue)}><CircleHelp className="h-4 w-4" /> I don’t understand</Button></div></div>
-      <PageHeading eyebrow={`${isMath ? 'Mathematics' : 'Physics'} · ${publishedLesson ? 'Published lesson' : 'Foundation'}`} title={title} description={publishedLesson?.summary.en ?? (isMath ? 'Recognize what the graph tells you before choosing an algebraic method.' : 'Turn a sentence about forces into one diagram and one relationship.')} actions={!publishedLesson ? <Badge variant="outline">Built-in lesson</Badge> : <Badge variant="success">Verified content</Badge>} />
+      <PageHeading eyebrow={`${isMath ? 'Mathematics' : 'Physics'} · ${TRUST[trust].eyebrow}`} title={title} description={publishedLesson?.summary.en ?? (isMath ? 'Recognize what the graph tells you before choosing an algebraic method.' : 'Turn a sentence about forces into one diagram and one relationship.')} actions={<Badge variant={TRUST[trust].tone}>{TRUST[trust].label}</Badge>} />
+      <p className="-mt-2 mb-4 text-xs leading-relaxed text-muted-foreground">{TRUST[trust].note}</p>
 
       <div className="mb-6"><div className="scrollbar-none mb-3 flex gap-2 overflow-x-auto pb-1">{lessonSteps.map((label, index) => <button key={label} type="button" aria-current={index === step ? 'step' : undefined} onClick={() => setStep(index)} className={`min-h-12 shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${index === step ? 'bg-foreground text-background' : index < step ? 'bg-success/10 text-success' : 'bg-secondary text-muted-foreground'}`}>{index < step ? <Check className="mr-1 inline h-3 w-3" /> : null}{index + 1}. {label}</button>)}</div><Progress value={progress} label={`Lesson ${Math.round(progress)} percent complete`} /></div>
 
