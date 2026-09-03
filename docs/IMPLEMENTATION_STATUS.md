@@ -283,9 +283,38 @@ none is even *named* in a way that could hold a sentence.
   deployments, so repeated failures by one account are visible without identifying whose.
 - The module imports nothing, so it cannot reach a database or a network. A test holds it.
 
-**Not wired into the callables yet.** The recorder and its rules exist and are tested; the
-call sites in `index.ts` and the sync engine still have to be added, and the sink has to be
-chosen when the Firebase project exists.
+**Now wired in.** One wrapper (`monitored` in `callable.ts`) is applied to all 25 exported
+`onCall` handlers, so there is one `try/catch` in the codebase rather than twenty-five. It
+records the operation name and, for an `HttpsError`, its code; an unknown error becomes
+`internal`, because its message can contain a fragment of whatever document caused it. The
+error is re-thrown untouched, so the status the client receives is unchanged, and Auth, App
+Check, authorization and rate limiting are untouched — the wrapper sits outside them and
+reads nothing from the request. A test walks every source file and fails if an exported
+`onCall` is unwrapped or if a wrapper is named after a different export.
+
+The three server-side counters sit at the real failure points, once each:
+
+| Event | Where | What it carries |
+| --- | --- | --- |
+| `import-conflict` | inside `refuseIfBlocked`, the single refusal path | a count, never a decision list or item id |
+| `account-deletion-failure` | where storage cleanup actually fails | a salted `actorRef` and the stage |
+| `mock-submission` | a `finally`, so exactly once per call | outcome from a closed set and a latency **bucket** |
+
+The previous `logger.warn` at the deletion site recorded the uid and the raw cause; a
+storage path can contain a file a learner named, so both are gone. Mock duration is measured
+with `process.hrtime` and only its bucket is recorded — the precise figure beside an actor
+reference would be a timing fingerprint.
+
+**`reportOperationalEvent`** is the one client-facing channel, added because the server
+cannot see a sync failure that happens entirely in the browser. Its schema has **no string
+field at all**: a fixed kind, a reason from six enum values, an entity type from the sync
+enum, and an attempt count between 1 and 50. Auth and App Check required, 60 an hour, writes
+to no collection, returns only `{ received: true }`. A test asserts it is the only file that
+passes client input to the sink.
+
+**Not proven in production.** The code and the Cloud Logging sink are complete and tested,
+but no Firebase project is deployed, so no real event has been emitted and no alert has ever
+fired. Monitoring is written, not working.
 
 ## Verified state
 
