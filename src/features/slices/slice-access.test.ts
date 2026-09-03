@@ -91,8 +91,12 @@ describe('an unknown cell', () => {
     }
   });
 
-  it('recognises exactly the two authored slices and nothing else', () => {
-    expect(KNOWN.sort()).toEqual(['math-linear-isolate-unknown', 'phys-thermodynamics-heat-transfer']);
+  it('recognises exactly the authored slices and nothing else', () => {
+    expect([...KNOWN].sort()).toEqual([
+      'math-linear-isolate-unknown',
+      'math-linear-multi-step-linear',
+      'phys-thermodynamics-heat-transfer',
+    ]);
     expect(sliceAccess({ cellId: 'phys-thermodynamics-heat-transfer', knownCellIds: KNOWN, audience: 'demo' }).allowed).toBe(true);
     expect(sliceAccess({ cellId: '', knownCellIds: KNOWN, audience: 'demo' }).allowed).toBe(false);
   });

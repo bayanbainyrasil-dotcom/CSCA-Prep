@@ -10,7 +10,7 @@ import {
 } from '../domain';
 
 /**
- * Authored teaching content for the two vertical slices.
+ * Authored teaching content for the vertical slices.
  *
  * This is **not** demo content. `DEMO_LESSONS` in `seed.ts` are marked
  * `demo: true` and exist to make the local demo navigable; everything here is
@@ -100,6 +100,45 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-like-terms',
+    english: 'like terms',
+    russian: 'подобные слагаемые',
+    simpleExplanation: text(
+      'Terms with exactly the same letter part, so 4x and 2x are like terms but 4x and 4 are not.',
+      'Слагаемые с одинаковой буквенной частью: 4x и 2x подобны, а 4x и 4 — нет.',
+    ),
+    exampleSentence: 'Collect the like terms on the left.',
+    category: 'math',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-expand',
+    english: 'expand',
+    russian: 'раскрыть скобки',
+    simpleExplanation: text(
+      'Multiply everything inside the bracket by what is outside it — every term, not only the first.',
+      'Умножить всё, что внутри скобки, на то, что снаружи — каждое слагаемое, а не только первое.',
+    ),
+    exampleSentence: 'Expand the brackets before collecting like terms.',
+    category: 'question-command',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-common-denominator',
+    english: 'common denominator',
+    russian: 'общий знаменатель',
+    simpleExplanation: text(
+      'A number every denominator divides into, used to clear fractions from an equation.',
+      'Число, на которое делится каждый знаменатель; используется, чтобы убрать дроби из уравнения.',
+    ),
+    exampleSentence: 'Multiply both sides by the common denominator.',
+    category: 'math',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -161,6 +200,29 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     limitations: text(
       'Only for one operation. Two or more steps need the multi-step method, and this form says nothing about inequalities, where multiplying by a negative flips the sign.',
       'Только для одной операции. Два и более шага требуют многошагового метода, и эта форма ничего не говорит о неравенствах, где умножение на отрицательное число меняет знак.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
+    id: 'formula-multi-step-linear',
+    subject: 'mathematics',
+    topicId: 'math-linear',
+    name: text('Unknown on both sides', 'Неизвестное в обеих частях'),
+    katex: 'ax + b = cx + d \\iff x = \\frac{d - b}{a - c}',
+    calculates: text(
+      'The value of the unknown when it appears on both sides of the equation.',
+      'Значение неизвестного, когда оно встречается в обеих частях уравнения.',
+    ),
+    variables: [
+      { symbol: 'x', meaning: text('the unknown', 'неизвестное'), siUnit: null },
+      { symbol: 'a', meaning: text('coefficient of the unknown on the left', 'коэффициент при неизвестном слева'), siUnit: null },
+      { symbol: 'b', meaning: text('constant term on the left', 'свободный член слева'), siUnit: null },
+      { symbol: 'c', meaning: text('coefficient of the unknown on the right', 'коэффициент при неизвестном справа'), siUnit: null },
+      { symbol: 'd', meaning: text('constant term on the right', 'свободный член справа'), siUnit: null },
+    ],
+    limitations: text(
+      'Undefined when a equals c: the unknowns cancel, and the equation is then either true for every x or for none. It is a shortcut for a rearrangement, not a substitute for it — a bracket or a fraction must be cleared before the coefficients can be read off.',
+      'Не определено при a = c: неизвестные сокращаются, и уравнение верно либо при любом x, либо ни при каком. Это сокращённая запись преобразования, а не замена ему: скобки и дроби нужно раскрыть до того, как коэффициенты можно будет считать.',
     ),
     ...draftMeta(),
   }),
@@ -252,6 +314,66 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
     ...draftMeta(),
   }),
   LessonSchema.parse({
+    id: 'lesson-math-linear-multi-step-linear',
+    topicId: 'math-linear',
+    subject: 'mathematics',
+    title: text('When the unknown is on both sides', 'Когда неизвестное в обеих частях'),
+    summary: text(
+      'Clear brackets and fractions first, gather the unknowns on one side, then finish with a single inverse operation.',
+      'Сначала раскрыть скобки и убрать дроби, затем собрать неизвестные в одной части и закончить одной обратной операцией.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need the one-step method: name the operation applied to the unknown and apply its inverse to both sides. If that is not automatic yet, do the isolating-the-unknown cell first, because every question here ends with exactly that move.',
+        'Нужен одношаговый метод: назвать операцию, применённую к неизвестному, и применить обратную к обеим частям. Если это ещё не доведено до автоматизма, сначала пройдите ячейку «выразить неизвестное»: каждое задание здесь заканчивается именно этим действием.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Expand a bracket correctly, clear a fraction by multiplying every term, collect the unknowns on one side, and check the result by substituting it into the original equation rather than into your own rearrangement.',
+        'Правильно раскрывать скобку, убирать дробь умножением каждого слагаемого, собирать неизвестные в одной части и проверять результат подстановкой в исходное уравнение, а не в собственное преобразование.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'A multi-step equation is a one-step equation you have not finished tidying. The work is not new: it is the same balance, with brackets and fractions cleared first so that only one operation is left standing between you and the unknown.',
+        'Многошаговое уравнение — это одношаговое, которое ещё не привели в порядок. Ничего нового: то же равновесие, только сначала убирают скобки и дроби, чтобы между вами и неизвестным осталась ровно одна операция.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“Expand” means multiply out a bracket. “Collect like terms” means add together the terms that share the same letter part. “Hence” in a CSCA prompt means use the result you have just found, not start again.',
+        '«Expand» значит раскрыть скобку. «Collect like terms» значит сложить слагаемые с одинаковой буквенной частью. «Hence» в задании CSCA значит использовать только что найденный результат, а не начинать заново.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'like terms — подобные слагаемые; expand — раскрыть скобки; common denominator — общий знаменатель.',
+        'like terms — подобные слагаемые; expand — раскрыть скобки; common denominator — общий знаменатель.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'Once every bracket and fraction is cleared, ax + b = cx + d gives x = (d − b) ÷ (a − c). If a equals c the unknowns cancel: the equation is then true for every x, or for none.',
+        'Когда скобки и дроби убраны, из ax + b = cx + d следует x = (d − b) ÷ (a − c). Если a = c, неизвестные сокращаются: уравнение верно либо при любом x, либо ни при каком.',
+      ), { katex: ['ax + b = cx + d \\iff x = \\frac{d - b}{a - c}'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'Solve 8x − 5 = 3x + 20. There is no bracket and no fraction, so gather the unknowns: subtract 3x from both sides to get 5x − 5 = 20. Now one operation stands between you and the unknown twice over, so add 5 to both sides for 5x = 25, then divide by 5 for x = 5. Check in the original: the left side is 8(5) − 5 = 35 and the right side is 3(5) + 20 = 35. Equal, so the answer stands.',
+        'Решите 8x − 5 = 3x + 20. Скобок и дробей нет, поэтому собираем неизвестные: вычитаем 3x из обеих частей и получаем 5x − 5 = 20. Теперь до неизвестного остаётся дважды по одной операции: прибавляем 5 к обеим частям, получаем 5x = 25, и делим на 5, получаем x = 5. Проверка в исходном уравнении: слева 8(5) − 5 = 35, справа 3(5) + 20 = 35. Равно, значит ответ верен.',
+      ), { estimatedMinutes: 4 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'Solve 5(x − 1) = 2x + 16. First: expand the bracket, and multiply both terms inside it, not only the x. Second: gather the unknowns on the side that keeps the coefficient positive. Third: undo what is left, one operation at a time. Fourth: substitute into the original equation, brackets and all.',
+        'Решите 5(x − 1) = 2x + 16. Первое: раскройте скобку, умножив оба слагаемых внутри, а не только x. Второе: соберите неизвестные там, где коэффициент останется положительным. Третье: отменяйте оставшееся по одной операции. Четвёртое: подставьте в исходное уравнение вместе со скобкой.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'Solve 7x + 2 = 4x + 20, then 2(3x − 1) = 4x + 12, then (x + 9)/2 = x − 3. For the last one, multiply every term by 2 before anything else — including the term that has no fraction. Check each by substitution before looking at the solution.',
+        'Решите 7x + 2 = 4x + 20, затем 2(3x − 1) = 4x + 12, затем (x + 9)/2 = x − 3. В последнем сначала умножьте на 2 каждое слагаемое, включая то, где дроби нет. Проверяйте каждое подстановкой, прежде чем смотреть решение.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'The distractors are built from the two mistakes that cost most marks: a sign lost when a term crosses the equals sign, and a bracket expanded onto its first term only. Both give a whole number that is sitting there in the options, so an answer looking plausible is not evidence that it is right. Substitute before you choose.',
+        'Неверные варианты построены на двух ошибках, которые чаще всего стоят баллов: потерянный знак при переносе через равенство и скобка, раскрытая только на первое слагаемое. Обе дают целое число, которое уже есть среди вариантов, поэтому правдоподобный вид ответа ничего не доказывает. Подставляйте до того, как выбрать.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Three equations with the unknown on both sides, in four minutes. One of them has a bracket. Substitute your answer back even when the clock is running: an unchecked answer here is worth what an unanswered one is.',
+        'Три уравнения с неизвестным в обеих частях за четыре минуты. В одном есть скобка. Подставляйте ответ обратно, даже когда идёт время: непроверенный ответ здесь стоит столько же, сколько неотвеченный.',
+      ), { estimatedMinutes: 4 }),
+    ],
+    vocabularyIds: ['vocab-like-terms', 'vocab-expand', 'vocab-common-denominator'],
+    formulaIds: ['formula-multi-step-linear'],
+    prerequisiteLessonIds: ['lesson-math-linear-isolate-unknown'],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
     id: 'lesson-phys-thermodynamics-heat-transfer',
     topicId: 'phys-thermodynamics',
     subject: 'physics',
@@ -316,5 +438,6 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 /** The blueprint cell each authored lesson teaches toward. */
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
   'lesson-math-linear-isolate-unknown': 'math-linear-isolate-unknown',
+  'lesson-math-linear-multi-step-linear': 'math-linear-multi-step-linear',
   'lesson-phys-thermodynamics-heat-transfer': 'phys-thermodynamics-heat-transfer',
 };

@@ -7,7 +7,8 @@ import { sliceAccess, sliceAudience } from './slice-access';
 import { currentStage, isSliceComplete, summariseSlice, type SliceProgress } from './slice-progress';
 
 /**
- * The two teaching slices, as they stand for this learner on this deployment.
+ * The authored teaching slices, as they stand for this learner on this
+ * deployment.
  *
  * Each card says the actual state and nothing more. It never says "Verified",
  * "Adaptive" or "Recommended": none of those is true of this content, and the

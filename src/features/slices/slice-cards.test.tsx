@@ -1,11 +1,26 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { SLICE_LESSONS, SLICE_LESSON_CELL_IDS } from '@/data/teaching-slices';
 import { SliceCards } from './slice-cards';
 import { completeStage, emptySliceProgress, type SliceProgress, type SliceStage } from './slice-progress';
 
 const MATH_CELL = 'math-linear-isolate-unknown';
 const PHYSICS_CELL = 'phys-thermodynamics-heat-transfer';
+/**
+ * Counts come from the authored content, not from a literal. A new slice is a
+ * content change; having it fail eight rendering tests taught nothing.
+ */
+const SLICES = SLICE_LESSONS.length;
+
+/** The card for one cell, found by its link or its heading rather than by index. */
+function cardFor(cellId: string): HTMLElement {
+  const lesson = SLICE_LESSONS.find((entry) => SLICE_LESSON_CELL_IDS[entry.id] === cellId);
+  const cards = screen.getAllByRole('listitem');
+  const found = cards.find((card) => within(card).queryByText(lesson?.title.en ?? '') !== null);
+  if (!found) throw new Error(`No card rendered for ${cellId}`);
+  return found;
+}
 
 function progressWith(cellId: string, stages: SliceStage[]): SliceProgress {
   let progress = emptySliceProgress({ userId: 'learner-1', cellId, lessonId: `lesson-${cellId}`, now: '2026-09-03T09:00:00.000Z' });
@@ -26,17 +41,19 @@ function renderCards(props: Partial<Parameters<typeof SliceCards>[0]> = {}) {
 afterEach(cleanup);
 
 describe('what each card says', () => {
-  it('shows both slices, one per subject', () => {
+  it('shows every authored slice, each labelled with its own subject', () => {
     renderCards();
-    const cards = screen.getAllByRole('listitem');
-    expect(cards).toHaveLength(2);
-    expect(within(cards[0]!).getByText('Mathematics')).toBeVisible();
-    expect(within(cards[1]!).getByText('Physics')).toBeVisible();
+    expect(screen.getAllByRole('listitem')).toHaveLength(SLICES);
+    for (const lesson of SLICE_LESSONS) {
+      const card = cardFor(SLICE_LESSON_CELL_IDS[lesson.id]!);
+      const subject = lesson.subject === 'physics' ? 'Physics' : 'Mathematics';
+      expect(within(card).getByText(subject), lesson.id).toBeVisible();
+    }
   });
 
   it('reports not started, in progress with the stage, and completed', () => {
     const { rerender } = renderCards();
-    expect(screen.getAllByText('Not started')).toHaveLength(2);
+    expect(screen.getAllByText('Not started')).toHaveLength(SLICES);
 
     rerender(
       <MemoryRouter>
@@ -61,10 +78,11 @@ describe('what each card says', () => {
 
   it('links each card to its own slice route by cell id', () => {
     renderCards();
-    // Both cards say "Start", so each link is read from its own card.
-    const cards = screen.getAllByRole('listitem');
-    expect(within(cards[0]!).getByRole('link')).toHaveAttribute('href', `/slice/${MATH_CELL}`);
-    expect(within(cards[1]!).getByRole('link')).toHaveAttribute('href', `/slice/${PHYSICS_CELL}`);
+    // Every card says "Start", so each link is read from its own card.
+    for (const lesson of SLICE_LESSONS) {
+      const cellId = SLICE_LESSON_CELL_IDS[lesson.id]!;
+      expect(within(cardFor(cellId)).getByRole('link'), lesson.id).toHaveAttribute('href', `/slice/${cellId}`);
+    }
   });
 
   it('offers Continue once started and Review it again once finished', () => {
@@ -87,7 +105,7 @@ describe('what each card says', () => {
 describe('what the cards never claim', () => {
   it('says awaiting review, and never verified, adaptive or recommended', () => {
     const { container } = renderCards();
-    expect(screen.getAllByText('Awaiting review')).toHaveLength(2);
+    expect(screen.getAllByText('Awaiting review')).toHaveLength(SLICES);
     expect(screen.getByText(/count toward no coverage/i)).toBeVisible();
 
     const text = container.textContent ?? '';
@@ -101,15 +119,15 @@ describe('an ordinary learner on a real deployment', () => {
   it('sees the slices locked rather than openable', () => {
     renderCards({ isDemo: false, role: 'user' });
 
-    expect(screen.getAllByText('Coming soon')).toHaveLength(2);
-    expect(screen.getAllByText(/Locked until a reviewer approves it/)).toHaveLength(2);
+    expect(screen.getAllByText('Coming soon')).toHaveLength(SLICES);
+    expect(screen.getAllByText(/Locked until a reviewer approves it/)).toHaveLength(SLICES);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
-    expect(screen.getAllByText(/waiting for a subject-matter review/i)).toHaveLength(2);
+    expect(screen.getAllByText(/waiting for a subject-matter review/i)).toHaveLength(SLICES);
   });
 
   it('opens for an administrator instead', () => {
     renderCards({ isDemo: false, role: 'admin' });
-    expect(screen.getAllByRole('link')).toHaveLength(2);
+    expect(screen.getAllByRole('link')).toHaveLength(SLICES);
   });
 });
 
@@ -117,8 +135,7 @@ describe('progress belongs to one learner', () => {
   it('reads only the record for the cell it is showing', () => {
     renderCards({ progress: { [PHYSICS_CELL]: progressWith(PHYSICS_CELL, ['lesson', 'guided']) } });
 
-    const cards = screen.getAllByRole('listitem');
-    expect(within(cards[0]!).getByText('Not started')).toBeVisible();
-    expect(within(cards[1]!).getByText('In progress · Independent practice')).toBeVisible();
+    expect(within(cardFor(MATH_CELL)).getByText('Not started')).toBeVisible();
+    expect(within(cardFor(PHYSICS_CELL)).getByText('In progress · Independent practice')).toBeVisible();
   });
 });

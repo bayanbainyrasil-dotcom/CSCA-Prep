@@ -13,9 +13,11 @@ export const pagesEntrypoints = [
   'lesson/newtons-laws',
   'lesson/quadratic',
   'lesson/lesson-physics-constant-speed-demo',
-  // The two authored teaching slices. Their cell ids are fixed, so a fresh deep
-  // link resolves through a real page file instead of the 404 fallback.
+  // The authored teaching slices. Their cell ids are fixed, so a fresh deep link
+  // resolves through a real page file instead of the 404 fallback. Adding a
+  // slice means adding its route here; the test below checks every one.
   'slice/math-linear-isolate-unknown',
+  'slice/math-linear-multi-step-linear',
   'slice/phys-thermodynamics-heat-transfer',
   'practice',
   'practice/session',
