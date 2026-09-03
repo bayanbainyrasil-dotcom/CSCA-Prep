@@ -103,6 +103,7 @@ const INDEPENDENT: Record<string, (p: Record<string, string | number | boolean>)
 const ESTIMATION_TOLERANCE: Record<string, number> = {
   'math-foundation-estimate-magnitude-001': 0.15,
   'math-foundation-estimate-magnitude-002': 0.15,
+  'math-foundation-estimate-magnitude-003': 0.15,
 };
 
 function optionText(question: DraftQuestion, optionId: string): string {

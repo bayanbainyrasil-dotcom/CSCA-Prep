@@ -338,6 +338,38 @@ export const DRAFT_QUESTION_SEED: DraftQuestion[] = [
   },
   {
     ...COMMON,
+    id: 'math-foundation-estimate-magnitude-003',
+    cellId: 'math-foundation-estimate-magnitude',
+    module: 'Number and foundations',
+    topicId: 'math-foundation',
+    skill: 'Compute reliably without a calculator',
+    questionType: 'estimation',
+    difficulty: 2,
+    question: 'Without computing exactly, (7.9 × 10⁴) ÷ (1.9 × 10²) is closest to which value?',
+    questionTranslation: 'Не вычисляя точно, к какому значению ближе всего (7.9 × 10⁴) ÷ (1.9 × 10²)?',
+    options: [
+      { id: 'a', text: '4.2 × 10²' },
+      { id: 'b', text: '4.2 × 10¹' },
+      { id: 'c', text: '4.2 × 10³' },
+      { id: 'd', text: '1.5 × 10²' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Handle the digits and the power of ten separately. The digits give about 8 ÷ 2 = 4, and dividing powers of ten subtracts the exponents: 10⁴ ÷ 10² = 10². So the quotient is a little above 4 × 10², and 4.2 × 10² is the nearest option.',
+    shortSolution: 'About 8 ÷ 2 = 4 and 10⁴ ÷ 10² = 10², so roughly 4.2 × 10².',
+    explanation:
+      'The exponent decides which option is possible before any digits are divided, so settling it first eliminates every distractor built from an exponent slip.',
+    commonMistakes: [
+      { id: 'exponent-not-subtracted', description: 'Keeping the exponent of the numerator alone gives 4.2 × 10⁴, and dropping a further power gives 4.2 × 10³.', distractorOptionId: 'c' },
+      { id: 'exponent-over-subtracted', description: 'Subtracting one power too many gives 4.2 × 10¹.', distractorOptionId: 'b' },
+      { id: 'digits-subtracted', description: 'Subtracting the digits rather than dividing them gives about 6, and a further exponent slip lands near 1.5 × 10².', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['estimate', 'order of magnitude'],
+    estimatedTime: 50,
+    templateParameters: { check: 'scientific-quotient', m1: 7.9, e1: 4, m2: 1.9, e2: 2 },
+  },
+  {
+    ...COMMON,
     id: 'math-linear-isolate-unknown-001',
     cellId: 'math-linear-isolate-unknown',
     module: 'Algebra',

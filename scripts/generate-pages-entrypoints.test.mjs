@@ -31,6 +31,8 @@ test('generates a real entrypoint for each authored teaching slice', async () =>
   // A learner following a shared link to a slice must land on a page file, not
   // on the 404 fallback, so the deep link survives a refresh on GitHub Pages.
   const slices = [
+    'slice/math-foundation-estimate-magnitude',
+    'slice/math-foundation-fraction-decimal-percent',
     'slice/math-foundation-integer-operations',
     'slice/math-linear-isolate-unknown',
     'slice/math-linear-multi-step-linear',

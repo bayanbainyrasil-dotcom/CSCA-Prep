@@ -93,6 +93,8 @@ describe('an unknown cell', () => {
 
   it('recognises exactly the authored slices and nothing else', () => {
     expect([...KNOWN].sort()).toEqual([
+      'math-foundation-estimate-magnitude',
+      'math-foundation-fraction-decimal-percent',
       'math-foundation-integer-operations',
       'math-linear-isolate-unknown',
       'math-linear-linear-word-problem',

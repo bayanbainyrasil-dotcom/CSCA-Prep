@@ -217,6 +217,84 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-lowest-terms',
+    english: 'in its lowest terms',
+    russian: 'в несократимом виде',
+    simpleExplanation: text(
+      'A fraction whose top and bottom share no common factor left to cancel. An answer that is correct but not cancelled is usually still marked wrong.',
+      'Дробь, у которой у числителя и знаменателя не осталось общего множителя. Верный, но несокращённый ответ обычно всё равно считается неверным.',
+    ),
+    exampleSentence: 'Give your answer as a fraction in its lowest terms.',
+    category: 'question-command',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-decimal-place',
+    english: 'decimal place',
+    russian: 'знак после запятой',
+    simpleExplanation: text(
+      'A position after the decimal point. “To two decimal places” tells you where to round, and rounding earlier than that changes the answer.',
+      'Позиция после десятичной запятой. «To two decimal places» указывает, где округлять; округление раньше меняет ответ.',
+    ),
+    exampleSentence: 'Give your answer to three decimal places.',
+    category: 'unit',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-of',
+    english: 'of',
+    russian: 'от (в смысле умножения)',
+    simpleExplanation: text(
+      'Between a percentage or fraction and a quantity, “of” means multiply. “20% of 60” is 0.2 × 60, never 60 − 20.',
+      'Между процентом или дробью и величиной «of» означает умножение. «20% of 60» — это 0.2 × 60, а не 60 − 20.',
+    ),
+    exampleSentence: 'Find 15% of the total mass.',
+    category: 'comparison',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-estimate',
+    english: 'estimate',
+    russian: 'оценить, прикинуть',
+    simpleExplanation: text(
+      'Find roughly what the answer is, on purpose and quickly. An exact calculation is not a better answer to this instruction; it is a slower one that risks the same slip.',
+      'Найти примерное значение — намеренно и быстро. Точное вычисление здесь не лучший ответ, а более медленный, и в нём та же ошибка так же возможна.',
+    ),
+    exampleSentence: 'Estimate the value without computing it exactly.',
+    category: 'question-command',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-order-of-magnitude',
+    english: 'order of magnitude',
+    russian: 'порядок величины',
+    simpleExplanation: text(
+      'Which power of ten a number sits at. Two numbers an order of magnitude apart differ by a factor of about ten.',
+      'На какой степени десяти находится число. Числа, отличающиеся на порядок, различаются примерно в десять раз.',
+    ),
+    exampleSentence: 'The two answers differ by an order of magnitude.',
+    category: 'comparison',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-significant-figure',
+    english: 'significant figure',
+    russian: 'значащая цифра',
+    simpleExplanation: text(
+      'A digit that carries information about the size of a number, counted from the first non-zero digit. Rounding to one of them is what makes an estimate quick.',
+      'Цифра, несущая информацию о величине числа; счёт ведётся с первой ненулевой. Округление до одной такой цифры и делает оценку быстрой.',
+    ),
+    exampleSentence: 'Round each number to one significant figure first.',
+    category: 'unit',
+    subject: 'mathematics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -347,6 +425,47 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     ...draftMeta(),
   }),
   FormulaSchema.parse({
+    id: 'formula-percent-decimal-fraction',
+    subject: 'mathematics',
+    topicId: 'math-foundation',
+    name: text('One number, three notations', 'Одно число в трёх записях'),
+    katex: 'p\\% = \\frac{p}{100} = d',
+    calculates: text(
+      'The same value written as a percentage, as a decimal, or as a fraction — the notation changes, the number does not.',
+      'Одно и то же значение в записи процентом, десятичной дробью или обыкновенной дробью — запись меняется, число нет.',
+    ),
+    variables: [
+      { symbol: 'p', meaning: text('the number of per-cent, without the sign', 'число процентов без знака'), siUnit: null },
+      { symbol: 'd', meaning: text('the same value as a decimal', 'то же значение десятичной дробью'), siUnit: null },
+    ],
+    limitations: text(
+      'This converts a value; it does not compare two of them. A rise from 20% to 25% is five percentage points but a quarter more, and those are different answers to different questions. It also says nothing about rounding: a decimal that does not terminate has to be rounded where the question says, not where it becomes convenient.',
+      'Это перевод значения, а не сравнение двух. Рост с 20% до 25% — это пять процентных пунктов, но при этом на четверть больше, и это разные ответы на разные вопросы. Здесь также ничего не сказано об округлении: непериодическую запись округляют там, где указано в задании, а не там, где удобно.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
+    id: 'formula-standard-form',
+    subject: 'mathematics',
+    topicId: 'math-foundation',
+    name: text('Standard form', 'Стандартный вид'),
+    katex: 'x = a \\times 10^{n},\\quad 1 \\le a < 10',
+    calculates: text(
+      'Any number as one digit before the point multiplied by a power of ten, so that two numbers can be compared by size at a glance.',
+      'Любое число в виде одной цифры до запятой, умноженной на степень десяти, чтобы два числа можно было сравнить по величине сразу.',
+    ),
+    variables: [
+      { symbol: 'x', meaning: text('the number being written', 'записываемое число'), siUnit: null },
+      { symbol: 'a', meaning: text('the digits, at least one and less than ten', 'цифры: не меньше единицы и меньше десяти'), siUnit: null },
+      { symbol: 'n', meaning: text('the power of ten, which carries the size', 'показатель степени десяти, несущий величину'), siUnit: null },
+    ],
+    limitations: text(
+      'The form itself says nothing about accuracy: writing a number in standard form neither adds nor removes significant figures, and an estimate written this way is still an estimate. It also does not apply to zero, which has no such form, and the condition on a is part of the definition — 12 × 10³ is a correct value but not standard form, and is marked wrong where the form is what was asked for.',
+      'Сама запись ничего не говорит о точности: перевод в стандартный вид не добавляет и не убирает значащих цифр, и оценка, записанная так, остаётся оценкой. Он также неприменим к нулю, у которого такой формы нет, а условие на a — часть определения: 12 × 10³ верно по значению, но не является стандартным видом и засчитывается как ошибка там, где требовалась именно форма.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
     id: 'formula-heat-transfer',
     subject: 'physics',
     topicId: 'phys-thermodynamics',
@@ -430,6 +549,126 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
     ],
     vocabularyIds: ['vocab-evaluate', 'vocab-order-of-operations', 'vocab-minus-sign'],
     formulaIds: ['formula-sign-rules'],
+    prerequisiteLessonIds: [],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
+    id: 'lesson-math-foundation-fraction-decimal-percent',
+    topicId: 'math-foundation',
+    subject: 'mathematics',
+    title: text('One number, three notations', 'Одно число в трёх записях'),
+    summary: text(
+      'Move between fraction, decimal and percentage by dividing or by multiplying by a hundred, and answer in the notation the question asks for.',
+      'Переходить между обыкновенной дробью, десятичной и процентом делением или умножением на сто и отвечать в той записи, которую требует задание.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need division that does not stop at the decimal point, and to be able to cancel a fraction by a common factor. Signs are not involved here, so the order-of-operations cell is useful but not required first.',
+        'Нужно уметь делить, не останавливаясь на целой части, и сокращать дробь на общий множитель. Знаки здесь не участвуют, поэтому ячейка про порядок действий полезна, но не обязательна раньше.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Turn a fraction into a decimal by dividing, a decimal into a percentage by multiplying by a hundred, and a percentage into a fraction in its lowest terms — and say which of the three the question wants back.',
+        'Превращать обыкновенную дробь в десятичную делением, десятичную в проценты умножением на сто, а проценты — в несократимую дробь, и понимать, какую из трёх записей ждёт задание.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'Fraction, decimal and percentage are three ways of writing one number, not three kinds of number. Every conversion is therefore a single operation and never a calculation to be reasoned out afresh: divide to leave a fraction, multiply by a hundred to reach a percentage, and reverse either to come back.',
+        'Обыкновенная дробь, десятичная дробь и процент — это три записи одного числа, а не три вида чисел. Поэтому любой перевод — одно действие, а не вычисление, которое каждый раз выводят заново: делят, чтобы уйти от обыкновенной дроби, умножают на сто, чтобы получить проценты, и обращают то или другое, чтобы вернуться.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“Write … as a decimal” and “write … as a percentage” ask for a notation, not a calculation, and answering in the other notation loses the mark on correct work. “In its lowest terms” means cancel until nothing cancels. “Of” between a percentage and a quantity means multiply. “To two decimal places” says where to round, and rounding earlier changes the digits that are checked.',
+        '«Write … as a decimal» и «write … as a percentage» требуют записи, а не вычисления, и ответ в другой записи теряет балл при верном решении. «In its lowest terms» значит сокращать, пока сокращается. «Of» между процентом и величиной означает умножение. «To two decimal places» указывает, где округлять, и более раннее округление меняет как раз те цифры, которые проверяются.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'in its lowest terms — в несократимом виде; decimal place — знак после запятой; of — от, в смысле умножения.',
+        'in its lowest terms — в несократимом виде; decimal place — знак после запятой; of — от, в смысле умножения.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'p percent is p ÷ 100 written as a decimal, and the same value as a fraction once it is cancelled. Going the other way, a decimal becomes a percentage by multiplying by 100.',
+        'p процентов — это p ÷ 100 в виде десятичной дроби и то же значение в виде обыкновенной дроби после сокращения. В обратную сторону десятичная дробь становится процентами умножением на 100.',
+      ), { katex: ['p\\% = \\frac{p}{100} = d'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'Write 7/20 as a decimal and as a percentage.\n\nA fraction is a division, so the decimal comes from dividing: 7 ÷ 20 = 0.35. Do not stop at the whole part; the division continues past the point until it terminates or the question says where to round.\n\nThe percentage is that decimal multiplied by a hundred: 0.35 × 100 = 35, so the answer is 35%. Notice that nothing was recalculated between the two answers — the second is the first with the point moved.\n\nCheck by going back: 35 ÷ 100 = 0.35, and 0.35 as a fraction is 35/100, which cancels to 7/20. Landing on the fraction you started from is the check.',
+        'Запишите 7/20 в виде десятичной дроби и в виде процентов.\n\nОбыкновенная дробь — это деление, поэтому десятичная запись получается делением: 7 ÷ 20 = 0.35. Не останавливайтесь на целой части: деление продолжается за запятой, пока не завершится или пока задание не укажет, где округлить.\n\nПроценты — это та же десятичная дробь, умноженная на сто: 0.35 × 100 = 35, то есть 35%. Обратите внимание: между двумя ответами ничего не пересчитывали — второй это первый со сдвинутой запятой.\n\nПроверка обратным ходом: 35 ÷ 100 = 0.35, а 0.35 в виде дроби это 35/100, что сокращается до 7/20. Возврат к исходной дроби и есть проверка.',
+      ), { estimatedMinutes: 4 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'Write 0.6 as a fraction in its lowest terms. First: what does the last digit tell you the denominator is? Second: write the fraction with that denominator before cancelling anything. Third: cancel by the largest common factor you can see, then check nothing is left to cancel. Fourth: reverse the conversion and see whether you get 0.6 back.',
+        'Запишите 0.6 в виде несократимой дроби. Первое: что последняя цифра говорит о знаменателе? Второе: запишите дробь с этим знаменателем до всякого сокращения. Третье: сократите на наибольший общий множитель, который видите, и проверьте, что сокращать больше нечего. Четвёртое: выполните обратный перевод и посмотрите, получится ли 0.6.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'Write 9/40 as a decimal, then as a percentage. Write 0.7 as a percentage and as a fraction in its lowest terms. Write 45% as a fraction in its lowest terms. For each one, say the notation the question asked for before you write the answer down.',
+        'Запишите 9/40 в виде десятичной дроби, затем в процентах. Запишите 0.7 в процентах и в виде несократимой дроби. Запишите 45% в виде несократимой дроби. В каждом случае сначала назовите запись, которую требует задание, и только потом записывайте ответ.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'The options in this cell usually include the right number in the wrong notation, and the right digits with the point in the wrong place. Both look like your answer at a glance, so read the last few words of the question again before choosing: they, not the arithmetic, decide which option is correct. An uncancelled fraction is also a common trap where the cancelled form is present as well.',
+        'Варианты в этой ячейке обычно содержат верное число в неверной записи и верные цифры со сдвинутой запятой. Оба на первый взгляд похожи на ваш ответ, поэтому перечитайте последние слова задания перед выбором: именно они, а не вычисления, определяют верный вариант. Несокращённая дробь — ещё одна частая ловушка, когда сокращённая форма тоже присутствует.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Three conversions in two minutes. Say the target notation out loud before each one. The conversions themselves take seconds; naming the target is what stops the wrong-notation answer, and it costs nothing.',
+        'Три перевода за две минуты. Перед каждым проговорите вслух нужную запись. Сами переводы занимают секунды; именно называние цели предотвращает ответ в неверной записи и ничего не стоит.',
+      ), { estimatedMinutes: 2 }),
+    ],
+    vocabularyIds: ['vocab-lowest-terms', 'vocab-decimal-place', 'vocab-of'],
+    formulaIds: ['formula-percent-decimal-fraction'],
+    prerequisiteLessonIds: [],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
+    id: 'lesson-math-foundation-estimate-magnitude',
+    topicId: 'math-foundation',
+    subject: 'mathematics',
+    title: text('Estimating, and knowing when that is the answer', 'Оценка и понимание того, когда она и есть ответ'),
+    summary: text(
+      'Round each number to one significant figure, work with the powers of ten separately, and choose the option nearest the result.',
+      'Округлить каждое число до одной значащей цифры, отдельно разобраться со степенями десяти и выбрать вариант, ближайший к результату.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need to multiply and divide powers of ten by adding and subtracting their exponents, and to round a number to one significant figure. Both are single steps; if either is not automatic, that is what to practise before the estimating itself.',
+        'Нужно уметь умножать и делить степени десяти, складывая и вычитая показатели, и округлять число до одной значащей цифры. И то, и другое — одно действие; если что-то из этого не доведено до автоматизма, тренируйте именно это, а не саму оценку.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Round the digits and handle the powers of ten separately, arrive at an estimate in one line, and recognise when a question is asking for an estimate rather than a value — including when computing exactly would be the slower way to get the mark.',
+        'Отдельно округлять цифры и отдельно работать со степенями десяти, получать оценку в одну строку и распознавать, когда задание просит именно оценку, а не значение — в том числе когда точное вычисление окажется более долгим способом получить балл.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'An estimate is not a worse answer given in a hurry. When the options are an order of magnitude apart, the digits do not decide anything and only the power of ten does, so rounding hard is exactly the right move rather than a concession. Splitting a number into its digits and its power of ten turns one awkward calculation into two easy ones.',
+        'Оценка — это не худший ответ, полученный второпях. Когда варианты отличаются на порядок, цифры ничего не решают, решает только степень десяти, и поэтому грубое округление — именно верный ход, а не уступка. Разделение числа на цифры и степень десяти превращает одно неудобное вычисление в два простых.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“Without computing exactly” and “which is closest to” are instructions, not encouragement: they say the mark is for the nearest option, and an exact answer that misses the point of the question still has to be matched to one. “Approximately” and “roughly” mean the same thing here. “Order of magnitude” refers to the power of ten, not to the digits in front of it.',
+        '«Without computing exactly» и «which is closest to» — это указания, а не поощрение: они сообщают, что балл даётся за ближайший вариант, и точный ответ всё равно придётся сопоставлять с вариантом. «Approximately» и «roughly» здесь означают то же самое. «Order of magnitude» относится к степени десяти, а не к стоящим перед ней цифрам.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'estimate — оценить; order of magnitude — порядок величины; significant figure — значащая цифра.',
+        'estimate — оценить; order of magnitude — порядок величины; significant figure — значащая цифра.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'Standard form writes a number as one digit before the point times a power of ten. Multiplying adds the exponents and dividing subtracts them, so the size of the answer is settled before any digits are multiplied.',
+        'Стандартный вид записывает число как одну цифру до запятой, умноженную на степень десяти. При умножении показатели складываются, при делении вычитаются, поэтому величина ответа определяется ещё до умножения цифр.',
+      ), { katex: ['x = a \\times 10^{n},\\quad 1 \\le a < 10'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'Estimate (6.1 × 10⁵) ÷ (2.9 × 10²).\n\nSplit the problem. The digits first, rounded hard: 6 ÷ 3 = 2. Then the powers of ten, where division subtracts the exponents: 10⁵ ÷ 10² = 10³. Put them together for about 2 × 10³.\n\nThat is the whole calculation, and it is deliberately crude. Rounding 2.9 up to 3 makes the quotient slightly small, so the true value is a little above the estimate — enough to choose between options a power of ten apart, and not enough to choose between options that differ in the second digit. If a question offers you the latter, it is not asking for an estimate.',
+        'Оцените (6.1 × 10⁵) ÷ (2.9 × 10²).\n\nРазделите задачу. Сначала цифры, округляя грубо: 6 ÷ 3 = 2. Затем степени десяти, где при делении показатели вычитаются: 10⁵ ÷ 10² = 10³. Вместе получается около 2 × 10³.\n\nЭто всё вычисление, и оно намеренно грубое. Округление 2.9 до 3 немного занижает частное, поэтому истинное значение чуть больше оценки — этого хватает, чтобы выбрать между вариантами, отличающимися на порядок, и не хватает, чтобы выбрать между вариантами, отличающимися во второй цифре. Если задание предлагает второе, оно просит не оценку.',
+      ), { estimatedMinutes: 4 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'Estimate 397 × 0.0021. First: write each number in standard form before rounding anything. Second: round each set of digits to one significant figure. Third: combine the powers of ten by adding the exponents. Fourth: check the sign of the exponent against common sense — multiplying by a number below one must make the result smaller.',
+        'Оцените 397 × 0.0021. Первое: запишите каждое число в стандартном виде до всякого округления. Второе: округлите цифры каждого до одной значащей. Третье: объедините степени десяти, сложив показатели. Четвёртое: сверьте знак показателя со здравым смыслом: умножение на число меньше единицы обязано уменьшить результат.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'Estimate 78 × 0.49, then (8.2 × 10⁶) ÷ (3.9 × 10³), then 0.62 ÷ 0.031. For each, write the estimate before doing anything exact, and then say whether your rounding made the answer slightly too large or slightly too small.',
+        'Оцените 78 × 0.49, затем (8.2 × 10⁶) ÷ (3.9 × 10³), затем 0.62 ÷ 0.031. В каждом случае сначала запишите оценку и только потом что-либо точное, а затем скажите, завысило ваше округление ответ или занизило.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'The distractors here are almost always the right digits with the wrong power of ten, because that is what an exponent slip produces. So settle the power of ten first and use it to eliminate: usually only one option survives, and the digits never have to be checked at all. Reaching for exact arithmetic in this cell costs time and does not protect against the mistake the options are built from.',
+        'Неверные варианты здесь почти всегда содержат верные цифры с неверной степенью десяти, потому что именно это даёт ошибка в показателе. Поэтому сначала определяйте степень десяти и отсеивайте по ней: обычно остаётся один вариант, и цифры проверять вообще не приходится. Точная арифметика в этой ячейке стоит времени и не защищает от той ошибки, из которой построены варианты.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Three estimates in ninety seconds. That budget is the point: it is short enough that exact arithmetic will not fit, which is the habit this cell is training. Write only the power of ten first for all three, then the digits.',
+        'Три оценки за девяносто секунд. Этот лимит и есть суть: он слишком мал для точных вычислений, и именно эту привычку тренирует ячейка. Сначала запишите только степень десяти для всех трёх, затем цифры.',
+      ), { estimatedMinutes: 2 }),
+    ],
+    vocabularyIds: ['vocab-estimate', 'vocab-order-of-magnitude', 'vocab-significant-figure'],
+    formulaIds: ['formula-standard-form'],
     prerequisiteLessonIds: [],
     ...draftMeta(),
   }),
@@ -677,6 +916,8 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 
 /** The blueprint cell each authored lesson teaches toward. */
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
+  'lesson-math-foundation-estimate-magnitude': 'math-foundation-estimate-magnitude',
+  'lesson-math-foundation-fraction-decimal-percent': 'math-foundation-fraction-decimal-percent',
   'lesson-math-foundation-integer-operations': 'math-foundation-integer-operations',
   'lesson-math-linear-isolate-unknown': 'math-linear-isolate-unknown',
   'lesson-math-linear-multi-step-linear': 'math-linear-multi-step-linear',
