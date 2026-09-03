@@ -540,6 +540,49 @@ export const ResetMyProgressSchema = z
   .strict();
 
 /**
+ * Recording an official-outline review.
+ *
+ * Strict, and deliberately missing every field a caller might want to forge:
+ * there is no reviewer, reviewerUid, reviewedAt, lastCheckedAt or version here.
+ * All five are server facts. There is also no field able to hold an extract of
+ * the source: `ownSummary` and `differenceNote` are bounded and are the
+ * reviewer's own words about a document, never the document.
+ */
+export const OutlineReviewStatusSchema = z.enum([
+  "matches-source",
+  "difference-found",
+  "needs-specialist",
+  "superseded",
+]);
+
+export const RecordOutlineReviewSchema = z
+  .object({
+    cellId: z.string().trim().min(1).max(120),
+    status: OutlineReviewStatusSchema,
+    /** The cell version the reviewer actually read. Guards against a race. */
+    expectedCellVersion: z.number().int().nonnegative(),
+    sourceUrl: z.string().url().max(500).nullable().default(null),
+    sourceTitle: z.string().trim().max(200).nullable().default(null),
+    sourceEdition: z.string().trim().max(120).nullable().default(null),
+    sourcePublishedAt: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD.")
+      .nullable()
+      .default(null),
+    differenceNote: z.string().max(1000).default(""),
+    ownSummary: z.string().max(400).default(""),
+    /** The reviewer states the summary is their own words, not a quotation. */
+    ownWordsAttested: z.literal(true),
+  })
+  .strict();
+
+export const ReadOutlineReviewsSchema = z
+  .object({
+    subject: z.enum(["mathematics", "physics"]).optional(),
+  })
+  .strict();
+
+/**
  * Account deletion is irreversible, so the caller types the word rather than
  * clicking once. The freshness of the sign-in is checked server-side from the
  * token, not asserted by the caller.

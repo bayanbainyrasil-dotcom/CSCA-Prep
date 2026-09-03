@@ -65,6 +65,8 @@ export {
   importPublicQuestionSeed,
 } from "./import-callables";
 
+export { recordOutlineReview, readOutlineReviews } from "./outline-callables";
+
 const standardCallableOptions = {
   enforceAppCheck: true,
   cors: true,

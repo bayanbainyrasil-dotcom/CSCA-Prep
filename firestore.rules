@@ -463,6 +463,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Official-outline review. Readable by a signed-in learner so the app can
+    // say honestly whether a cell's requirement has been checked against a dated
+    // source, but written only by `recordOutlineReview`: the reviewer identity,
+    // the review time and the reviewed cell version are server facts, and a
+    // client able to write them could certify its own blueprint.
+    match /blueprintOutlineReviews/{cellId} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Import bookkeeping. A client that could write one of these records could
     // make the server believe a batch had already been applied, or make it
     // re-apply one; a client that could read them learns which content exists.
