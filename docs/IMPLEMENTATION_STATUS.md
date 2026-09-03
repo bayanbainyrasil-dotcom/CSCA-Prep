@@ -169,6 +169,18 @@ what it is: *Published* (with a note that publication is not subject-matter veri
 kind rather than a boolean, so a caller that forgets to handle authored content fails to
 compile, and draft content can never be returned as published.
 
+**Persistence** wired through the existing sync path rather than a new mechanism:
+`slice-progress` is a sync entity type mapping to one `sliceProgress` collection under the
+learner's own subtree, with the same versioned envelope and outbox as every other piece of
+progress. The Dexie `entities` table is generic, so no migration was needed.
+
+`SliceProgressSchema` enforces at rest what the engine enforces in memory, because a record
+can arrive from disk or a sync peer without passing through the engine: a prefix of the
+sequence with none skipped, no stage twice, never more correct than answered, at most four
+stages, and no unknown field — so nothing can smuggle in a claim of verification or mastery.
+Tests craft each and confirm refusal. `sliceProgress` is mutable but deliberately not
+tombstonable: a finished stage should not be deletable from a client.
+
 **Still outstanding:** the screen itself. The engine, the content and the trust labels
 exist; the route that walks a learner through the four stages, persists progress through
 the repository layer, and surfaces the two slices on the dashboard and daily plan has not
