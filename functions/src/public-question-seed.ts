@@ -62,6 +62,13 @@ const COMMON = {
   tags: ['authored-slice-1'],
 };
 
+const PHYSICS_COMMON = {
+  subject: 'physics' as const,
+  language: 'en' as const,
+  formulas: ['Q = mc\u0394T'],
+  tags: ['authored-slice-2'],
+};
+
 /**
  * These items are checked into a public repository together with their answer
  * keys and worked solutions, so their answers are public. They are usable for
@@ -622,8 +629,154 @@ export const DRAFT_QUESTION_SEED: DraftQuestion[] = [
     estimatedTime: 120,
     templateParameters: { check: 'mean-shift', n1: 4, mean1: 68, n2: 5, mean2: 70 },
   },
+  //
+  // Physics vertical slice for phys-thermodynamics-heat-transfer, authored
+  // 2026-09-03. The cell requires difficulties 2 and 3 and both
+  // single-step-calculation and multi-step-calculation, so the four items below
+  // cover each combination. Every distractor is a named arithmetic or reading
+  // mistake rather than a filler number, and every answer is recomputed
+  // independently in src/data/draft-questions.test.ts from templateParameters.
+  //
+  // Like everything else in this file, the answer keys are public. These are
+  // practice items and can never back a confidential mock.
+  //
+  {
+    ...PHYSICS_COMMON,
+    id: 'phys-thermodynamics-heat-transfer-001',
+    cellId: 'phys-thermodynamics-heat-transfer',
+    module: 'Thermal physics',
+    topicId: 'phys-thermodynamics',
+    skill: 'Apply thermal relations',
+    questionType: 'single-step-calculation',
+    difficulty: 2,
+    question:
+      'A beaker holds 0.50 kg of water. The specific heat capacity of water is 4200 J/(kg·K). How much energy raises its temperature by 20 K?',
+    questionTranslation:
+      'В стакане 0,50 кг воды. Удельная теплоёмкость воды 4200 Дж/(кг·К). Сколько энергии нужно, чтобы поднять её температуру на 20 К?',
+    options: [
+      { id: 'a', text: '42 kJ' },
+      { id: 'b', text: '84 kJ' },
+      { id: 'c', text: '2.1 kJ' },
+      { id: 'd', text: '4.2 kJ' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Use Q = mcΔT. Q = 0.50 × 4200 × 20 = 42000 J, which is 42 kJ. Checking the size: half a kilogram of water needs about 2 kJ for each kelvin, so 20 K needs about 42 kJ.',
+    shortSolution: 'Q = 0.50 × 4200 × 20 = 42 kJ.',
+    explanation:
+      'Each of the three quantities multiplies. The most common slip is dropping one of them, so name m, c and ΔT before multiplying anything.',
+    commonMistakes: [
+      { id: 'mass-dropped', description: 'Using 1 kg instead of 0.50 kg gives 84 kJ.', distractorOptionId: 'b' },
+      { id: 'delta-dropped', description: 'Leaving out ΔT gives 2.1 kJ.', distractorOptionId: 'c' },
+      { id: 'power-of-ten', description: 'A factor-of-ten slip gives 4.2 kJ.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['specific-heat-capacity', 'temperature-change'],
+    estimatedTime: 60,
+    templateParameters: { check: 'heat-in-kilojoules', m: 0.5, c: 4200, dT: 20 },
+  },
+  {
+    ...PHYSICS_COMMON,
+    id: 'phys-thermodynamics-heat-transfer-002',
+    cellId: 'phys-thermodynamics-heat-transfer',
+    module: 'Thermal physics',
+    topicId: 'phys-thermodynamics',
+    skill: 'Apply thermal relations',
+    questionType: 'single-step-calculation',
+    difficulty: 3,
+    question:
+      'Adding 9200 J of energy to a 0.40 kg metal block raises its temperature by 50 K. What is the specific heat capacity of the metal?',
+    questionTranslation:
+      'Передача 9200 Дж энергии металлическому бруску массой 0,40 кг повышает его температуру на 50 К. Чему равна удельная теплоёмкость металла?',
+    options: [
+      { id: 'a', text: '460 J/(kg·K)' },
+      { id: 'b', text: '230 J/(kg·K)' },
+      { id: 'c', text: '184 J/(kg·K)' },
+      { id: 'd', text: '0.46 J/(kg·K)' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Rearrange Q = mcΔT to c = Q ÷ (mΔT). c = 9200 ÷ (0.40 × 50) = 9200 ÷ 20 = 460 J/(kg·K).',
+    shortSolution: 'c = 9200 ÷ (0.40 × 50) = 460 J/(kg·K).',
+    explanation:
+      'Rearranging first, then substituting, keeps the units visible: joules divided by kilogram-kelvin is exactly J/(kg·K).',
+    commonMistakes: [
+      { id: 'doubled-delta', description: 'Reading 50 K as a final temperature and using 100 gives 230.', distractorOptionId: 'b' },
+      { id: 'mass-dropped', description: 'Dividing by ΔT alone gives 184.', distractorOptionId: 'c' },
+      { id: 'grams', description: 'Using 400 g as the number instead of 0.40 kg gives 0.46.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['specific-heat-capacity', 'rearrange'],
+    estimatedTime: 75,
+    templateParameters: { check: 'specific-heat-capacity', q: 9200, m: 0.4, dT: 50 },
+  },
+  {
+    ...PHYSICS_COMMON,
+    id: 'phys-thermodynamics-heat-transfer-003',
+    cellId: 'phys-thermodynamics-heat-transfer',
+    module: 'Thermal physics',
+    topicId: 'phys-thermodynamics',
+    skill: 'Apply thermal relations',
+    questionType: 'multi-step-calculation',
+    difficulty: 2,
+    question:
+      'Water of mass 0.20 kg is heated from 20 °C to 100 °C. The specific heat capacity of water is 4200 J/(kg·K). How much energy is needed?',
+    questionTranslation:
+      'Воду массой 0,20 кг нагревают от 20 °C до 100 °C. Удельная теплоёмкость воды 4200 Дж/(кг·К). Сколько энергии для этого нужно?',
+    options: [
+      { id: 'a', text: '67.2 kJ' },
+      { id: 'b', text: '84 kJ' },
+      { id: 'c', text: '16.8 kJ' },
+      { id: 'd', text: '336 kJ' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'First find the temperature change: ΔT = 100 − 20 = 80 K. Then Q = mcΔT = 0.20 × 4200 × 80 = 67200 J, which is 67.2 kJ. A change in celsius degrees is the same number of kelvin, so no conversion is needed.',
+    shortSolution: 'ΔT = 80 K, so Q = 0.20 × 4200 × 80 = 67.2 kJ.',
+    explanation:
+      'The extra step is the subtraction. ΔT is a difference, not the final reading, and a change of 1 °C is a change of 1 K.',
+    commonMistakes: [
+      { id: 'final-temperature', description: 'Using the final 100 °C as ΔT gives 84 kJ.', distractorOptionId: 'b' },
+      { id: 'initial-temperature', description: 'Using the initial 20 °C as ΔT gives 16.8 kJ.', distractorOptionId: 'c' },
+      { id: 'mass-dropped', description: 'Using 1 kg instead of 0.20 kg gives 336 kJ.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['specific-heat-capacity', 'temperature-change'],
+    estimatedTime: 90,
+    templateParameters: { check: 'heat-in-kilojoules-from-temperatures', m: 0.2, c: 4200, tStart: 20, tEnd: 100 },
+  },
+  {
+    ...PHYSICS_COMMON,
+    id: 'phys-thermodynamics-heat-transfer-004',
+    cellId: 'phys-thermodynamics-heat-transfer',
+    module: 'Thermal physics',
+    topicId: 'phys-thermodynamics',
+    skill: 'Apply thermal relations',
+    questionType: 'multi-step-calculation',
+    difficulty: 3,
+    question:
+      'An aluminium block of mass 0.15 kg cools from 120 °C to 30 °C. The specific heat capacity of aluminium is 900 J/(kg·K). How much energy does the block release?',
+    questionTranslation:
+      'Алюминиевый брусок массой 0,15 кг остывает от 120 °C до 30 °C. Удельная теплоёмкость алюминия 900 Дж/(кг·К). Сколько энергии отдаёт брусок?',
+    options: [
+      { id: 'a', text: '12.15 kJ' },
+      { id: 'b', text: '16.2 kJ' },
+      { id: 'c', text: '4.05 kJ' },
+      { id: 'd', text: '81 kJ' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'The magnitude of the temperature change is ΔT = 120 − 30 = 90 K. Q = mcΔT = 0.15 × 900 × 90 = 12150 J, which is 12.15 kJ. The block cools, so this energy leaves it; the question asks how much is released, so the magnitude is the answer.',
+    shortSolution: 'ΔT = 90 K, so Q = 0.15 × 900 × 90 = 12.15 kJ.',
+    explanation:
+      'Cooling uses the same relation as heating. Only the direction of the energy changes, and the question asks for the amount released rather than a signed value.',
+    commonMistakes: [
+      { id: 'start-temperature', description: 'Using the starting 120 °C as ΔT gives 16.2 kJ.', distractorOptionId: 'b' },
+      { id: 'end-temperature', description: 'Using the final 30 °C as ΔT gives 4.05 kJ.', distractorOptionId: 'c' },
+      { id: 'mass-dropped', description: 'Using 1 kg instead of 0.15 kg gives 81 kJ.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['specific-heat-capacity', 'released'],
+    estimatedTime: 90,
+    templateParameters: { check: 'heat-in-kilojoules-from-temperatures', m: 0.15, c: 900, tStart: 120, tEnd: 30 },
+  },
 ];
-
 /** Cells this authored slice targets, in the order a reviewer should work through them. */
 export const AUTHORED_SLICE_CELL_IDS = [
   'math-foundation-integer-operations',
@@ -632,4 +785,5 @@ export const AUTHORED_SLICE_CELL_IDS = [
   'math-linear-isolate-unknown',
   'math-linear-multi-step-linear',
   'math-linear-linear-word-problem',
+  'phys-thermodynamics-heat-transfer',
 ] as const;

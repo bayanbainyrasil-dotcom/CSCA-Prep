@@ -28,7 +28,10 @@ function parseNumber(text: string): number {
     .replace(/−/g, '-')
     .replace(/^x\s*=\s*/, '')
     .replace(/%$/, '')
-    .replace(/\s*(km|kg)$/, '')
+    // A trailing unit is stripped so the number a learner reads is what gets
+    // compared: "42 kJ" is 42, "460 J/(kg·K)" is 460. The unit itself is checked
+    // separately by the unit-consistency test below.
+    .replace(/\s*[A-Za-z°Ω][A-Za-z°Ω·/()]*$/, '')
     .trim();
 
   const scientific = /^(-?[\d.]+)\s*×\s*10([⁰¹²³⁴⁵⁶⁷⁸⁹⁻]+)$/.exec(normalised);
@@ -62,6 +65,13 @@ const INDEPENDENT: Record<string, (p: Record<string, string | number | boolean>)
   'scientific-quotient': (p) =>
     String((Number(p.m1) / Number(p.m2)) * 10 ** (Number(p.e1) - Number(p.e2))),
   'rounded-product': (p) => String(Number(p.x) * Number(p.y)),
+  // Physics slice: Q = mcDT, expressed in the kilojoules the options use, and
+  // the rearrangement c = Q / (m DT). Written from the relation rather than by
+  // copying the solution text, so a wrong solution cannot validate itself.
+  'heat-in-kilojoules': (p) => String((Number(p.m) * Number(p.c) * Number(p.dT)) / 1000),
+  'heat-in-kilojoules-from-temperatures': (p) =>
+    String((Number(p.m) * Number(p.c) * Math.abs(Number(p.tEnd) - Number(p.tStart))) / 1000),
+  'specific-heat-capacity': (p) => String(Number(p.q) / (Number(p.m) * Number(p.dT))),
   'x-plus-b-equals-c': (p) => String(Number(p.c) - Number(p.b)),
   'ax-equals-c': (p) => String(Number(p.c) / Number(p.a)),
   'x-over-a-equals-c': (p) => String(Number(p.c) * Number(p.a)),
@@ -186,7 +196,9 @@ describe('authored slice structure', () => {
       const text = `${question.question} ${question.solution} ${question.explanation}`.toLowerCase();
       expect(text).not.toContain('official');
       expect(text).not.toContain('past paper');
-      expect(question.tags).toContain('authored-slice-1');
+      // Each item belongs to a named authored slice. The set is pinned so a new
+      // slice has to be added deliberately rather than appearing untagged.
+      expect(['authored-slice-1', 'authored-slice-2'].some((tag) => question.tags.includes(tag)), question.id).toBe(true);
     }
   });
 });
@@ -325,9 +337,9 @@ describe('blueprint mapping of the authored slice', () => {
     }
   });
 
-  it('touches only the six cells of this slice, leaving the other 103 empty', () => {
+  it('touches only the seven cells of this slice, leaving the other 102 empty', () => {
     const targeted = new Set(DRAFT_QUESTION_SEED.map((question) => question.cellId));
     expect([...targeted].sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
-    expect(BLUEPRINT_CELL_SEED.length - targeted.size).toBe(103);
+    expect(BLUEPRINT_CELL_SEED.length - targeted.size).toBe(102);
   });
 });

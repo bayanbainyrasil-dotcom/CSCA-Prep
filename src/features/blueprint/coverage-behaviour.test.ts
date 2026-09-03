@@ -45,6 +45,9 @@ function asRecord(
 }
 
 const SLICE = new Set<string>(AUTHORED_SLICE_CELL_IDS);
+/** The slice spans two subjects, so exam requests must be split by subject. */
+const MATH_SLICE = AUTHORED_SLICE_CELL_IDS.filter((id) => id.startsWith('math-'));
+const PHYSICS_SLICE = AUTHORED_SLICE_CELL_IDS.filter((id) => id.startsWith('phys-'));
 const OTHER_CELLS = BLUEPRINT_CELL_SEED.filter((cell) => !SLICE.has(cell.id));
 
 describe('states that never count as coverage', () => {
@@ -96,18 +99,21 @@ describe('after a real human approval', () => {
   const verifiedBank = DRAFT_QUESTION_SEED.map((question) => asRecord(question));
   const coverage = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, verifiedBank);
 
-  it('covers exactly the six cells of the authored slice', () => {
+  it('covers exactly the seven cells of the authored slice', () => {
     const covered = coverage.cells.filter((entry) => entry.status === 'covered').map((entry) => entry.cell.id);
     expect(covered.sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
-    expect(coverage.verifiedCells).toBe(6);
+    expect(coverage.verifiedCells).toBe(7);
+    // Six Mathematics cells and one Physics cell, the second vertical slice.
+    expect(MATH_SLICE).toHaveLength(6);
+    expect(PHYSICS_SLICE).toEqual(['phys-thermodynamics-heat-transfer']);
   });
 
-  it('leaves the other 103 cells empty', () => {
+  it('leaves the other 102 cells empty', () => {
     for (const cell of OTHER_CELLS) {
       const entry = coverage.cells.find((item) => item.cell.id === cell.id);
       expect(entry?.status, cell.id).toBe('empty');
     }
-    expect(coverage.totals.empty).toBe(103);
+    expect(coverage.totals.empty).toBe(102);
   });
 
   it('raises no structural issue', () => {
@@ -115,13 +121,25 @@ describe('after a real human approval', () => {
     expect(coverage.orphanQuestionIds).toEqual([]);
   });
 
-  it('allows an exam built only from those six covered cells', () => {
+  it('allows an exam built only from the covered cells of one subject', () => {
+    expect(canPublishExam(coverage, { subject: 'mathematics', mode: 'mock', cellIds: MATH_SLICE })).toEqual({
+      allowed: true,
+      blockers: [],
+    });
+    expect(canPublishExam(coverage, { subject: 'physics', mode: 'mock', cellIds: PHYSICS_SLICE })).toEqual({
+      allowed: true,
+      blockers: [],
+    });
+  });
+
+  it('refuses a mixed-subject exam even when every cell in it is covered', () => {
     const decision = canPublishExam(coverage, {
       subject: 'mathematics',
       mode: 'mock',
       cellIds: [...AUTHORED_SLICE_CELL_IDS],
     });
-    expect(decision).toEqual({ allowed: true, blockers: [] });
+    expect(decision.allowed).toBe(false);
+    expect(decision.blockers.join(' ')).toMatch(/belongs to physics, not mathematics/);
   });
 
   it('still refuses a mock that draws on the rest of the Mathematics blueprint', () => {
@@ -138,10 +156,11 @@ describe('after a real human approval', () => {
     expect(decision.blockers.join(' ')).toMatch(/No question has been authored/);
   });
 
-  it('refuses a Physics mock entirely: none of it is authored', () => {
+  it('still refuses a full Physics mock: one authored cell out of sixty-two', () => {
     const physicsCells = BLUEPRINT_CELL_SEED.filter((cell) => cell.subject === 'physics').map((cell) => cell.id);
     const decision = canPublishExam(coverage, { subject: 'physics', mode: 'mock', cellIds: physicsCells });
     expect(decision.allowed).toBe(false);
+    expect(decision.blockers.length).toBeGreaterThan(50);
   });
 
   it('stops counting an item as soon as its text changes after approval', () => {
@@ -152,10 +171,10 @@ describe('after a real human approval', () => {
     const entry = after.cells.find((item) => item.cell.id === 'math-linear-isolate-unknown');
     expect(entry?.verifiedItems).toBe(0);
     expect(entry?.status).toBe('unverified');
-    expect(after.verifiedCells).toBe(5);
-    expect(
-      canPublishExam(after, { subject: 'mathematics', mode: 'mock', cellIds: [...AUTHORED_SLICE_CELL_IDS] }).allowed,
-    ).toBe(false);
+    expect(after.verifiedCells).toBe(6);
+    // Single-subject, so the refusal is attributable to the edit rather than to
+    // a physics cell appearing in a mathematics exam.
+    expect(canPublishExam(after, { subject: 'mathematics', mode: 'mock', cellIds: MATH_SLICE }).allowed).toBe(false);
   });
 
   it('lets one approved item cover only its own cell', () => {
@@ -220,15 +239,15 @@ describe('a question whose answer key is already public', () => {
     expect(decision.blockers.join(' ')).toContain('published answer key');
   });
 
-  it('still allows publishing the same cells as practice', () => {
+  it('still allows publishing the same cells as practice, one subject at a time', () => {
     const practice = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, publicBank, { mode: 'practice' });
-    const decision = canPublishExam(practice, {
-      subject: 'mathematics',
-      mode: 'practice',
-      cellIds: [...AUTHORED_SLICE_CELL_IDS],
-    });
 
-    expect(decision).toEqual({ allowed: true, blockers: [] });
+    expect(
+      canPublishExam(practice, { subject: 'mathematics', mode: 'practice', cellIds: MATH_SLICE }),
+    ).toEqual({ allowed: true, blockers: [] });
+    expect(
+      canPublishExam(practice, { subject: 'physics', mode: 'practice', cellIds: PHYSICS_SLICE }),
+    ).toEqual({ allowed: true, blockers: [] });
   });
 
   it('counts a privately held item in the same cell, so the gap is closable', () => {
