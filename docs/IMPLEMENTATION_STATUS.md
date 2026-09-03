@@ -181,7 +181,44 @@ stages, and no unknown field — so nothing can smuggle in a claim of verificati
 Tests craft each and confirm refusal. `sliceProgress` is mutable but deliberately not
 tombstonable: a finished stage should not be deletable from a client.
 
-**Still outstanding:** the screen itself. The engine, the content and the trust labels
+**The route** at `/slice/:cellId` walks lesson → guided → independent → timed → result.
+Progress comes from the store and is written through the sync path above; the engine
+refuses a repeat or an out-of-order completion, so a double tap is reported as "already
+recorded, nothing counted twice" rather than advancing anything. Focus moves to the new
+stage heading, the current step carries `aria-current="step"`, and both slice deep links
+have Pages entrypoints so a shared link survives a refresh.
+
+**The trust boundary** is a pure function, not a condition buried in the view:
+
+| Audience | Sees | Label |
+| --- | --- | --- |
+| Learner, real deployment | nothing | "Coming soon", with the reason |
+| Administrator, real deployment | the slice | "Review preview — awaiting human review" |
+| Local demo | the slice | "Awaiting human review" |
+
+`resolveLesson` is untouched: draft is still never returned as published.
+
+**Two content defects the checks caught,** both real:
+
+- The mathematics lesson's worked example was character-for-character the short solution of
+  practice item 001. `scripts/check-bundle-secrets.mjs` failed on it.
+- The physics lesson's worked example used the same numbers as physics item 001 and reached
+  the same answer in different words, so the string scan could not see it at all.
+
+Both renumbered, and `src/data/lesson-answer-overlap.test.ts` now asserts the invariant the
+scanner cannot: no worked example may share every quantity with a practice item in its own
+cell.
+
+**Dashboard cards** on the daily plan show the real state — not started, the current stage,
+completed, or locked — and never say Verified, Adaptive or Recommended.
+
+**Still outstanding:** the practice stages count items but do not yet render individual
+questions: the authored items live on the server with their solutions and are deliberately
+not bundled, so on the demo deployment the stage says so plainly instead of inventing a
+question. Wiring the real question components requires the production import, which needs
+the Firebase deployment. Real two-device sync of slice progress is likewise unproven.
+
+**Previously outstanding, now done:** the screen itself. The engine, the content and the trust labels
 exist; the route that walks a learner through the four stages, persists progress through
 the repository layer, and surfaces the two slices on the dashboard and daily plan has not
 been built. That is the next task, and until it exists the slices are reachable only as a
