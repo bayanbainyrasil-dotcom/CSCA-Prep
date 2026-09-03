@@ -119,11 +119,24 @@ export async function loadBlueprintCell(cellId: string): Promise<BlueprintCell |
   return snapshot.exists && data ? toCell(snapshot.id, data) : undefined;
 }
 
-/** Reads the blueprint and the published bank, and recomputes coverage from them. */
-export async function loadBlueprintState(): Promise<{
+/**
+ * Reads the blueprint and the published bank, and recomputes coverage from them.
+ *
+ * `answerLabels` decides whether the private `questionSolutions` documents are
+ * read at all. An administrator asking for a full coverage report needs them,
+ * because the only use of a correct-answer label is `answerDistributionSkew`,
+ * which reports a global issue when one option letter is correct too often. A
+ * learner-facing summary returns no issues, so it opts out: the private answers
+ * are then never loaded into the process, and the per-cell status — which does
+ * not depend on the label — is identical either way.
+ */
+export async function loadBlueprintState(
+  options: { answerLabels?: boolean } = {},
+): Promise<{
   cells: BlueprintCell[];
   items: BlueprintQuestionRecord[];
 }> {
+  const withAnswerLabels = options.answerLabels !== false;
   const [cellSnapshot, questionSnapshot] = await Promise.all([
     db.collection(BLUEPRINT_COLLECTION).get(),
     db.collection("questions").get(),
@@ -133,12 +146,15 @@ export async function loadBlueprintState(): Promise<{
 
   // The correct-answer label is private content and is read here only to detect
   // answer-key skew. It is never returned to any caller.
-  const solutionSnapshots = await db.getAll(
-    ...questionSnapshot.docs.map((document) => db.collection("questionSolutions").doc(document.id)),
-  );
-  const labelById = new Map(
-    solutionSnapshots.map((snapshot) => [snapshot.id, asString(snapshot.data()?.correctAnswer, "?")]),
-  );
+  const labelById = new Map<string, string>();
+  if (withAnswerLabels) {
+    const solutionSnapshots = await db.getAll(
+      ...questionSnapshot.docs.map((document) => db.collection("questionSolutions").doc(document.id)),
+    );
+    for (const snapshot of solutionSnapshots) {
+      labelById.set(snapshot.id, asString(snapshot.data()?.correctAnswer, "?"));
+    }
+  }
 
   const items = questionSnapshot.docs.map((document) =>
     toQuestionRecord(document.id, document.data(), labelById.get(document.id) ?? "?"),

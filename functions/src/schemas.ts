@@ -407,6 +407,14 @@ export const BlueprintCoverageSchema = z
   })
   .strict();
 
+/**
+ * The learner-facing coverage read takes no arguments at all.
+ *
+ * A subject or mode filter would be harmless, but every accepted field is a
+ * field an attacker can probe, and the panel needs the whole blueprint anyway.
+ */
+export const CoverageSummarySchema = z.object({}).strict();
+
 export const PublishMockExamSchema = z
   .object({
     mockExamId: identifier,

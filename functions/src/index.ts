@@ -71,6 +71,8 @@ export { recordOutlineReview, readOutlineReviews } from "./outline-callables";
 
 export { reportOperationalEvent } from "./report-callables";
 
+export { getCoverageSummary } from "./coverage-summary-callables";
+
 const standardCallableOptions = {
   enforceAppCheck: true,
   cors: true,

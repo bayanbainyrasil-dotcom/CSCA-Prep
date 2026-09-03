@@ -79,8 +79,23 @@ describe('the shipped application', () => {
     expect(offenders).toEqual([]);
   });
 
+  /**
+   * `blueprint-summary` is on the allow-list above because it is a count and
+   * nothing else. That is only true while it stays that way, so it is checked
+   * rather than trusted: any question text, option, answer or lesson body added
+   * to it would show up as a long string literal here.
+   */
+  it('keeps the browser-importable blueprint summary free of content', () => {
+    const source = withoutComments(readFileSync('functions/src/blueprint-summary.ts', 'utf8'));
+    const literals = [...source.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)].map((match) => match[2] ?? '');
+    expect(literals.filter((literal) => literal.length > 40)).toEqual([]);
+    for (const forbidden of ['correctAnswer', 'solution', 'explanation', 'question:', 'options']) {
+      expect(source, forbidden).not.toContain(forbidden);
+    }
+  });
+
   it('never imports anything from the trusted backend except its shared contracts', () => {
-    const allowed = /functions\/src\/(schemas|blueprint-engine|mock-engine|import-engine|seed-versions)/;
+    const allowed = /functions\/src\/(schemas|blueprint-engine|mock-engine|import-engine|seed-versions|blueprint-summary)/;
     const offenders: string[] = [];
     for (const path of SHIPPED_SOURCES) {
       if (SEED_REEXPORTS.includes(path.split('\\').join('/'))) continue;
