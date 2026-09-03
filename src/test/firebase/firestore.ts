@@ -285,6 +285,25 @@ export class Firestore {
   getAll(...references: DocumentReference[]): Promise<DocumentSnapshot[]> {
     return Promise.all(references.map((reference) => reference.get()));
   }
+  /**
+   * Deletes a document or a whole collection, including everything nested under
+   * it. Paths here are flat strings like `users/uid/notes`, so "nested under"
+   * means every collection whose path starts with this one.
+   */
+  recursiveDelete(target: DocumentReference | CollectionReference): Promise<void> {
+    const path = target instanceof CollectionReference ? target.collectionId : target.path;
+    if (target instanceof CollectionReference) {
+      collectionOf(path).clear();
+    } else {
+      collectionOf((target as DocumentReference).collectionId).delete((target as DocumentReference).id);
+    }
+    for (const [name, documents] of store) {
+      if (name === path) continue;
+      if (name.startsWith(`${path}/`)) documents.clear();
+    }
+    return Promise.resolve();
+  }
+
   async runTransaction<T>(body: (transaction: Transaction) => Promise<T>): Promise<T> {
     const transaction = new Transaction();
     const result = await body(transaction);

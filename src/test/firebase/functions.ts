@@ -79,13 +79,25 @@ export function initializeApp(): Record<string, never> {
   return {};
 }
 
+/** Users the auth double has been asked to delete, for assertions. */
+export const deletedUserIds: string[] = [];
+
+export function resetAuthDouble(): void {
+  deletedUserIds.length = 0;
+}
+
 export function getAuth(): {
   setCustomUserClaims: () => Promise<void>;
+  deleteUser: (uid: string) => Promise<void>;
   getUser: () => Promise<never>;
   verifyIdToken: () => Promise<never>;
 } {
   return {
     setCustomUserClaims: () => Promise.resolve(),
+    deleteUser: (uid: string) => {
+      deletedUserIds.push(uid);
+      return Promise.resolve();
+    },
     getUser: () => Promise.reject(new Error('The auth double does not read users.')),
     verifyIdToken: () => Promise.reject(new Error('The auth double does not verify tokens.')),
   };
