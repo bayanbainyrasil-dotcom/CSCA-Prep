@@ -34,6 +34,7 @@ const COLLECTION_BY_TYPE: Record<Exclude<SyncEntityType, "profile">, string> = {
   note: "notes",
   bookmark: "bookmarks",
   "study-plan": "studyPlans",
+  "slice-progress": "sliceProgress",
 };
 
 const MUTABLE_DELETE_TYPES = new Set<SyncEntityType>(["note", "bookmark"]);

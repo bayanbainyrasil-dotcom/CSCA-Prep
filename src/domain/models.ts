@@ -757,6 +757,63 @@ export const FormulaProgressSchema = z
   .strict();
 export type FormulaProgress = z.infer<typeof FormulaProgressSchema>;
 
+/**
+ * A learner's progress through one teaching slice.
+ *
+ * The rules live in `src/features/slices/slice-progress.ts`; this is only the
+ * stored shape. `userId` is on the record as well as in the id, so a document
+ * that somehow reached the wrong subtree is still identifiable as misplaced.
+ */
+export const SliceStageSchema = z.enum(["lesson", "guided", "independent", "timed"]);
+
+export const SliceStageRecordSchema = z
+  .object({
+    stage: SliceStageSchema,
+    completedAt: IsoDateTimeSchema,
+    answered: z.number().int().min(0).max(200),
+    correct: z.number().int().min(0).max(200),
+    durationSeconds: z.number().int().min(0).max(86_400),
+  })
+  .strict()
+  .refine((record) => record.correct <= record.answered, {
+    message: "A stage cannot record more correct answers than answers",
+    path: ["correct"],
+  });
+
+export const SliceProgressSchema = z
+  .object({
+    id: IdSchema,
+    userId: IdSchema,
+    cellId: IdSchema,
+    lessonId: IdSchema,
+    stages: z.array(SliceStageRecordSchema).max(4),
+    startedAt: IsoDateTimeSchema,
+    updatedAt: IsoDateTimeSchema,
+    version: z.number().int().positive(),
+  })
+  .strict()
+  .superRefine((progress, context) => {
+    const stages = progress.stages.map((record) => record.stage);
+    if (new Set(stages).size !== stages.length) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["stages"],
+        message: "A stage cannot be completed twice",
+      });
+    }
+    // Progress must be a prefix of the sequence: no skipping, stored or not.
+    const order = SliceStageSchema.options;
+    const expected = order.slice(0, stages.length);
+    if (stages.join(",") !== expected.join(",")) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["stages"],
+        message: "Stages must be completed in order, with none skipped",
+      });
+    }
+  });
+export type SliceProgress = z.infer<typeof SliceProgressSchema>;
+
 export const UserNoteSchema = z
   .object({
     id: IdSchema,
@@ -868,6 +925,7 @@ export const SyncEntityTypeSchema = z.enum([
   "note",
   "bookmark",
   "study-plan",
+  "slice-progress",
 ]);
 export type SyncEntityType = z.infer<typeof SyncEntityTypeSchema>;
 
@@ -925,10 +983,13 @@ export type SyncEntity =
   | FormulaProgress
   | UserNote
   | Bookmark
-  | StudyPlan;
+  | StudyPlan
+  | SliceProgress;
 
 export function parseSyncEntity(entityType: SyncEntityType, input: unknown): SyncEntity {
   switch (entityType) {
+    case "slice-progress":
+      return SliceProgressSchema.parse(input);
     case "profile":
       return UserProfileSchema.parse(input);
     case "attempt":
