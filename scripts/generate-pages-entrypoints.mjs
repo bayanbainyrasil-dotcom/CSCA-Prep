@@ -12,6 +12,7 @@ export const pagesEntrypoints = [
   'physics',
   'lesson/newtons-laws',
   'lesson/quadratic',
+  'lesson/lesson-physics-constant-speed-demo',
   'practice',
   'practice/session',
   'diagnostic',

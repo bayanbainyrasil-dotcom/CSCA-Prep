@@ -35,7 +35,7 @@ Remediation applied in the audit batch:
 
 1. Added generated GitHub Pages entrypoints for every static application route. This fixes
    the deployed `/onboarding` behavior where a fresh deep link rendered correctly but
-   returned HTTP 404.
+   returned HTTP 404. The built-in published demo lesson is included as well.
 2. Raised shared and audited compact touch targets to 48 px and added pressed/current
    semantics to progress filters and lesson steps.
 3. Upgraded Firebase Admin `14.3.0` and Firebase Functions `7.3.2`, moved the Functions

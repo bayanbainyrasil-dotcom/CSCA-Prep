@@ -15,6 +15,7 @@ test('generates a 200-capable Pages entrypoint for every static application rout
 
     assert.equal(await readFile(join(outDir, '404.html'), 'utf8'), marker);
     assert.ok(pagesEntrypoints.includes('onboarding'));
+    assert.ok(pagesEntrypoints.includes('lesson/lesson-physics-constant-speed-demo'));
     assert.ok(pagesEntrypoints.includes('practice/session'));
     assert.ok(pagesEntrypoints.includes('mock/physics/results'));
 

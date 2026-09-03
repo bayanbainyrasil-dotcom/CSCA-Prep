@@ -37,7 +37,7 @@ export function Sidebar({ onSearch }: { onSearch: () => void }) {
             to={path}
             end={end}
             className={({ isActive }) => cn(
-              'flex min-h-10 items-center gap-3 rounded-xl px-3 text-[0.82rem] font-semibold transition-colors',
+              'flex min-h-12 items-center gap-3 rounded-xl px-3 text-[0.82rem] font-semibold transition-colors',
               isActive ? 'bg-foreground text-background shadow-sm' : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
             )}
           >

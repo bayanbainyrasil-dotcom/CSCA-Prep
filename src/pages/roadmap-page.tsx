@@ -65,7 +65,7 @@ export default function RoadmapPage() {
                         onClick={() => setSelectedDay(day)}
                         aria-label={`Day ${day}, ${state}`}
                         className={cn(
-                          'aspect-square min-h-10 rounded-xl border text-xs font-bold transition-transform hover:-translate-y-0.5',
+                          'aspect-square min-h-12 rounded-xl border text-xs font-bold transition-transform hover:-translate-y-0.5',
                           state === 'completed' && 'border-success/15 bg-success/10 text-success',
                           state === 'active' && 'border-primary bg-primary text-primary-foreground shadow-md',
                           state === 'overdue' && 'border-physics/35 bg-physics/10 text-amber-700 dark:text-physics',
