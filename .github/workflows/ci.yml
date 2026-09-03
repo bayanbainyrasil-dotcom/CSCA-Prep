@@ -69,6 +69,13 @@ jobs:
       - name: Build web app
         run: pnpm build
 
+      # Both checks read `dist/`, so they run after the build and never before.
+      - name: Scan the built bundle for seed answers
+        run: pnpm check:bundle
+
+      - name: Check the first-load budget
+        run: pnpm check:budget
+
   functions:
     name: Cloud Functions typecheck and build
     runs-on: ubuntu-latest

@@ -14,12 +14,15 @@
     "preview": "vite preview",
     "typecheck": "tsc -b --pretty false",
     "lint": "eslint . --max-warnings 0",
-    "test": "vitest run && pnpm test:pages",
+    "test": "vitest run && pnpm test:pages && pnpm test:budget",
     "test:pages": "node --test scripts/generate-pages-entrypoints.test.mjs",
+    "test:budget": "node --test scripts/check-bundle-budget.test.mjs",
+    "check:bundle": "node scripts/check-bundle-secrets.mjs",
+    "check:budget": "node scripts/check-bundle-budget.mjs",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "validate": "pnpm typecheck && pnpm lint && pnpm test && pnpm build"
+    "validate": "pnpm typecheck && pnpm lint && pnpm test && pnpm build && pnpm check:bundle && pnpm check:budget"
   },
   "dependencies": {
     "@fontsource-variable/manrope": "^5.3.0",
