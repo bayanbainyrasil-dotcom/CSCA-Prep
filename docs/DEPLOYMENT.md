@@ -1,127 +1,132 @@
-# Deployment
+# Production deployment runbook — Workstream 1
 
-This guide deploys the React PWA to Vercel and the trusted data layer to Firebase. Use separate Firebase projects for development/staging and production so tests and preview deployments can never modify production learner data.
+**What this document is.** Everything needed to bring CSCA Prep up on a real
+domain, in the order it has to happen, with the exact console screen and value
+shape for each step the owner must do himself.
 
-## Prerequisites
+**What has and has not been proven.** Nothing in this repository has been
+deployed. The verification harness below is tested and works; the deployment it
+is meant to check does not exist yet. Every gate item is marked accordingly, and
+none is ticked from reading configuration.
 
-- Node.js 22 and pnpm 11 for the web app
-- A Firebase project on the Blaze plan (Cloud Functions and current Cloud Storage projects require billing)
-- Firebase CLI access with permission to deploy rules, indexes, Storage rules, functions, and secrets
-- A Vercel account connected to the GitHub repository
-- Optional: Google Cloud CLI for backup administration
+---
 
-Install dependencies and create a local configuration:
+## Order of operations
 
-```sh
-pnpm install --frozen-lockfile
-pnpm --dir functions install --frozen-lockfile
-cp .env.example .env.local
+Firebase first, Vercel second: the web build needs the Firebase client
+identifiers as build-time variables, so the Firebase project must exist before
+the first real Vercel build.
+
+### 1. Firebase project
+
+1. **Create or choose the project.** `console.firebase.google.com` → Add project.
+   One project. Do not create a second one for staging until the first is proven.
+2. **Upgrade to Blaze.** Settings → Usage and billing → Details and settings →
+   Modify plan. Cloud Functions v2 cannot deploy on Spark. Set a budget alert at
+   a level you choose; expected spend at current traffic is inside the free tier.
+3. **Register a Web app.** Project settings → Your apps → Web. Copy the six
+   config values; they become the `VITE_FIREBASE_*` variables. These are public
+   client identifiers, not secrets — they are protected by Security Rules, App
+   Check and API-key restrictions, not by being hidden.
+4. **Enable Google sign-in.** Authentication → Sign-in method → Google → Enable.
+   Set the support email.
+5. **Authorized domains.** Authentication → Settings → Authorized domains → add
+   the production hostname. Sign-in fails silently without this.
+6. **App Check.** App Check → Apps → register the Web app with reCAPTCHA v3.
+   Copy the site key into `VITE_FIREBASE_APP_CHECK_SITE_KEY`. Then App Check →
+   APIs → set **Cloud Functions** and **Cloud Firestore** to *Enforced*.
+   Unenforced App Check is the single most consequential misconfiguration
+   available here: it would let anyone call the grading and mock endpoints
+   directly. The harness checks this.
+7. **Bootstrap secret.** The one server secret this app has:
+   ```
+   firebase functions:secrets:set ADMIN_BOOTSTRAP_CODE
+   ```
+   A long random string, entered at the prompt. It never appears in Git, in a
+   `VITE_` variable, in a log or in this file. It is used once, to grant the
+   first administrator claim, and can be rotated afterwards.
+
+### 2. Deploy the backend
+
 ```
-
-Fill `.env.local` from **Firebase console → Project settings → Your apps → Web app**. Never put a service-account key or the administrator bootstrap code in a `VITE_` variable: Vite embeds those values in the public browser bundle.
-
-## 1. Configure Firebase
-
-1. Create a Firebase Web app.
-2. Under **Authentication → Sign-in method**, enable Google. Set the support email.
-3. Create Firestore in Native mode. Choose the location deliberately; changing it later requires a migration. The Cloud Functions region in this project is `asia-east1`.
-4. Create the default Cloud Storage bucket and keep it private. New buckets use the `PROJECT_ID.firebasestorage.app` naming format.
-5. Under **Authentication → Settings → Authorized domains**, add `localhost`, the final production hostname, and only the exact preview/staging hostnames that need sign-in. Do not treat a wildcard preview domain as trusted.
-6. Under **App Check**, register the Web app with reCAPTCHA v3 and copy its site key into `VITE_FIREBASE_APP_CHECK_SITE_KEY`. Deploy and inspect App Check metrics before turning on product-level enforcement. The callable functions already require valid App Check tokens.
-
-The required browser variables are:
-
-```dotenv
-VITE_DEPLOYMENT_MODE=firebase
-VITE_FIREBASE_API_KEY=
-VITE_FIREBASE_AUTH_DOMAIN=your-project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your-project-id
-VITE_FIREBASE_STORAGE_BUCKET=your-project-id.firebasestorage.app
-VITE_FIREBASE_MESSAGING_SENDER_ID=
-VITE_FIREBASE_APP_ID=
-VITE_FIREBASE_APP_CHECK_SITE_KEY=
-```
-
-Vercel builds are fail-closed: if any Firebase client identifier or the
-production App Check key is absent, the build stops instead of falling back to
-the local demo. GitHub Pages explicitly uses `VITE_DEPLOYMENT_MODE=local-demo`.
-
-Firebase web configuration identifies the project; it is not an authorization boundary. Firestore/Storage rules, callable authorization, App Check, and restricted API-key settings provide the actual protection.
-
-### Deploy the backend
-
-From the repository root:
-
-```sh
 firebase login
-firebase use --add
-firebase functions:secrets:set ADMIN_BOOTSTRAP_CODE
-firebase deploy --only firestore:rules,firestore:indexes,storage,functions
+firebase use --add                 # select the project, alias it "default"
+firebase deploy --only firestore:rules,firestore:indexes,storage
+firebase deploy --only functions
 ```
 
-Enter the approved one-time owner setup value only at the Secret Manager prompt. Secret Manager stores it outside the repository. Do not place it in `.env`, GitHub, Vercel, documentation, screenshots, or logs.
+`firebase use --add` writes `.firebaserc`, which is deliberately absent from the
+repository: it names a specific project and is the owner's choice, not a
+committed default.
 
-The deployed `asia-east1` callables are `ensureUserProfile`, `bootstrapAdmin`, `setUserRole`, `exportMyData`, `exportQuestionBank`, `importQuestionBank`, and `gradeQuestion`. Admin and import operations verify authorization server-side; the client must never assign its own role.
+Functions deploy to **asia-east1** (`functions/src/platform.ts`). Callable URLs
+are therefore `https://asia-east1-<project-id>.cloudfunctions.net/<name>`.
 
-## 2. Bootstrap the owner account
+### 3. Vercel
 
-Complete App Check and the function deployment first.
+1. Import the GitHub repository. Framework preset: Vite. `vercel.json` supplies
+   the build command, output directory, rewrites and headers.
+2. **Environment variables**, Production scope, all seven:
+   | Variable | Value shape |
+   | --- | --- |
+   | `VITE_DEPLOYMENT_MODE` | `firebase` — must not be `local-demo` on any Vercel environment |
+   | `VITE_FIREBASE_API_KEY` | `AIza…` from the Web app config |
+   | `VITE_FIREBASE_AUTH_DOMAIN` | `<project>.firebaseapp.com` |
+   | `VITE_FIREBASE_PROJECT_ID` | `<project-id>` |
+   | `VITE_FIREBASE_STORAGE_BUCKET` | `<project-id>.firebasestorage.app` |
+   | `VITE_FIREBASE_MESSAGING_SENDER_ID` | numeric sender id |
+   | `VITE_FIREBASE_APP_ID` | `1:…:web:…` |
+   | `VITE_FIREBASE_APP_CHECK_SITE_KEY` | reCAPTCHA v3 site key |
 
-1. Open the deployed app and sign in with the owner's verified Google account.
-2. Open `/admin` and use the one-time setup control with the bootstrap value.
-3. Let the app refresh the ID token, or sign out and back in once.
-4. Confirm `/admin` is available to that account and denied to a normal test account.
-5. Confirm `_system/adminBootstrap` is marked `completed` and names the correct owner UID.
+   No server secret is ever a `VITE_` variable. Everything in this table is a
+   public client identifier by design.
+3. **Domain.** Add the production domain and its DNS records. Then add that same
+   hostname to Firebase Authorized domains (step 1.5) and to the reCAPTCHA key's
+   allowed domains, or sign-in and App Check will both fail on it.
 
-Bootstrap is locked to the first completed owner in Firestore. Knowing the setup value must not grant a second account admin access. Keep the secret in Secret Manager because the deployed function declares it, and remove the setup prompt from normal user flow after completion.
+---
 
-## 3. Push to GitHub
+## Verifying the deployment
 
-Create a repository, push the default branch, and enable the repository's dependency graph. Protect the production branch and require these checks before merge:
+Two scripts. Neither trusts configuration; both ask the running site.
 
-- **Typecheck, lint, test, and build**
-- **Cloud Functions typecheck and build**
-- **Playwright smoke tests** when E2E files are present
-- **Reject vulnerable dependency additions**
+```
+# Preview the real header behaviour locally before spending a deploy on it.
+pnpm build && node scripts/preview-with-headers.mjs 4180
 
-The GitHub workflow intentionally performs no production deployment and needs no Firebase credentials. Vercel only publishes a deployment after its own build succeeds; use the protected production branch for production releases.
-
-## 4. Deploy to Vercel
-
-1. Import the GitHub repository into Vercel.
-2. Keep the project root as `.` and select the Vite framework preset.
-3. Set Node.js 22 in Project Settings. `vercel.json` supplies the frozen pnpm install, build command, `dist` output, SPA fallback, security headers, CSP, and service-worker cache headers.
-4. Add `VITE_DEPLOYMENT_MODE=firebase` and every `VITE_FIREBASE_*` value under **Settings → Environment Variables**. Use the production Firebase project only for the Production environment; point Preview and Development at a staging project.
-5. Deploy, attach the production domain, then add that exact domain to Firebase Authentication and the App Check registration.
-
-CLI deployment is also supported after `vercel link`:
-
-```sh
-vercel
-vercel --prod
+# Verify a deployed origin. Exits non-zero on any failure, so it can gate a release.
+node scripts/verify-deployment.mjs https://<your-domain> \
+  --callable https://asia-east1-<project-id>.cloudfunctions.net/startMockExam
 ```
 
-The CSP is deliberately allowlist-based for Firebase and Google sign-in. When adding another analytics, media, or API origin, update the smallest relevant CSP directive instead of weakening the whole policy.
+`verify-deployment.mjs` reads `vercel.json` as the source of truth, so it cannot
+drift from the config: adding a header to `vercel.json` adds a check.
 
-## 5. Verify production
+It covers: every declared header served exactly as declared; the SPA rewrite on
+deep routes; the PWA manifest and service worker; that no seed solution string
+appears in the served JavaScript; and that an unattested callable is refused.
+The App Check probe **fails when not given a callable URL** rather than passing
+silently, and fails when the endpoint answers 200.
 
-Run `pnpm validate` before release, then verify:
+### Checks the harness cannot do
 
-- a deep link such as `/roadmap` loads directly and after refresh;
-- Google login works on the final domain and a normal user cannot enter `/admin`;
-- response headers include the CSP, HSTS, `nosniff`, frame protection, and `same-origin-allow-popups`;
-- the generated manifest uses **CSCA Prep**, standalone display, and the 192/512/maskable icons;
-- the Workbox service worker updates without being CDN-cached and never caches Firebase/Auth responses;
-- installation works from Chrome/Edge and **Add to Home Screen** on iPhone/iPad Safari;
-- an already-loaded lesson/session still opens offline and pending progress syncs after reconnect;
-- the checks in [TESTING.md](./TESTING.md) pass against production-like staging.
+These need a browser and a human, once, on the deployed domain:
 
-The PWA service worker is generated during `pnpm build`; it is intentionally disabled in the Vite development server. Test installation and offline behavior from `pnpm preview` or HTTPS staging.
+- Google sign-in and sign-out complete.
+- Account deletion with reauthentication completes (Settings → Delete my account;
+  the server refuses a sign-in older than five minutes).
+- Onboarding state written on one device restores on a second device.
 
-## Rollback
+---
 
-- **Web:** promote the last known-good Vercel deployment. Do not roll back to a client that writes an older, incompatible data shape.
-- **Rules/functions:** deploy a reviewed known-good Git revision. Rules and function code do not restore data already written.
-- **Data:** follow [BACKUP.md](./BACKUP.md). Practice the restore in a separate Firebase project/database before any production recovery.
+## Release gate — current state
 
-Official references: [Firebase Google sign-in](https://firebase.google.com/docs/auth/web/google-signin), [Firebase App Check for Web](https://firebase.google.com/docs/app-check/web/recaptcha-provider), [Vite SPAs on Vercel](https://vercel.com/docs/frameworks/frontend/vite), and [Vercel project configuration](https://vercel.com/docs/project-configuration/vercel-json).
+| Gate item | State |
+| --- | --- |
+| Security headers served on the real domain | **Not deployed.** Harness written and proven against a local replay of `vercel.json`. |
+| Google sign-in / sign-out | **Not deployed.** Code path exists, unverified. |
+| App Check rejects an unattested request | **Not deployed.** Harness probe written and proven to fail against a non-enforcing endpoint. |
+| Account deletion with reauthentication | **Not deployed.** Code path exists and is unit-tested; unverified on a real Auth token. |
+| Two-device sync of onboarding state | **Not deployed.** Code path exists, unverified. |
+| Firestore/Storage rules deployed | **Not deployed.** Rules source-contract tests pass locally. |
+| No answer key in the served bundle | Passing locally (`scripts/check-bundle-secrets.mjs`); re-checked against the domain by the harness after deploy. |
