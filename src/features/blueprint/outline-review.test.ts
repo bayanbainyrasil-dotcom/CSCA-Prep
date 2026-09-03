@@ -335,26 +335,38 @@ describe('the required-area checklist', () => {
     expect(REQUIRED_AREAS.filter((area) => area.subject === 'physics')).toHaveLength(10);
   });
 
-  it('reports the areas that match no cell at all as gaps', () => {
-    const missing = coverage.filter((entry) => entry.missing).map((entry) => entry.area.id);
-    expect(missing).toEqual(['math-solid-geometry', 'phys-kinetic-theory', 'phys-diffraction']);
+  it('now finds a cell for every required area, after the gaps were filled with drafts', () => {
+    // Three areas matched nothing and one matched only a bundled cell before the
+    // 2026-09-03 additions. Each is now represented, but by a draft whose
+    // requirement is itself unconfirmed — see the next test.
+    expect(coverage.filter((entry) => entry.missing)).toEqual([]);
+    expect(coverage.filter((entry) => entry.bundledOnly)).toEqual([]);
   });
 
-  it('reports interference as present only inside a bundled cell', () => {
-    const interference = coverage.find((entry) => entry.area.id === 'phys-interference');
-    expect(interference?.missing).toBe(false);
-    expect(interference?.bundledOnly).toBe(true);
-    expect(interference?.cellIds).toEqual(['phys-waves-wave-behaviour']);
-  });
-
-  it('records why each flagged area is called out, so the reason is not lost', () => {
-    for (const entry of coverage.filter((item) => item.missing || item.bundledOnly)) {
-      expect(entry.area.note.length, entry.area.id).toBeGreaterThan(20);
+  it('fills those gaps only with unverified drafts that say the requirement is unconfirmed', () => {
+    const added = ['phys-thermodynamics-molecular-kinetic-energy', 'phys-optics-single-slit-and-grating', 'phys-optics-path-difference-fringes', 'math-solid-geometry-volume-surface-area'];
+    for (const id of added) {
+      const cell = BLUEPRINT_CELL_SEED.find((entry) => entry.id === id);
+      expect(cell, id).toBeDefined();
+      expect(cell?.verificationStatus, id).toBe('draft');
+      expect(cell?.reviewer, id).toBeNull();
+      expect(cell?.reviewedAt, id).toBeNull();
+      expect(cell?.sourceReference, id).toMatch(/Not an official CSCA specification/);
     }
   });
 
-  it('finds the remaining areas present', () => {
-    const fine = coverage.filter((entry) => !entry.missing && !entry.bundledOnly);
-    expect(fine.length).toBe(REQUIRED_AREAS.length - 4);
+  it('keeps a note on every area that was flagged, so why it was added is not lost', () => {
+    const flagged = REQUIRED_AREAS.filter((area) => area.note !== '');
+    expect(flagged.map((area) => area.id).sort()).toEqual(
+      ['math-solid-geometry', 'phys-diffraction', 'phys-interference', 'phys-kinetic-theory'].sort(),
+    );
+    for (const area of flagged) expect(area.note.length, area.id).toBeGreaterThan(20);
+  });
+
+  it('adding the cells did not move coverage', () => {
+    const report = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, []);
+    expect(report.verifiedCells).toBe(0);
+    expect(report.totals.covered).toBe(0);
+    expect(report.totals.empty).toBe(BLUEPRINT_CELL_SEED.length);
   });
 });

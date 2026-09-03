@@ -102,12 +102,12 @@ describe('after a real human approval', () => {
     expect(coverage.verifiedCells).toBe(6);
   });
 
-  it('leaves the other 99 cells empty', () => {
+  it('leaves the other 103 cells empty', () => {
     for (const cell of OTHER_CELLS) {
       const entry = coverage.cells.find((item) => item.cell.id === cell.id);
       expect(entry?.status, cell.id).toBe('empty');
     }
-    expect(coverage.totals.empty).toBe(99);
+    expect(coverage.totals.empty).toBe(103);
   });
 
   it('raises no structural issue', () => {

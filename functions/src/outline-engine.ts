@@ -228,8 +228,10 @@ export const REQUIRED_AREAS: RequiredArea[] = [
     id: "math-solid-geometry",
     subject: "mathematics",
     label: "Solid geometry",
-    pattern: /solid geometry|polyhedr|prism|pyramid|cylinder|cone|sphere|surface area|volume/i,
-    note: "Matched no cell in the 2026-09-03 seed. Plane geometry is present; three-dimensional figures are not.",
+    // Deliberately matches three-dimensional geometry too, so the checker does
+    // not claim a total absence that is not there.
+    pattern: /solid geometry|three-dimensional|3d|polyhedr|prism|pyramid|cylinder|cone|sphere|surface area|volume/i,
+    note: "Only math-3d-geometry-3d-distance matched, and it covers distances and angles in three-dimensional coordinates. Mensuration of solids — volume and surface area of prisms, pyramids, cylinders, cones and spheres — matched nothing.",
   },
   { id: "math-probability-statistics", subject: "mathematics", label: "Probability, statistics and the normal distribution", pattern: /probabilit|statistic|normal distribution|variance|standard deviation/i, note: "" },
 

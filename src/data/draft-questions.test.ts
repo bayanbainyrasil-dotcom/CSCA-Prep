@@ -325,9 +325,9 @@ describe('blueprint mapping of the authored slice', () => {
     }
   });
 
-  it('touches only the six cells of this slice, leaving the other 99 empty', () => {
+  it('touches only the six cells of this slice, leaving the other 103 empty', () => {
     const targeted = new Set(DRAFT_QUESTION_SEED.map((question) => question.cellId));
     expect([...targeted].sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
-    expect(BLUEPRINT_CELL_SEED.length - targeted.size).toBe(99);
+    expect(BLUEPRINT_CELL_SEED.length - targeted.size).toBe(103);
   });
 });

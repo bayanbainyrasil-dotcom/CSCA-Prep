@@ -68,8 +68,31 @@ describe('the seed claims nothing it has not earned', () => {
   });
 
   it('records a real, checkable source rather than an invented one', () => {
+    // Two honest provenances exist. Most cells were derived from the topic list
+    // already in this repository. A few were added later because a required-area
+    // check found nothing covering an area the audit named; those say so, and
+    // say the requirement itself is unconfirmed. Neither claims an official
+    // source, and a third, vaguer provenance must not appear.
     for (const cell of BLUEPRINT_CELL_SEED) {
-      expect(cell.sourceReference).toMatch(/src\/data\/curriculum\.ts/);
+      expect(
+        /src\/data\/curriculum\.ts/.test(cell.sourceReference) ||
+          /required-area check found no cell|word diffraction occurred nowhere|interference appeared only inside/.test(
+            cell.sourceReference,
+          ),
+        cell.id,
+      ).toBe(true);
+    }
+  });
+
+  it('says of every added cell that its requirement is unconfirmed, not merely its wording', () => {
+    const added = BLUEPRINT_CELL_SEED.filter((cell) => !/src\/data\/curriculum\.ts/.test(cell.sourceReference));
+    expect(added.length).toBeGreaterThan(0);
+    for (const cell of added) {
+      expect(cell.verificationStatus, cell.id).toBe('draft');
+      expect(cell.reviewer, cell.id).toBeNull();
+      expect(cell.knownLimitations, cell.id).toMatch(
+        /confirm this against a dated official source or delete the cell|a reviewer must decide whether/i,
+      );
     }
   });
 });
