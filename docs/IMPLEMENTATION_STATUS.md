@@ -4,9 +4,9 @@ Last updated: 2026-09-03
 
 Branch: `main`
 
-Audited application baseline: `32e36f0`
+Published application head: `15790e7`
 
-Remote documentation checkpoint before this audit: `60b52e0`
+Pre-audit documentation checkpoint: `60b52e0`
 
 Full audit: [`docs/AUDIT_2026-09-03.md`](./AUDIT_2026-09-03.md)
 
@@ -19,11 +19,12 @@ GitHub Pages is deliberately configured as `local-demo`. The real Vercel + Fireb
 environment is not deployed, so Google sign-in, App Check, cloud persistence, administrator
 review and server-authoritative exams have not been exercised on a production domain.
 
-The previously blocked 40-commit delivery reached `main` as a fast-forward. CI
-[run 27](https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33732956076)
+The audit remediation is published. CI
+[run 40](https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33735831342)
 and Pages
-[run 9](https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33732956114)
-were green on application commit `32e36f0`; `60b52e0` only records that delivery result.
+[run 12](https://github.com/bayanbainyrasil-dotcom/CSCA-Prep/actions/runs/33735831350)
+are green on application commit `15790e7`. The live entry asset
+`assets/index-DH7mYLpG.js` matches the local Pages build exactly.
 
 ## Last completed batch
 
@@ -53,12 +54,14 @@ Remediation applied in the audit batch:
 - Functions typecheck and build: pass.
 - Web production dependency audit: no known vulnerabilities.
 - Functions production dependency audit: no known vulnerabilities.
-- Playwright with the configured Chromium fallback: 21 scenarios passed and 32
+- Local Playwright with the configured Chromium fallback: 21 scenarios passed and 32
   project-inapplicable scenarios were skipped; one parallel timezone test failed once and
-  then passed alone.
+  then passed alone. CI then passed 22 scenarios, including that timezone flow.
 - iPhone and iPad Chromium-profile layout checks: pass, including no horizontal overflow.
-- Real WebKit/Safari: not run in this environment; this remains weaker evidence than a real
-  iPhone/iPad test. CI on the previous application baseline did run the full browser set.
+- Real Safari hardware: not run. CI includes the configured WebKit device projects where
+  each scenario applies, but that remains weaker evidence than a real iPhone/iPad test.
+- Live deep-link verification: `/onboarding/`, `/practice/session/` and the built-in demo
+  lesson return HTTP 200; manifest and service worker return HTTP 200.
 
 ## Completed capabilities
 
