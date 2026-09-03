@@ -59,10 +59,24 @@ export type DocumentData = Record<string, unknown>;
 const store = new Map<string, Map<string, DocumentData>>();
 /** Every write that reached the store, in order, for "wrote nothing" assertions. */
 export const recordedWrites: { collection: string; id: string; merge: boolean }[] = [];
+/**
+ * Every collection a read touched, for "never opened that collection"
+ * assertions. Not reading a collection is a security property in this codebase
+ * — the learner-facing coverage path must never load `questionSolutions` — and
+ * a property no amount of inspecting the response can prove.
+ */
+export const readCollections: string[] = [];
 
 export function resetFirestore(): void {
   store.clear();
   recordedWrites.length = 0;
+  readCollections.length = 0;
+}
+
+function recordRead(collection: string): void {
+  // A subcollection path such as `users/uid/notes` is recorded whole; callers
+  // assert on the exact path they care about.
+  readCollections.push(collection);
 }
 
 export function seedDocument(collection: string, id: string, data: DocumentData): void {
@@ -137,6 +151,7 @@ export class DocumentReference {
     return new CollectionReference(`${this.path}/${name}`);
   }
   get(): Promise<DocumentSnapshot> {
+    recordRead(this.collectionId);
     return Promise.resolve(new DocumentSnapshot(this.id, collectionOf(this.collectionId).get(this.id), this));
   }
   set(data: DocumentData, options?: { merge?: boolean }): Promise<void> {
@@ -185,6 +200,7 @@ export class Query {
   }
 
   get(): Promise<{ docs: DocumentSnapshot[]; empty: boolean; size: number }> {
+    recordRead(this.state.collectionId);
     let entries = [...collectionOf(this.state.collectionId).entries()];
     for (const filter of this.state.filters) {
       entries = entries.filter(([, data]) => data[filter.field] === filter.value);
