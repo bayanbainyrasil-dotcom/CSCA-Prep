@@ -39,6 +39,7 @@ test('generates a real entrypoint for each authored teaching slice', async () =>
     'slice/math-linear-linear-word-problem',
     'slice/phys-thermodynamics-heat-transfer',
     'slice/phys-kinematics-constant-speed',
+    'slice/phys-kinematics-displacement-distance',
     'slice/phys-units-si-base-derived',
     'slice/phys-units-unit-conversion-si',
   ];

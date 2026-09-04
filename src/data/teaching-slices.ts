@@ -386,6 +386,45 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-displacement',
+    english: 'displacement',
+    russian: 'перемещение',
+    simpleExplanation: text(
+      'The straight line from where something started to where it finished, together with the direction. It does not depend on the route taken.',
+      'Прямая от точки старта до точки финиша вместе с направлением. От выбранного пути не зависит.',
+    ),
+    exampleSentence: 'Find the magnitude of the displacement after the journey.',
+    category: 'physics',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-vector',
+    english: 'vector',
+    russian: 'векторная величина',
+    simpleExplanation: text(
+      'A quantity with a direction as well as a size, so two of them in opposite directions can cancel.',
+      'Величина, у которой кроме модуля есть направление, поэтому две такие величины в противоположных направлениях могут компенсировать друг друга.',
+    ),
+    exampleSentence: 'Velocity is a vector; speed is not.',
+    category: 'physics',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-magnitude',
+    english: 'magnitude',
+    russian: 'модуль, величина без знака',
+    simpleExplanation: text(
+      'The size of a vector with its direction set aside. A magnitude is never negative, so a negative answer means the direction crept into the number.',
+      'Размер векторной величины без учёта направления. Модуль не бывает отрицательным, поэтому отрицательный ответ означает, что направление попало в число.',
+    ),
+    exampleSentence: 'What is the magnitude of the displacement?',
+    category: 'question-command',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -617,6 +656,28 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     limitations: text(
       'Only while the speed does not change. If it does, this gives the distance from the average speed and nothing about any moment within the journey — and a journey with a stop in it has an average speed lower than the speed it moved at. It also relates distance to speed, not displacement to velocity: something that returns to its start has travelled a distance and has zero displacement, and s = vt gives the first.',
       'Только пока скорость не меняется. Если меняется, соотношение даёт путь по средней скорости и ничего не говорит ни об одном моменте внутри движения, а у поездки с остановкой средняя скорость ниже той, с которой ехали. Кроме того, здесь связаны путь и скорость, а не перемещение и вектор скорости: тело, вернувшееся в исходную точку, прошло путь и имеет нулевое перемещение, и s = vt даёт именно первое.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
+    id: 'formula-displacement-on-a-line',
+    subject: 'physics',
+    topicId: 'phys-kinematics',
+    name: text('Displacement along one line', 'Перемещение вдоль одной прямой'),
+    katex: 'd = |a - b|,\\quad L = a + b',
+    calculates: text(
+      'The magnitude of the displacement and the distance travelled, for a journey out and back along the same straight line.',
+      'Модуль перемещения и пройденный путь для движения туда и обратно вдоль одной прямой.',
+    ),
+    variables: [
+      { symbol: 'd', meaning: text('magnitude of the displacement', 'модуль перемещения'), siUnit: 'm' },
+      { symbol: 'L', meaning: text('distance travelled', 'пройденный путь'), siUnit: 'm' },
+      { symbol: 'a', meaning: text('length of the outward leg', 'длина участка «туда»'), siUnit: 'm' },
+      { symbol: 'b', meaning: text('length of the return leg, in the opposite direction', 'длина участка «обратно», в противоположном направлении'), siUnit: 'm' },
+    ],
+    limitations: text(
+      'Only for two legs along one straight line in opposite directions. Legs at an angle do not subtract and do not add — they combine as vectors, which needs the components or Pythagoras and is a later cell. The distance is a sum in every case, but the displacement is a difference only here.',
+      'Только для двух участков вдоль одной прямой в противоположных направлениях. Участки под углом не вычитаются и не складываются: они складываются как векторы, для чего нужны проекции или теорема Пифагора, и это тема более поздней ячейки. Путь остаётся суммой всегда, а перемещение является разностью только в этом случае.',
     ),
     ...draftMeta(),
   }),
@@ -1008,6 +1069,66 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
     ...draftMeta(),
   }),
   LessonSchema.parse({
+    id: 'lesson-phys-kinematics-displacement-distance',
+    topicId: 'phys-kinematics',
+    subject: 'physics',
+    title: text('Displacement is not distance, and speed is not velocity', 'Перемещение — не путь, а скорость — не вектор скорости'),
+    summary: text(
+      'Tell each vector from its scalar partner, and read which of the pair the question is asking for before computing anything.',
+      'Отличать каждую векторную величину от её скалярной пары и понимать, о какой из них спрашивает задание, до всяких вычислений.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'Nothing beyond adding and subtracting lengths. This cell comes before the constant-speed one and is the reason its relation is stated for distance rather than for displacement.',
+        'Ничего, кроме сложения и вычитания длин. Эта ячейка идёт до ячейки о постоянной скорости и объясняет, почему её соотношение записано для пути, а не для перемещения.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Say which of a pair of quantities is the vector, work out a displacement along a straight line where the distance is already known, and recognise from the wording of a question which of the two it wants.',
+        'Определять, какая из пары величин векторная, находить перемещение вдоль прямой, когда путь уже известен, и по формулировке вопроса понимать, какая из двух величин в нём требуется.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'Distance answers “how much ground did it cover?” and depends on the route. Displacement answers “how far from the start did it end up, and in which direction?” and depends only on the two endpoints. Every kinematic quantity comes in such a pair — distance with displacement, speed with velocity — and the pair members are equal only when the motion is in one direction and never reverses. That last condition is what makes the difference invisible in easy questions and decisive in the ones that carry marks.',
+        'Путь отвечает на вопрос «сколько пройдено?» и зависит от маршрута. Перемещение отвечает на вопрос «насколько далеко от старта оказалось тело и в каком направлении?» и зависит только от двух точек. Каждая кинематическая величина существует в такой паре — путь и перемещение, скорость и вектор скорости, — и члены пары совпадают, только если движение идёт в одну сторону и не разворачивается. Именно это условие делает различие незаметным в простых вопросах и решающим в тех, где стоят баллы.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“Magnitude” means the size with the direction set aside, so a magnitude is never negative — a negative answer means the direction got into the number. “Displacement” is always the vector, and “distance travelled” is always the scalar, however the sentence is arranged. “Returns to its starting point” is the phrase that makes a displacement zero, and it appears in the middle of a sentence far more often than at the end.',
+        '«Magnitude» означает размер без учёта направления, поэтому модуль не бывает отрицательным: отрицательный ответ означает, что направление попало в число. «Displacement» — всегда векторная величина, а «distance travelled» — всегда скалярная, как бы ни было построено предложение. «Returns to its starting point» — фраза, обнуляющая перемещение, и она гораздо чаще стоит в середине предложения, чем в конце.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'displacement — перемещение; vector — векторная величина; magnitude — модуль.',
+        'displacement — перемещение; vector — векторная величина; magnitude — модуль.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'For two legs along the same straight line in opposite directions, the distance travelled is a + b and the magnitude of the displacement is |a − b|. The distance is a sum in every case; the displacement is a difference only here, because the legs are along one line.',
+        'Для двух участков вдоль одной прямой в противоположных направлениях путь равен a + b, а модуль перемещения равен |a − b|. Путь является суммой всегда; перемещение является разностью только здесь, потому что участки лежат на одной прямой.',
+      ), { katex: ['d = |a - b|', 'L = a + b'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'A cyclist rides 900 m north along a straight road, then turns and rides 600 m south along the same road. Find the distance travelled and the magnitude of the displacement.\n\nThe distance is what the wheels covered, so the two legs add: 900 + 600 = 1500 m. Nothing about direction enters this; distance never cancels.\n\nThe displacement is measured from start to finish. The legs are along one line and point opposite ways, so they subtract: 900 − 600 = 300 m, north. The direction is part of the answer unless the question asked for the magnitude, in which case 300 m is complete.\n\nNotice how far apart the two answers are — 1500 m against 300 m — and that both are correct answers to different questions. In this cell the mark is lost in the reading, not in the arithmetic.',
+        'Велосипедист проезжает 900 м на север по прямой дороге, затем разворачивается и проезжает 600 м на юг по той же дороге. Найдите пройденный путь и модуль перемещения.\n\nПуть — это то, что накрутили колёса, поэтому участки складываются: 900 + 600 = 1500 м. Направление сюда не входит: путь никогда не компенсируется.\n\nПеремещение отсчитывается от старта до финиша. Участки лежат на одной прямой и направлены противоположно, поэтому они вычитаются: 900 − 600 = 300 м на север. Направление входит в ответ, если только не спрашивался модуль — тогда 300 м это полный ответ.\n\nОбратите внимание, насколько далеки друг от друга два ответа — 1500 м против 300 м — и что оба верны, но для разных вопросов. В этой ячейке балл теряется при чтении, а не при вычислении.',
+      ), { estimatedMinutes: 5 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'A lift goes up 24 m, then down 15 m, then stops. First: mark which of the two legs is the one that will be subtracted, and why. Second: write the distance travelled, and say in one phrase why it is a sum. Third: write the magnitude of the displacement. Fourth: state the direction, and then say whether the question you were asked actually wanted it.',
+        'Лифт поднимается на 24 м, затем опускается на 15 м и останавливается. Первое: отметьте, какой из участков будет вычитаться и почему. Второе: запишите пройденный путь и одной фразой объясните, почему это сумма. Третье: запишите модуль перемещения. Четвёртое: укажите направление, а затем скажите, требовалось ли оно в заданном вам вопросе.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'A swimmer does four lengths of a 25 m pool, finishing at the end they started from: give the distance and the displacement. A drone flies 70 m east then 45 m west: give both again. Then, for each of speed, velocity, distance and displacement, write “vector” or “scalar” beside it without looking back at the lesson.',
+        'Пловец проплывает четыре длины бассейна 25 м и заканчивает у того же бортика, откуда стартовал: укажите путь и перемещение. Дрон летит 70 м на восток, затем 45 м на запад: снова укажите обе величины. Затем для каждой из величин — скорость, вектор скорости, путь, перемещение — напишите «векторная» или «скалярная», не заглядывая в урок.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'Both the sum and the difference are always among the options, because both are correct answers to questions that could have been asked. That means arriving at a number that appears in the list proves nothing at all. The reliable habit is to underline the quantity the question names before doing any arithmetic, and to check at the end that the answer you wrote is the quantity you underlined. Where the path is closed, the displacement is zero and no arithmetic is needed — an option of zero is not a trick.',
+        'И сумма, и разность всегда присутствуют среди вариантов, потому что обе — верные ответы на вопросы, которые могли быть заданы. Значит, получение числа, которое есть в списке, само по себе ничего не доказывает. Надёжная привычка: подчеркнуть названную в вопросе величину до всяких вычислений и в конце проверить, что записанный ответ — это именно подчёркнутая величина. Если путь замкнут, перемещение равно нулю и вычислять нечего: вариант «ноль» здесь не уловка.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Four items in two minutes: two recognitions and two straight-line journeys. The recognitions are recall and should be instant; if they are not, the vector-scalar pairs are what to drill, because every later kinematics cell assumes them.',
+        'Четыре задания за две минуты: два на узнавание и два на движение по прямой. Узнавание — это воспроизведение и должно быть мгновенным; если это не так, отрабатывать нужно пары «вектор — скаляр», потому что все последующие кинематические ячейки на них опираются.',
+      ), { estimatedMinutes: 2 }),
+    ],
+    vocabularyIds: ['vocab-displacement', 'vocab-vector', 'vocab-magnitude'],
+    formulaIds: ['formula-displacement-on-a-line'],
+    prerequisiteLessonIds: [],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
     id: 'lesson-phys-kinematics-constant-speed',
     topicId: 'phys-kinematics',
     subject: 'physics',
@@ -1251,6 +1372,7 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 
 /** The blueprint cell each authored lesson teaches toward. */
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
+  'lesson-phys-kinematics-displacement-distance': 'phys-kinematics-displacement-distance',
   'lesson-phys-kinematics-constant-speed': 'phys-kinematics-constant-speed',
   'lesson-phys-units-si-base-derived': 'phys-units-si-base-derived',
   'lesson-phys-units-unit-conversion-si': 'phys-units-unit-conversion-si',

@@ -45,6 +45,38 @@ function parseNumber(text: string): number {
   return value;
 }
 
+/**
+ * Which of a list of quantities is the single vector, or the single scalar.
+ *
+ * The classification lives here rather than in the item, so an item that calls
+ * speed a vector fails instead of confirming itself. Exactly one of the listed
+ * quantities must be of the kind asked for — an item offering two vectors has no
+ * single correct answer, and that is a defect worth failing on.
+ */
+const QUANTITY_KIND: Record<string, 'vector' | 'scalar'> = {
+  displacement: 'vector',
+  velocity: 'vector',
+  acceleration: 'vector',
+  force: 'vector',
+  momentum: 'vector',
+  distance: 'scalar',
+  speed: 'scalar',
+  time: 'scalar',
+  mass: 'scalar',
+  energy: 'scalar',
+  temperature: 'scalar',
+};
+
+function pickByKind(list: string, kind: 'vector' | 'scalar'): string {
+  const quantities = list.split(',').map((entry) => entry.trim()).filter(Boolean);
+  for (const quantity of quantities) {
+    expect(QUANTITY_KIND[quantity], `"${quantity}" is not a classified quantity`).toBeDefined();
+  }
+  const matches = quantities.filter((quantity) => QUANTITY_KIND[quantity] === kind);
+  expect(matches, `exactly one ${kind} should be offered, got: ${matches.join(', ')}`).toHaveLength(1);
+  return matches[0]!;
+}
+
 function gcd(a: number, b: number): number {
   return b === 0 ? Math.abs(a) : gcd(b, a % b);
 }
@@ -84,6 +116,15 @@ const INDEPENDENT: Record<string, (p: Record<string, string | number | boolean>)
   'time-from-distance-speed': (p) => String((Number(p.km) * 1000) / Number(p.v)),
   'speed-in-ms-from-km-and-minutes': (p) => String((Number(p.km) * 1000) / (Number(p.minutes) * 60)),
   'distance-km-from-speed-and-minutes': (p) => String((Number(p.v) * Number(p.minutes) * 60) / 1000),
+  'closed-loop-displacement': (p) => {
+    // A whole number of laps ends where it started, whatever the lap length is,
+    // so the lap length is deliberately not a parameter here.
+    expect(Number.isInteger(Number(p.laps)), 'a closed loop needs a whole number of laps').toBe(true);
+    return '0';
+  },
+  'net-displacement-on-a-line': (p) => String(Math.abs(Number(p.forward) - Number(p.back))),
+  'vector-quantity-among': (p) => String(pickByKind(String(p.quantities), 'vector')),
+  'scalar-quantity-among': (p) => String(pickByKind(String(p.quantities), 'scalar')),
   'si-base-unit-for': (p) => {
     const base: Record<string, string> = {
       length: 'metre',
@@ -238,9 +279,14 @@ describe('authored slice structure', () => {
       // Each item belongs to a named authored slice. The set is pinned so a new
       // slice has to be added deliberately rather than appearing untagged.
       expect(
-        ['authored-slice-1', 'authored-slice-2', 'authored-slice-3', 'authored-slice-4', 'authored-slice-5'].some(
-          (tag) => question.tags.includes(tag),
-        ),
+        [
+          'authored-slice-1',
+          'authored-slice-2',
+          'authored-slice-3',
+          'authored-slice-4',
+          'authored-slice-5',
+          'authored-slice-6',
+        ].some((tag) => question.tags.includes(tag)),
         question.id,
       ).toBe(true);
     }

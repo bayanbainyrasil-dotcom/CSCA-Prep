@@ -108,6 +108,18 @@ const KINEMATICS_COMMON = {
 };
 
 /**
+ * Displacement against distance. No relation is listed: the whole cell is about
+ * which quantity a situation is asking for, and attaching a formula would
+ * suggest there is something to substitute into.
+ */
+const VECTOR_COMMON = {
+  subject: 'physics' as const,
+  language: 'en' as const,
+  formulas: [] as string[],
+  tags: ['authored-slice-6'],
+};
+
+/**
  * These items are checked into a public repository together with their answer
  * keys and worked solutions, so their answers are public. They are usable for
  * practice and for the local demo, and they must never back a confidential
@@ -1230,6 +1242,134 @@ export const DRAFT_QUESTION_SEED: DraftQuestion[] = [
     estimatedTime: 65,
     templateParameters: { check: 'distance-km-from-speed-and-minutes', v: 20, minutes: 15 },
   },
+  {
+    ...VECTOR_COMMON,
+    id: 'phys-kinematics-displacement-distance-001',
+    cellId: 'phys-kinematics-displacement-distance',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'concept-recognition',
+    difficulty: 1,
+    question: 'An athlete runs one complete lap of a 400 m track and finishes at the point where they started. What is the magnitude of their displacement?',
+    questionTranslation: 'Спортсмен пробегает полный круг по дорожке длиной 400 м и финиширует в точке старта. Чему равен модуль его перемещения?',
+    options: [
+      { id: 'a', text: '0 m' },
+      { id: 'b', text: '400 m' },
+      { id: 'c', text: '200 m' },
+      { id: 'd', text: '800 m' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Displacement is measured from the starting point to the finishing point, and here they are the same point. The displacement is therefore zero, whatever route was taken between them. The 400 m is the distance travelled, which is a different quantity.',
+    shortSolution: 'Start and finish coincide, so the displacement is zero.',
+    explanation:
+      'Distance depends on the path and displacement does not. A closed path is the clearest case: the distance can be as large as you like while the displacement stays zero.',
+    commonMistakes: [
+      { id: 'distance-instead', description: 'Giving the distance travelled rather than the displacement gives 400 m.', distractorOptionId: 'b' },
+      { id: 'half-lap', description: 'Taking half a lap gives 200 m.', distractorOptionId: 'c' },
+      { id: 'doubled', description: 'Doubling the lap gives 800 m.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['displacement', 'distance'],
+    estimatedTime: 40,
+    templateParameters: { check: 'closed-loop-displacement', laps: 1 },
+  },
+  {
+    ...VECTOR_COMMON,
+    id: 'phys-kinematics-displacement-distance-002',
+    cellId: 'phys-kinematics-displacement-distance',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'concept-recognition',
+    difficulty: 1,
+    question: 'Which one of these quantities is a vector?',
+    questionTranslation: 'Какая из этих величин является векторной?',
+    options: [
+      { id: 'a', text: 'displacement' },
+      { id: 'b', text: 'distance' },
+      { id: 'c', text: 'speed' },
+      { id: 'd', text: 'time' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'A vector has a direction as well as a size. Displacement does: it is a length in a stated direction. Distance, speed and time each have a size only, so all three are scalars.',
+    shortSolution: 'Displacement has a direction; distance, speed and time do not.',
+    explanation:
+      'Each vector in kinematics has a scalar partner that is easy to mistake for it — displacement with distance, velocity with speed — and the pairs are what this cell is testing.',
+    commonMistakes: [
+      { id: 'distance-as-vector', description: 'Distance is the scalar partner of displacement, not a vector.', distractorOptionId: 'b' },
+      { id: 'speed-as-vector', description: 'Speed is the scalar partner of velocity; it is velocity that is the vector.', distractorOptionId: 'c' },
+      { id: 'time-as-vector', description: 'Time has no direction at all.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['vector', 'scalar'],
+    estimatedTime: 35,
+    templateParameters: { check: 'vector-quantity-among', quantities: 'displacement,distance,speed,time' },
+  },
+  {
+    ...VECTOR_COMMON,
+    id: 'phys-kinematics-displacement-distance-003',
+    cellId: 'phys-kinematics-displacement-distance',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'concept-recognition',
+    difficulty: 2,
+    question: 'A car drives 300 m east along a straight road, then turns and drives 100 m west along the same road. What is the magnitude of its displacement?',
+    questionTranslation: 'Автомобиль проезжает 300 м на восток по прямой дороге, затем разворачивается и проезжает 100 м на запад по той же дороге. Чему равен модуль его перемещения?',
+    options: [
+      { id: 'a', text: '200 m' },
+      { id: 'b', text: '400 m' },
+      { id: 'c', text: '300 m' },
+      { id: 'd', text: '100 m' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'The two legs are along the same line and in opposite directions, so they subtract: the car ends up 300 − 100 = 200 m east of where it began. The distance travelled is 400 m, which is the sum, and the question did not ask for it.',
+    shortSolution: 'Opposite directions subtract: 300 − 100 = 200 m.',
+    explanation:
+      'Both the sum and the difference are available as options, and only reading which quantity was asked for separates them. This is the same trap the closed-path item sets, with a smaller gap between the two answers.',
+    commonMistakes: [
+      { id: 'added', description: 'Adding the legs gives the distance travelled, 400 m.', distractorOptionId: 'b' },
+      { id: 'first-leg', description: 'Stopping after the first leg gives 300 m.', distractorOptionId: 'c' },
+      { id: 'second-leg', description: 'Reading only the return leg gives 100 m.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['displacement', 'distance'],
+    estimatedTime: 50,
+    templateParameters: { check: 'net-displacement-on-a-line', forward: 300, back: 100 },
+  },
+  {
+    ...VECTOR_COMMON,
+    id: 'phys-kinematics-displacement-distance-004',
+    cellId: 'phys-kinematics-displacement-distance',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'concept-recognition',
+    difficulty: 2,
+    question: 'Which one of these quantities is a scalar?',
+    questionTranslation: 'Какая из этих величин является скалярной?',
+    options: [
+      { id: 'a', text: 'speed' },
+      { id: 'b', text: 'velocity' },
+      { id: 'c', text: 'acceleration' },
+      { id: 'd', text: 'displacement' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'A scalar has a size and no direction. Speed is the size of the velocity with its direction discarded, so it is a scalar. Velocity, acceleration and displacement all carry a direction and are vectors.',
+    shortSolution: 'Speed is velocity with the direction discarded, so it is a scalar.',
+    explanation:
+      'Speed and velocity are not two words for one quantity: a journey can have a large average speed and zero average velocity, which is exactly what happens on a closed path.',
+    commonMistakes: [
+      { id: 'velocity-as-scalar', description: 'Velocity is the vector; speed is its scalar partner.', distractorOptionId: 'b' },
+      { id: 'acceleration-as-scalar', description: 'Acceleration has a direction, which is why slowing down and speeding up differ in sign.', distractorOptionId: 'c' },
+      { id: 'displacement-as-scalar', description: 'Displacement is the vector partner of distance.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['vector', 'scalar'],
+    estimatedTime: 40,
+    templateParameters: { check: 'scalar-quantity-among', quantities: 'speed,velocity,acceleration,displacement' },
+  },
 ];
 /** Cells this authored slice targets, in the order a reviewer should work through them. */
 export const AUTHORED_SLICE_CELL_IDS = [
@@ -1241,6 +1381,7 @@ export const AUTHORED_SLICE_CELL_IDS = [
   'math-linear-linear-word-problem',
   'phys-thermodynamics-heat-transfer',
   'phys-kinematics-constant-speed',
+  'phys-kinematics-displacement-distance',
   'phys-units-si-base-derived',
   'phys-units-unit-conversion-si',
 ] as const;
