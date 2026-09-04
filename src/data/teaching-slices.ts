@@ -334,6 +334,19 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-in-terms-of',
+    english: 'in terms of',
+    russian: 'через, выразив через',
+    simpleExplanation: text(
+      'Write one thing using another. “Express the newton in terms of base units” asks for kg·m/s², not for a definition in words.',
+      'Записать одно через другое. «Express the newton in terms of base units» требует кг·м/с², а не определения словами.',
+    ),
+    exampleSentence: 'Express the joule in terms of SI base units.',
+    category: 'question-command',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -522,6 +535,28 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     limitations: text(
       'This looks like standard form and is not: there n is chosen so that a lies between one and ten, while here n is fixed by the prefix and a is whatever was written. It also covers one unit at a time — a derived unit such as km/h has a prefix on the top and a non-SI unit on the bottom, and both have to be dealt with. A prefix raised to a power, as in mm², carries the power too.',
       'Похоже на стандартный вид, но это не он: там n подбирают так, чтобы a было от одного до десяти, а здесь n задаётся приставкой, а a — то, что записано. Кроме того, здесь речь об одной единице: у производной единицы вроде км/ч приставка сверху, а несистемная единица снизу, и разобраться нужно с обеими. Приставка, возведённая в степень, как в мм², возводится в неё вместе с числом.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
+    id: 'formula-newton-in-base-units',
+    subject: 'physics',
+    topicId: 'phys-units',
+    name: text('A derived unit read off its relation', 'Производная единица, считанная с её соотношения'),
+    katex: '1\\,N = 1\\,kg \\cdot m \\cdot s^{-2}',
+    calculates: text(
+      'The base units of a derived unit, taken from the relation that defines the quantity rather than from memory.',
+      'Основные единицы производной единицы, полученные из соотношения, определяющего величину, а не из памяти.',
+    ),
+    variables: [
+      { symbol: 'N', meaning: text('the newton, the unit of force', 'ньютон, единица силы'), siUnit: 'N' },
+      { symbol: 'kg', meaning: text('the kilogram, the base unit of mass', 'килограмм, основная единица массы'), siUnit: 'kg' },
+      { symbol: 'm', meaning: text('the metre, the base unit of length', 'метр, основная единица длины'), siUnit: 'm' },
+      { symbol: 's', meaning: text('the second, the base unit of time', 'секунда, основная единица времени'), siUnit: 's' },
+    ],
+    limitations: text(
+      'This is one worked case, not a rule that generalises by pattern. Every other derived unit has to be read off its own defining relation: the joule is a newton metre, the watt a joule per second, the pascal a newton per square metre. Matching a remembered shape is exactly the mistake the distractors in this cell are built from — energy and torque share base units and are not the same quantity.',
+      'Это один разобранный случай, а не правило, обобщаемое по виду. Любую другую производную единицу нужно считывать с её собственного определяющего соотношения: джоуль — это ньютон-метр, ватт — джоуль в секунду, паскаль — ньютон на квадратный метр. Подбор по запомнившемуся виду — как раз та ошибка, из которой построены неверные варианты в этой ячейке: энергия и момент силы имеют одинаковые основные единицы и не являются одной величиной.',
     ),
     ...draftMeta(),
   }),
@@ -913,6 +948,66 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
     ...draftMeta(),
   }),
   LessonSchema.parse({
+    id: 'lesson-phys-units-si-base-derived',
+    topicId: 'phys-units',
+    subject: 'physics',
+    title: text('Seven base units, and everything else built from them', 'Семь основных единиц и всё остальное, построенное из них'),
+    summary: text(
+      'Know the seven SI base quantities, and get any derived unit by reading the relation that defines it rather than by recalling a shape.',
+      'Знать семь основных величин СИ и получать любую производную единицу, считывая определяющее соотношение, а не вспоминая её вид.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need to rearrange a simple relation, because deriving a unit is rearranging one with units in place of numbers. Nothing else is assumed; this cell comes before the conversion cell rather than after it.',
+        'Нужно уметь преобразовывать простое соотношение: вывод единицы — это то же преобразование, только вместо чисел единицы. Больше ничего не требуется; эта ячейка идёт до ячейки о переводе, а не после неё.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Name the seven SI base quantities and their units, tell a base unit from a derived one, and write any derived unit in base units by starting from the relation that defines the quantity.',
+        'Назвать семь основных величин СИ и их единицы, отличить основную единицу от производной и записать любую производную единицу в основных, начиная с соотношения, определяющего величину.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'The SI fixes seven quantities as base — length, mass, time, electric current, thermodynamic temperature, amount of substance and luminous intensity — and defines everything else from them. Which seven is a decision, not a discovery: charge feels more fundamental than current to most people who met it first, and the SI chose otherwise. So the list is learned, and everything after it is derived rather than learned.',
+        'СИ фиксирует семь величин как основные — длину, массу, время, силу тока, термодинамическую температуру, количество вещества и силу света — и определяет через них всё остальное. Какие именно семь — это решение, а не открытие: заряд большинству, кто встретил его раньше, кажется более фундаментальным, чем ток, а СИ выбрала иначе. Поэтому список запоминают, а всё последующее выводят, а не запоминают.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“In terms of base units” asks for an expression such as kg·m/s², not for a sentence. “Amount of substance” is a count of entities and is not a synonym for mass, however much the English suggests it. “Derived” means defined from the base units, not “less important”: the joule and the volt are derived and are used constantly.',
+        '«In terms of base units» требует выражения вроде кг·м/с², а не предложения. «Amount of substance» — это количество частиц, а не синоним массы, как бы ни подсказывал английский. «Derived» значит «определённая через основные», а не «менее важная»: джоуль и вольт производные и используются постоянно.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'base unit — основная единица; derived unit — производная единица; in terms of — выразив через.',
+        'base unit — основная единица; derived unit — производная единица; in terms of — выразив через.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'Force is mass times acceleration, so the newton is a kilogram metre per second squared. That is the method rather than a fact to keep: start from the defining relation and substitute base units for the quantities in it.',
+        'Сила равна массе, умноженной на ускорение, поэтому ньютон — это килограмм-метр на секунду в квадрате. Это метод, а не факт для запоминания: начните с определяющего соотношения и подставьте в него основные единицы вместо величин.',
+      ), { katex: ['1\\,N = 1\\,kg \\cdot m \\cdot s^{-2}'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'Express the watt in SI base units.\n\nStart from what a watt is: power is energy per unit time. So the base units of the watt are the base units of energy divided by the second.\n\nEnergy needs deriving in turn. Energy is force times distance, and force is mass times acceleration, so force is kg·m/s² and energy is that multiplied by a metre: kg·m²/s². Dividing by a second gives kg·m²/s³.\n\nCheck the chain rather than the result: each step used one defining relation and nothing recalled. If a step needed memory instead of a relation, that is the step to look at again.',
+        'Выразите ватт в основных единицах СИ.\n\nНачните с того, что такое ватт: мощность — это энергия за единицу времени. Значит, основные единицы ватта — это основные единицы энергии, делённые на секунду.\n\nЭнергию, в свою очередь, тоже нужно вывести. Энергия — это сила, умноженная на расстояние, а сила — масса, умноженная на ускорение, поэтому сила это кг·м/с², а энергия — это же, умноженное на метр: кг·м²/с². Деление на секунду даёт кг·м²/с³.\n\nПроверяйте цепочку, а не результат: на каждом шаге использовалось одно определяющее соотношение и ничего вспомненного. Если какой-то шаг потребовал памяти вместо соотношения, именно к нему и стоит вернуться.',
+      ), { estimatedMinutes: 5 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'Express the pascal in SI base units. First: write the relation that defines pressure. Second: replace force by its own base units before doing anything with the area. Third: divide by the base units of area, and keep the whole denominator together. Fourth: read your expression aloud as a sentence and check it still says what pressure is.',
+        'Выразите паскаль в основных единицах СИ. Первое: запишите соотношение, определяющее давление. Второе: замените силу её основными единицами, прежде чем что-либо делать с площадью. Третье: разделите на основные единицы площади и сохраните весь знаменатель целиком. Четвёртое: прочитайте выражение вслух как предложение и проверьте, что оно всё ещё говорит, что такое давление.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'Express the coulomb, the volt and the hertz in SI base units. Two of them need one relation each; one of them needs two. Before starting each, write the defining relation on its own line — the marks in this cell are lost in the relation, not in the algebra that follows it.',
+        'Выразите кулон, вольт и герц в основных единицах СИ. Двум из них нужно по одному соотношению, одному — два. Перед каждым запишите определяющее соотношение отдельной строкой: баллы в этой ячейке теряются на соотношении, а не на алгебре после него.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'Every distractor here is a real physical quantity, not a scrambled expression: kg·m/s is momentum, kg·m²/s³ is power, kg/(m·s²) is pressure. That means a plausible-looking option is plausible because it is genuinely something, and recognising the shape cannot separate them. Derive the answer before reading the options, then match. Note too that energy and torque share base units — base units identify a combination, not a quantity, which is a limit of the method rather than a flaw in your working.',
+        'Каждый неверный вариант здесь — реальная физическая величина, а не переставленное выражение: кг·м/с — импульс, кг·м²/с³ — мощность, кг/(м·с²) — давление. Поэтому правдоподобный вариант правдоподобен потому, что он действительно что-то означает, и распознавание по виду их не различит. Выводите ответ до того, как читать варианты, и только потом сопоставляйте. Заметьте также, что энергия и момент силы имеют одинаковые основные единицы: основные единицы определяют комбинацию, а не величину, и это ограничение метода, а не ошибка в ваших выкладках.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Two base-unit recognitions and two derivations in three minutes. The recognitions should take seconds — they are recall of the list of seven — so the time is really for the derivations. If a recognition is taking longer than a derivation, the list is what needs practice, not the method.',
+        'Два вопроса на узнавание основных единиц и два вывода за три минуты. Узнавание должно занимать секунды, это воспроизведение списка из семи, поэтому время фактически отводится на выводы. Если узнавание занимает больше времени, чем вывод, тренировать нужно список, а не метод.',
+      ), { estimatedMinutes: 3 }),
+    ],
+    vocabularyIds: ['vocab-base-unit', 'vocab-derived-unit', 'vocab-in-terms-of'],
+    formulaIds: ['formula-newton-in-base-units'],
+    prerequisiteLessonIds: [],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
     id: 'lesson-phys-units-unit-conversion-si',
     topicId: 'phys-units',
     subject: 'physics',
@@ -1036,6 +1131,7 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 
 /** The blueprint cell each authored lesson teaches toward. */
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
+  'lesson-phys-units-si-base-derived': 'phys-units-si-base-derived',
   'lesson-phys-units-unit-conversion-si': 'phys-units-unit-conversion-si',
   'lesson-math-foundation-estimate-magnitude': 'math-foundation-estimate-magnitude',
   'lesson-math-foundation-fraction-decimal-percent': 'math-foundation-fraction-decimal-percent',

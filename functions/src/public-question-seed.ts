@@ -84,6 +84,18 @@ const UNITS_COMMON = {
 };
 
 /**
+ * The base-and-derived-units items. Their answers are unit names and unit
+ * expressions rather than values, so `draft-questions.test.ts` recomputes each
+ * one from the SI definitions it holds itself and compares the text exactly.
+ */
+const SI_COMMON = {
+  subject: 'physics' as const,
+  language: 'en' as const,
+  formulas: [] as string[],
+  tags: ['authored-slice-4'],
+};
+
+/**
  * These items are checked into a public repository together with their answer
  * keys and worked solutions, so their answers are public. They are usable for
  * practice and for the local demo, and they must never back a confidential
@@ -950,6 +962,134 @@ export const DRAFT_QUESTION_SEED: DraftQuestion[] = [
     estimatedTime: 55,
     templateParameters: { check: 'speed-from-milliseconds', metres: 0.6, milliseconds: 2.5 },
   },
+  {
+    ...SI_COMMON,
+    id: 'phys-units-si-base-derived-001',
+    cellId: 'phys-units-si-base-derived',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'concept-recognition',
+    difficulty: 1,
+    question: 'Which SI base unit is used for the quantity electric current?',
+    questionTranslation: 'Какая основная единица СИ используется для величины «сила тока»?',
+    options: [
+      { id: 'a', text: 'ampere' },
+      { id: 'b', text: 'coulomb' },
+      { id: 'c', text: 'volt' },
+      { id: 'd', text: 'ohm' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Electric current is one of the seven SI base quantities, and its base unit is the ampere. The coulomb, the volt and the ohm are all derived units, each defined in terms of the ampere and other base units.',
+    shortSolution: 'Electric current is a base quantity; its base unit is the ampere.',
+    explanation:
+      'Charge is often met before current, which makes the coulomb feel more fundamental than it is. The SI takes current as the base quantity and defines the coulomb from it, not the other way round.',
+    commonMistakes: [
+      { id: 'charge-as-base', description: 'Treating charge as the base quantity gives the coulomb.', distractorOptionId: 'b' },
+      { id: 'confuses-quantity', description: 'Reading the question as asking about potential difference gives the volt.', distractorOptionId: 'c' },
+      { id: 'circuit-association', description: 'Choosing another familiar electrical unit gives the ohm.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['base unit', 'derived unit'],
+    estimatedTime: 35,
+    templateParameters: { check: 'si-base-unit-for', quantity: 'electric current' },
+  },
+  {
+    ...SI_COMMON,
+    id: 'phys-units-si-base-derived-002',
+    cellId: 'phys-units-si-base-derived',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'concept-recognition',
+    difficulty: 1,
+    question: 'Which SI base unit is used for the quantity amount of substance?',
+    questionTranslation: 'Какая основная единица СИ используется для величины «количество вещества»?',
+    options: [
+      { id: 'a', text: 'mole' },
+      { id: 'b', text: 'kilogram' },
+      { id: 'c', text: 'gram' },
+      { id: 'd', text: 'candela' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Amount of substance is a base quantity in its own right and its base unit is the mole. It is a count of entities, so it is not the same quantity as mass and is not measured in kilograms.',
+    shortSolution: 'Amount of substance is a base quantity; its base unit is the mole.',
+    explanation:
+      'Amount of substance and mass are separate base quantities, which is why a mole of one substance and a mole of another have different masses.',
+    commonMistakes: [
+      { id: 'amount-as-mass', description: 'Reading “amount” as mass gives the kilogram.', distractorOptionId: 'b' },
+      { id: 'gram-as-base', description: 'The gram is not the base unit even for mass — the kilogram is, prefix included.', distractorOptionId: 'c' },
+      { id: 'other-base-unit', description: 'Choosing another base unit at random gives the candela, which measures luminous intensity.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['base unit'],
+    estimatedTime: 35,
+    templateParameters: { check: 'si-base-unit-for', quantity: 'amount of substance' },
+  },
+  {
+    ...SI_COMMON,
+    id: 'phys-units-si-base-derived-003',
+    cellId: 'phys-units-si-base-derived',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'concept-recognition',
+    difficulty: 2,
+    question: 'The newton is a derived unit. Which expression gives it in SI base units?',
+    questionTranslation: 'Ньютон — производная единица. Какое выражение записывает его в основных единицах СИ?',
+    options: [
+      { id: 'a', text: 'kg·m/s²' },
+      { id: 'b', text: 'kg·m/s' },
+      { id: 'c', text: 'kg·m²/s²' },
+      { id: 'd', text: 'kg/(m·s²)' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Force is mass times acceleration, and acceleration is metres per second per second, so a newton is a kilogram metre per second squared: kg·m/s². Every symbol in that expression is a base unit.',
+    shortSolution: 'Force is mass × acceleration, so 1 N = 1 kg·m/s².',
+    explanation:
+      'Reading a derived unit off its defining relation is faster and safer than recalling it, and it is the same skill the dimensional-check cell asks for later.',
+    commonMistakes: [
+      { id: 'momentum', description: 'Mass times velocity rather than acceleration gives kg·m/s, which is momentum.', distractorOptionId: 'b' },
+      { id: 'energy', description: 'Force times distance gives kg·m²/s², which is energy.', distractorOptionId: 'c' },
+      { id: 'pressure', description: 'Force divided by area gives kg/(m·s²), which is pressure.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['derived unit', 'base unit'],
+    estimatedTime: 50,
+    templateParameters: { check: 'base-units-of', quantity: 'force' },
+  },
+  {
+    ...SI_COMMON,
+    id: 'phys-units-si-base-derived-004',
+    cellId: 'phys-units-si-base-derived',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'concept-recognition',
+    difficulty: 2,
+    question: 'The joule is a derived unit. Which expression gives it in SI base units?',
+    questionTranslation: 'Джоуль — производная единица. Какое выражение записывает его в основных единицах СИ?',
+    options: [
+      { id: 'a', text: 'kg·m²/s²' },
+      { id: 'b', text: 'kg·m/s²' },
+      { id: 'c', text: 'kg·m²/s³' },
+      { id: 'd', text: 'A·s' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Energy is force times distance, so a joule is a newton metre: kg·m/s² multiplied by m, which is kg·m²/s².',
+    shortSolution: 'Energy is force × distance, so 1 J = 1 kg·m²/s².',
+    explanation:
+      'The difference between energy and power is a single second in the denominator, so the two expressions are worth deriving rather than recognising by shape.',
+    commonMistakes: [
+      { id: 'force-not-energy', description: 'Stopping at force gives kg·m/s².', distractorOptionId: 'b' },
+      { id: 'power', description: 'Energy per second gives kg·m²/s³, which is power.', distractorOptionId: 'c' },
+      { id: 'charge', description: 'Choosing an unrelated derived unit gives A·s, which is charge.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['derived unit'],
+    estimatedTime: 50,
+    templateParameters: { check: 'base-units-of', quantity: 'energy' },
+  },
 ];
 /** Cells this authored slice targets, in the order a reviewer should work through them. */
 export const AUTHORED_SLICE_CELL_IDS = [
@@ -960,5 +1100,6 @@ export const AUTHORED_SLICE_CELL_IDS = [
   'math-linear-multi-step-linear',
   'math-linear-linear-word-problem',
   'phys-thermodynamics-heat-transfer',
+  'phys-units-si-base-derived',
   'phys-units-unit-conversion-si',
 ] as const;

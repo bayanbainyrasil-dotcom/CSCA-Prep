@@ -58,6 +58,10 @@ describe('a lesson never gives away a practice answer', () => {
         const exampleNumbers = numbersIn(example);
         for (const item of items) {
           const itemNumbers = numbersIn(item.question);
+          // A concept-recognition item carries no quantities at all, so there is
+          // no set of numbers it could share. Its answer is a unit name, which
+          // the verbatim-solution test above already covers.
+          if (itemNumbers.size === 0) continue;
           const shared = [...itemNumbers].filter((value) => exampleNumbers.has(value));
           // Sharing one constant (a specific heat capacity, say) is expected;
           // sharing every quantity means it is the same problem.

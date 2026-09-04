@@ -78,6 +78,34 @@ const INDEPENDENT: Record<string, (p: Record<string, string | number | boolean>)
   'kmh-to-ms': (p) => String((Number(p.kmh) * 1000) / 3600),
   'current-in-milliamps': (p) => String(Number(p.chargeMilliCoulomb) / Number(p.seconds)),
   'speed-from-milliseconds': (p) => String(Number(p.metres) / (Number(p.milliseconds) / 1000)),
+  // The SI definitions, written out here rather than read from the item, so an
+  // item that names the wrong unit fails instead of confirming itself.
+  'si-base-unit-for': (p) => {
+    const base: Record<string, string> = {
+      length: 'metre',
+      mass: 'kilogram',
+      time: 'second',
+      'electric current': 'ampere',
+      'thermodynamic temperature': 'kelvin',
+      'amount of substance': 'mole',
+      'luminous intensity': 'candela',
+    };
+    const unit = base[String(p.quantity)];
+    expect(unit, `no SI base unit is defined for "${String(p.quantity)}"`).toBeDefined();
+    return unit!;
+  },
+  'base-units-of': (p) => {
+    const derived: Record<string, string> = {
+      force: 'kg·m/s²',
+      energy: 'kg·m²/s²',
+      power: 'kg·m²/s³',
+      pressure: 'kg/(m·s²)',
+      charge: 'A·s',
+    };
+    const expression = derived[String(p.quantity)];
+    expect(expression, `no base-unit expression is defined for "${String(p.quantity)}"`).toBeDefined();
+    return expression!;
+  },
   'x-plus-b-equals-c': (p) => String(Number(p.c) - Number(p.b)),
   'ax-equals-c': (p) => String(Number(p.c) / Number(p.a)),
   'x-over-a-equals-c': (p) => String(Number(p.c) * Number(p.a)),
@@ -206,7 +234,9 @@ describe('authored slice structure', () => {
       // Each item belongs to a named authored slice. The set is pinned so a new
       // slice has to be added deliberately rather than appearing untagged.
       expect(
-        ['authored-slice-1', 'authored-slice-2', 'authored-slice-3'].some((tag) => question.tags.includes(tag)),
+        ['authored-slice-1', 'authored-slice-2', 'authored-slice-3', 'authored-slice-4'].some((tag) =>
+          question.tags.includes(tag),
+        ),
         question.id,
       ).toBe(true);
     }
@@ -223,8 +253,11 @@ describe('independent recomputation of every answer', () => {
       const expected = compute!(question.templateParameters);
       const keyText = optionText(question, question.correctAnswer);
 
-      if (expected.includes('/')) {
-        expect(keyText.replace(/\s/g, ''), question.id).toBe(expected);
+      // An expected answer that is not a number is text — a fraction such as
+      // "3/25", or a unit such as "kg·m/s²" — and text is compared exactly.
+      // That is stricter than the numeric path, which allows a tolerance.
+      if (!Number.isFinite(Number(expected))) {
+        expect(keyText.replace(/\s/g, ''), question.id).toBe(expected.replace(/\s/g, ''));
         continue;
       }
 
@@ -245,8 +278,9 @@ describe('independent recomputation of every answer', () => {
   it('leaves exactly one option matching the recomputed answer', () => {
     for (const question of DRAFT_QUESTION_SEED) {
       const expected = INDEPENDENT[String(question.templateParameters.check)]!(question.templateParameters);
-      if (expected.includes('/')) {
-        const matches = question.options.filter((option) => option.text.replace(/\s/g, '') === expected);
+      if (!Number.isFinite(Number(expected))) {
+        const wanted = expected.replace(/\s/g, '');
+        const matches = question.options.filter((option) => option.text.replace(/\s/g, '') === wanted);
         expect(matches.map((option) => option.id), question.id).toEqual([question.correctAnswer]);
         continue;
       }
@@ -266,8 +300,15 @@ describe('independent recomputation of every answer', () => {
     for (const question of DRAFT_QUESTION_SEED) {
       for (const [key, value] of Object.entries(question.templateParameters)) {
         if (key === 'check') continue;
-        expect(typeof value, `${question.id}.${key}`).toBe('number');
-        expect(Number.isFinite(Number(value)), `${question.id}.${key}`).toBe(true);
+        // A parameter is a number to compute with or a name to look up. Either
+        // is fine; what must never appear is an empty or non-finite value, which
+        // is what silently turns an answer into NaN or undefined.
+        expect(['number', 'string'], `${question.id}.${key}`).toContain(typeof value);
+        if (typeof value === 'number') {
+          expect(Number.isFinite(value), `${question.id}.${key}`).toBe(true);
+        } else {
+          expect(String(value).trim().length, `${question.id}.${key}`).toBeGreaterThan(0);
+        }
       }
       const parameters = question.templateParameters;
       for (const divisorKey of ['c', 'denominator', 'divisor', 'rate', 'den1', 'den2', 'm2', 'a', 'seconds', 'milliseconds']) {
@@ -279,9 +320,7 @@ describe('independent recomputation of every answer', () => {
         expect(Number(parameters[divisorKey]), `${question.id}.${divisorKey}`).not.toBe(0);
       }
       const expected = INDEPENDENT[String(parameters.check)]!(parameters);
-      if (!expected.includes('/')) {
-        expect(Number.isFinite(Number(expected)), `${question.id} result is finite`).toBe(true);
-      }
+      expect(String(expected).trim().length, `${question.id} produces an answer`).toBeGreaterThan(0);
     }
   });
 
