@@ -459,6 +459,51 @@ Not done, and not attempted: moving zod and the domain schemas (22.9 KB gzipped)
 first load. That needs the data layer restructured so nothing on the shell path parses, and
 the regression risk is not worth 23 KB in a session that cannot run a real device test.
 
+## Tenth slice: distance at constant speed (P2-1, 2026-09-03)
+
+`phys-kinematics-constant-speed` is where the mock's motion questions start, and the two
+units slices authored before it are its prerequisite in practice if not in the blueprint.
+Four items, covering both question types the cell asks for.
+
+The lesson says plainly that the relation is the easy part: at constant speed distance is
+speed times time, and that is the whole physics of the cell. What separates a mark from no
+mark is unit discipline, and every wrong option here is the answer a missed conversion
+produces — the same digits at three or four powers of ten. Reading the digits therefore
+identifies nothing, and an option matching your arithmetic is what the item was built to
+offer rather than evidence that it is right.
+
+The relation records two limits: it holds only while the speed does not change, and it
+relates distance to speed rather than displacement to velocity — something that returns to
+where it started has travelled a distance and moved nowhere.
+
+### A change-detector removed
+
+`slice-access.test.ts` compared the authored cell ids against a hand-written list. That list
+fired on every slice authored in this session and never once caught a defect: it detected
+change rather than error. It is replaced by the properties that can actually break — every
+cell a lesson names exists in the blueprint, has authored questions, and is named by only
+one lesson.
+
+Ten of 109 cells now have a teaching slice. The public seed holds 34 items — 18 Mathematics
+across six cells, 16 Physics across four — all `draft` and unreviewed, and coverage still
+reads 0 approved.
+
+### Checks, each run separately on `66f839e`
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Web typecheck | `pnpm typecheck` | passed |
+| Lint | `pnpm lint` | passed, 0 warnings |
+| Web unit tests | `pnpm vitest run` | 806 passed, 66 files |
+| Pages entrypoints | `pnpm test:pages` | 2 passed |
+| Budget script tests | `pnpm test:budget` | 6 passed |
+| Web build | `pnpm build` | built |
+| Functions typecheck | `npx tsc --noEmit` in `functions/` | passed |
+| Functions build | `pnpm build` in `functions/` | passed |
+| Bundle secret scan | `pnpm check:bundle` | passed, 86 files, 68 solution strings absent |
+| First-load budget | `pnpm check:budget` | 189.0 KB gz JS, 19.7 KB gz CSS, within budget |
+| Browser tests | `PLAYWRIGHT_CHROMIUM_PATH=… pnpm test:e2e` | 26 passed, 34 skipped by project design, 0 failed |
+
 ## Ninth slice: the seven base units (P2-1, 2026-09-03)
 
 `phys-units-si-base-derived` is the stated prerequisite of the cell authored before it, so
@@ -742,7 +787,7 @@ viewport profiles rather than Safari.
 - 109-cell prerequisite blueprint, server coverage calculation and fail-closed publication.
 - Blueprint-first administrator editor, import dry runs, review queue, content versioning and
   stale-approval invalidation.
-- 30 original public practice questions covering nine cells, with independently recomputed
+- 34 original public practice questions covering ten cells, with independently recomputed
   answers and full explanation packets, and a teaching slice around every one of them.
 - Private question import that keeps answer keys/solutions out of learner-readable records.
 - AI tutor safety seam: provider abstraction, strict schemas, quotas, shared budget, cache,
@@ -756,11 +801,11 @@ viewport profiles rather than Safari.
 - Blueprint: 109 draft cells — 47 Mathematics, 62 Physics. Four were added on 2026-09-03
   to close required-area gaps; their requirement is itself unconfirmed (see below).
 - Human-verified cells: **0/109**.
-- Public authored questions: 30 across 9 cells, all still awaiting human review — 18 across
-  six Mathematics cells and 12 across three Physics cells
+- Public authored questions: 34 across 10 cells, all still awaiting human review — 18 across
+  six Mathematics cells and 16 across four Physics cells
   (`phys-thermodynamics-heat-transfer`, `phys-units-unit-conversion-si`,
-  `phys-units-si-base-derived`).
-- Teaching slices: 9, one for each of those cells, all `draft` and unreviewed. A lesson is
+  `phys-units-si-base-derived`, `phys-kinematics-constant-speed`).
+- Teaching slices: 10, one for each of those cells, all `draft` and unreviewed. A lesson is
   not a question and moves no coverage.
 - Confidential production mock questions: **0**.
 - Production mock coverage: **0**; publication/start correctly refuse with
@@ -777,7 +822,7 @@ public Git history and therefore cannot become confidential mock content even af
 2. Create a real administrator account and verify the admin bootstrap.
 3. Have a qualified human review the 109-cell blueprint against current official CSCA
    sources, recording source date, reviewer and unresolved differences.
-4. Import and human-review the 30 public practice items.
+4. Import and human-review the 34 public practice items.
 5. Author and independently review a never-public private question bank covering every mock
    cell, language, difficulty and question-type requirement.
 6. Finalize privacy/terms for the actual operator, processors and production domain.
@@ -794,7 +839,7 @@ public Git history and therefore cannot become confidential mock content even af
 ### P2 — scale and polish
 
 1. Expand reviewed lessons and questions as complete vertical slices rather than isolated
-   questions. Nine of 109 cells now have one; all nine await human review, and every
+   questions. Ten of 109 cells now have one; all ten await human review, and every
    authored item sits inside a slice.
 2. ~~Add learner-visible reviewed/unreviewed coverage confidence.~~ Done in code; the
    numbers it reports stay all-zero until a deployment and a human review exist.
@@ -810,14 +855,14 @@ blueprint before approving content. Do not invent a reviewer or self-mark genera
 as verified.
 
 **Done in this batch:** learner-visible coverage confidence (audit P2-4), the first-load
-budget and its guard (audit P2-5), and seven more vertical slices (audit P2-1) — every
-authored item in the repository sits inside one, and the last two slices were authored
+budget and its guard (audit P2-5), and eight more vertical slices (audit P2-1) — every
+authored item in the repository sits inside one, and the last three slices were authored
 question-first because no untaught item was left.
 
-**Next code task that can proceed independently:** a tenth slice, question-first and physics
-again — three authored cells out of 62 is still the thin side. `phys-kinematics-constant-speed`
-is the natural next one: it is foundational, it is where the mock's motion questions start,
-and the units work just authored is its prerequisite in practice if not in the blueprint.
+**Next code task that can proceed independently:** an eleventh slice, question-first and
+physics again — four authored cells out of 62 is still the thin side.
+`phys-kinematics-displacement-distance` is the blueprint prerequisite of the cell just
+authored and the lesson written for it already leans on the distinction, so it is next.
 Read the cell's `questionTypes`, `difficultyLevels` and `minimumItems` first and author to
 those rather than to a remembered shape. Everything authored stays `draft`/`pending-review`
 — Claude does not mark its own content verified, and no reviewer, source or review date may
