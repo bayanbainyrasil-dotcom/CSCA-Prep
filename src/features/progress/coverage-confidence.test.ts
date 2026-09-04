@@ -7,7 +7,7 @@ import {
 } from './coverage-confidence';
 import { BLUEPRINT_CELL_COUNTS } from '../../../functions/src/blueprint-summary';
 import { BLUEPRINT_CELL_SEED } from '@/data/blueprint-cells';
-import { DRAFT_QUESTION_SEED } from '@/data/draft-questions';
+import { AUTHORED_SLICE_CELL_IDS, DRAFT_QUESTION_SEED } from '@/data/draft-questions';
 import {
   BlueprintQuestionRecordSchema,
   evaluateBlueprintCoverage,
@@ -145,7 +145,7 @@ describe('partial coverage', () => {
   it('counts exactly the cells the coverage engine calls covered', () => {
     const report = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, approved);
     expect(confidence.reviewerApproved).toBe(report.verifiedCells);
-    expect(confidence.reviewerApproved).toBe(7);
+    expect(confidence.reviewerApproved).toBe(AUTHORED_SLICE_CELL_IDS.length);
   });
 
   it('leaves the rest unmeasured rather than counting them against the learner', () => {
@@ -154,8 +154,16 @@ describe('partial coverage', () => {
 
   it('still splits correctly by subject', () => {
     const [maths, physics] = confidence.bySubject;
-    expect(maths!.reviewerApproved).toBe(6);
-    expect(physics!.reviewerApproved).toBe(1);
+    // Counted from the seed, so authoring a cell does not require editing a
+    // literal here — only the split itself is asserted.
+    const bySubject = { mathematics: 0, physics: 0 };
+    for (const cellId of AUTHORED_SLICE_CELL_IDS) {
+      const cell = BLUEPRINT_CELL_SEED.find((entry) => entry.id === cellId)!;
+      bySubject[cell.subject] += 1;
+    }
+    expect(maths!.reviewerApproved).toBe(bySubject.mathematics);
+    expect(physics!.reviewerApproved).toBe(bySubject.physics);
+    expect(maths!.reviewerApproved + physics!.reviewerApproved).toBe(confidence.reviewerApproved);
   });
 });
 
@@ -172,7 +180,7 @@ describe('the learner and the reviewer never move each other’s number', () => 
 
   it('approving content does not mean the learner has studied it', () => {
     const confidence = coverageConfidence({ counts: BLUEPRINT_CELL_COUNTS, cells: summarise(approved), studiedCellIds: [] });
-    expect(confidence.reviewerApproved).toBe(7);
+    expect(confidence.reviewerApproved).toBe(AUTHORED_SLICE_CELL_IDS.length);
     expect(confidence.studied).toBe(0);
   });
 
@@ -183,7 +191,7 @@ describe('the learner and the reviewer never move each other’s number', () => 
       studiedCellIds: ['math-linear-isolate-unknown'],
     });
     expect(confidence.studied).toBe(1);
-    expect(confidence.reviewerApproved).toBe(7);
+    expect(confidence.reviewerApproved).toBe(AUTHORED_SLICE_CELL_IDS.length);
   });
 });
 

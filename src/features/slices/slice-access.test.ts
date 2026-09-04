@@ -100,6 +100,7 @@ describe('an unknown cell', () => {
       'math-linear-linear-word-problem',
       'math-linear-multi-step-linear',
       'phys-thermodynamics-heat-transfer',
+      'phys-units-unit-conversion-si',
     ]);
     expect(sliceAccess({ cellId: 'phys-thermodynamics-heat-transfer', knownCellIds: KNOWN, audience: 'demo' }).allowed).toBe(true);
     expect(sliceAccess({ cellId: '', knownCellIds: KNOWN, audience: 'demo' }).allowed).toBe(false);

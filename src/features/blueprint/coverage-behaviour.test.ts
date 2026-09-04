@@ -99,21 +99,23 @@ describe('after a real human approval', () => {
   const verifiedBank = DRAFT_QUESTION_SEED.map((question) => asRecord(question));
   const coverage = evaluateBlueprintCoverage(BLUEPRINT_CELL_SEED, verifiedBank);
 
-  it('covers exactly the seven cells of the authored slice', () => {
+  it('covers exactly the cells the authored slices target, and no others', () => {
     const covered = coverage.cells.filter((entry) => entry.status === 'covered').map((entry) => entry.cell.id);
     expect(covered.sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
-    expect(coverage.verifiedCells).toBe(7);
-    // Six Mathematics cells and one Physics cell, the second vertical slice.
-    expect(MATH_SLICE).toHaveLength(6);
-    expect(PHYSICS_SLICE).toEqual(['phys-thermodynamics-heat-transfer']);
+    // Derived from the seed rather than written down: authoring a cell is a
+    // content change, and what matters is that approval reaches exactly the
+    // cells that were authored.
+    expect(coverage.verifiedCells).toBe(AUTHORED_SLICE_CELL_IDS.length);
+    expect([...MATH_SLICE, ...PHYSICS_SLICE].sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
+    expect(PHYSICS_SLICE.length, 'physics is authored too').toBeGreaterThan(0);
   });
 
-  it('leaves the other 102 cells empty', () => {
+  it('leaves every other cell in the blueprint empty', () => {
     for (const cell of OTHER_CELLS) {
       const entry = coverage.cells.find((item) => item.cell.id === cell.id);
       expect(entry?.status, cell.id).toBe('empty');
     }
-    expect(coverage.totals.empty).toBe(102);
+    expect(coverage.totals.empty).toBe(BLUEPRINT_CELL_SEED.length - AUTHORED_SLICE_CELL_IDS.length);
   });
 
   it('raises no structural issue', () => {
@@ -171,7 +173,7 @@ describe('after a real human approval', () => {
     const entry = after.cells.find((item) => item.cell.id === 'math-linear-isolate-unknown');
     expect(entry?.verifiedItems).toBe(0);
     expect(entry?.status).toBe('unverified');
-    expect(after.verifiedCells).toBe(6);
+    expect(after.verifiedCells).toBe(AUTHORED_SLICE_CELL_IDS.length - 1);
     // Single-subject, so the refusal is attributable to the edit rather than to
     // a physics cell appearing in a mathematics exam.
     expect(canPublishExam(after, { subject: 'mathematics', mode: 'mock', cellIds: MATH_SLICE }).allowed).toBe(false);

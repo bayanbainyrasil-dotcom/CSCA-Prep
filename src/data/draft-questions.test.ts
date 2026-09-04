@@ -72,6 +72,12 @@ const INDEPENDENT: Record<string, (p: Record<string, string | number | boolean>)
   'heat-in-kilojoules-from-temperatures': (p) =>
     String((Number(p.m) * Number(p.c) * Math.abs(Number(p.tEnd) - Number(p.tStart))) / 1000),
   'specific-heat-capacity': (p) => String(Number(p.q) / (Number(p.m) * Number(p.dT))),
+  // Units slice. Each one is written from the definition rather than from the
+  // solution text, so a wrong solution cannot validate itself.
+  'si-prefix-scale': (p) => String(Number(p.value) * 10 ** Number(p.exponent)),
+  'kmh-to-ms': (p) => String((Number(p.kmh) * 1000) / 3600),
+  'current-in-milliamps': (p) => String(Number(p.chargeMilliCoulomb) / Number(p.seconds)),
+  'speed-from-milliseconds': (p) => String(Number(p.metres) / (Number(p.milliseconds) / 1000)),
   'x-plus-b-equals-c': (p) => String(Number(p.c) - Number(p.b)),
   'ax-equals-c': (p) => String(Number(p.c) / Number(p.a)),
   'x-over-a-equals-c': (p) => String(Number(p.c) * Number(p.a)),
@@ -199,7 +205,10 @@ describe('authored slice structure', () => {
       expect(text).not.toContain('past paper');
       // Each item belongs to a named authored slice. The set is pinned so a new
       // slice has to be added deliberately rather than appearing untagged.
-      expect(['authored-slice-1', 'authored-slice-2'].some((tag) => question.tags.includes(tag)), question.id).toBe(true);
+      expect(
+        ['authored-slice-1', 'authored-slice-2', 'authored-slice-3'].some((tag) => question.tags.includes(tag)),
+        question.id,
+      ).toBe(true);
     }
   });
 });
@@ -261,7 +270,7 @@ describe('independent recomputation of every answer', () => {
         expect(Number.isFinite(Number(value)), `${question.id}.${key}`).toBe(true);
       }
       const parameters = question.templateParameters;
-      for (const divisorKey of ['c', 'denominator', 'divisor', 'rate', 'den1', 'den2', 'm2', 'a']) {
+      for (const divisorKey of ['c', 'denominator', 'divisor', 'rate', 'den1', 'den2', 'm2', 'a', 'seconds', 'milliseconds']) {
         if (!(divisorKey in parameters)) continue;
         const kind = String(parameters.check);
         // `a` is a divisor only where the item divides by it.
@@ -338,9 +347,14 @@ describe('blueprint mapping of the authored slice', () => {
     }
   });
 
-  it('touches only the seven cells of this slice, leaving the other 102 empty', () => {
+  it('touches only the authored cells, leaving every other blueprint cell empty', () => {
     const targeted = new Set(DRAFT_QUESTION_SEED.map((question) => question.cellId));
     expect([...targeted].sort()).toEqual([...AUTHORED_SLICE_CELL_IDS].sort());
-    expect(BLUEPRINT_CELL_SEED.length - targeted.size).toBe(102);
+    // Derived, not a literal: a new authored cell is a content change, and the
+    // fact worth asserting is that nothing else was touched by accident.
+    expect(BLUEPRINT_CELL_SEED.length - targeted.size).toBe(
+      BLUEPRINT_CELL_SEED.length - AUTHORED_SLICE_CELL_IDS.length,
+    );
+    expect(targeted.size).toBe(AUTHORED_SLICE_CELL_IDS.length);
   });
 });

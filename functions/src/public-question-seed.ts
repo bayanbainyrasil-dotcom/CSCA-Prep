@@ -70,6 +70,20 @@ const PHYSICS_COMMON = {
 };
 
 /**
+ * The units items list no formula of their own. The slice does have a relation
+ * — a quantity is its digits times the power of ten its prefix stands for — but
+ * it is not a formula a learner substitutes into per item, and repeating it on
+ * every card would suggest the arithmetic is the difficulty here. It is not:
+ * choosing the right power of ten is.
+ */
+const UNITS_COMMON = {
+  subject: 'physics' as const,
+  language: 'en' as const,
+  formulas: [] as string[],
+  tags: ['authored-slice-3'],
+};
+
+/**
  * These items are checked into a public repository together with their answer
  * keys and worked solutions, so their answers are public. They are usable for
  * practice and for the local demo, and they must never back a confidential
@@ -808,6 +822,134 @@ export const DRAFT_QUESTION_SEED: DraftQuestion[] = [
     estimatedTime: 90,
     templateParameters: { check: 'heat-in-kilojoules-from-temperatures', m: 0.15, c: 900, tStart: 120, tEnd: 30 },
   },
+  {
+    ...UNITS_COMMON,
+    id: 'phys-units-unit-conversion-si-001',
+    cellId: 'phys-units-unit-conversion-si',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'unit-conversion',
+    difficulty: 2,
+    question: 'A capacitor is labelled 4.7 μF. Express this capacitance in farads.',
+    questionTranslation: 'На конденсаторе указано 4.7 мкФ. Выразите эту ёмкость в фарадах.',
+    options: [
+      { id: 'a', text: '4.7 × 10⁻⁶ F' },
+      { id: 'b', text: '4.7 × 10⁻³ F' },
+      { id: 'c', text: '4.7 × 10⁻⁹ F' },
+      { id: 'd', text: '4.7 × 10⁶ F' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'The prefix micro means a factor of 10⁻⁶, so 4.7 μF is 4.7 × 10⁻⁶ F. The digits are untouched by the conversion: only the power of ten changes.',
+    shortSolution: 'μ means 10⁻⁶, so 4.7 μF = 4.7 × 10⁻⁶ F.',
+    explanation:
+      'A prefix is a multiplier attached to the unit, not to the number, so converting to the base unit moves the power of ten and leaves the digits alone.',
+    commonMistakes: [
+      { id: 'micro-as-milli', description: 'Reading μ as milli gives 4.7 × 10⁻³ F.', distractorOptionId: 'b' },
+      { id: 'micro-as-nano', description: 'Reading μ as nano gives 4.7 × 10⁻⁹ F.', distractorOptionId: 'c' },
+      { id: 'sign-of-exponent', description: 'Multiplying by the prefix instead of applying it gives 4.7 × 10⁶ F.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['prefix', 'base unit'],
+    estimatedTime: 45,
+    templateParameters: { check: 'si-prefix-scale', value: 4.7, exponent: -6 },
+  },
+  {
+    ...UNITS_COMMON,
+    id: 'phys-units-unit-conversion-si-002',
+    cellId: 'phys-units-unit-conversion-si',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'unit-conversion',
+    difficulty: 2,
+    question: 'A car travels at a steady 72 km/h. Express this speed in SI base units.',
+    questionTranslation: 'Автомобиль движется с постоянной скоростью 72 км/ч. Выразите эту скорость в основных единицах СИ.',
+    options: [
+      { id: 'a', text: '20 m/s' },
+      { id: 'b', text: '1.2 m/s' },
+      { id: 'c', text: '0.02 m/s' },
+      { id: 'd', text: '259 m/s' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'One kilometre is 10³ metres and one hour is 3600 seconds, so a speed in km/h is divided by 3.6 to reach m/s: 72 ÷ 3.6 = 20 m/s.',
+    shortSolution: '72 ÷ 3.6 = 20 m/s.',
+    explanation:
+      'Both parts of the unit change, so both factors apply: dividing by only one of them leaves an answer that is out by 60 or by 1000.',
+    commonMistakes: [
+      { id: 'minutes-only', description: 'Dividing by 60 alone gives 1.2 m/s.', distractorOptionId: 'b' },
+      { id: 'seconds-only', description: 'Dividing by 3600 alone gives 0.02 m/s.', distractorOptionId: 'c' },
+      { id: 'wrong-direction', description: 'Multiplying by 3.6 rather than dividing gives about 259 m/s.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['base unit', 'derived unit'],
+    estimatedTime: 50,
+    templateParameters: { check: 'kmh-to-ms', kmh: 72 },
+  },
+  {
+    ...UNITS_COMMON,
+    id: 'phys-units-unit-conversion-si-003',
+    cellId: 'phys-units-unit-conversion-si',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'single-step-calculation',
+    difficulty: 2,
+    question: 'A charge of 3.6 mC passes a point in 0.20 s. What is the current, in milliamperes?',
+    questionTranslation: 'Заряд 3.6 мКл проходит через точку за 0.20 с. Чему равен ток в миллиамперах?',
+    options: [
+      { id: 'a', text: '18 mA' },
+      { id: 'b', text: '1.8 mA' },
+      { id: 'c', text: '0.72 mA' },
+      { id: 'd', text: '180 mA' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Current is charge divided by time. Both the charge and the answer are in milli-units, so the prefixes cancel and the arithmetic is done on the numbers as given: 3.6 ÷ 0.20 = 18 mA.',
+    shortSolution: '3.6 ÷ 0.20 = 18 mA.',
+    explanation:
+      'Converting to coulombs and amperes first gives the same answer but adds two chances to lose a power of ten. Matching prefixes on both sides is the shorter and safer route.',
+    commonMistakes: [
+      { id: 'decimal-slip', description: 'Dividing by 2 rather than by 0.20 gives 1.8 mA.', distractorOptionId: 'b' },
+      { id: 'multiplied', description: 'Multiplying rather than dividing gives 0.72 mA.', distractorOptionId: 'c' },
+      { id: 'stray-power', description: 'Carrying an extra power of ten from a half-finished conversion gives 180 mA.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['prefix', 'current'],
+    estimatedTime: 55,
+    templateParameters: { check: 'current-in-milliamps', chargeMilliCoulomb: 3.6, seconds: 0.2 },
+  },
+  {
+    ...UNITS_COMMON,
+    id: 'phys-units-unit-conversion-si-004',
+    cellId: 'phys-units-unit-conversion-si',
+    module: 'Measurement and mathematical tools',
+    topicId: 'phys-units',
+    skill: 'Use SI units consistently',
+    questionType: 'single-step-calculation',
+    difficulty: 2,
+    question: 'A pulse travels 0.60 m along a cable in 2.5 ms. What is its average speed?',
+    questionTranslation: 'Импульс проходит 0.60 м по кабелю за 2.5 мс. Чему равна его средняя скорость?',
+    options: [
+      { id: 'a', text: '240 m/s' },
+      { id: 'b', text: '0.24 m/s' },
+      { id: 'c', text: '2400 m/s' },
+      { id: 'd', text: '4.2 m/s' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'The time must be in seconds before dividing: 2.5 ms is 2.5 × 10⁻³ s. Then 0.60 ÷ (2.5 × 10⁻³) = 240 m/s.',
+    shortSolution: '0.60 ÷ 2.5 × 10⁻³ s = 240 m/s.',
+    explanation:
+      'The unit of the answer is fixed by the units that went into it, so a time left in milliseconds gives a speed in metres per millisecond — a number that is out by a thousand and carries a label nobody wrote down.',
+    commonMistakes: [
+      { id: 'time-not-converted', description: 'Dividing by 2.5 as though it were seconds gives 0.24 m/s.', distractorOptionId: 'b' },
+      { id: 'extra-power', description: 'Applying the milli twice gives 2400 m/s.', distractorOptionId: 'c' },
+      { id: 'inverted', description: 'Dividing the time by the distance gives about 4.2, the reciprocal in the wrong unit.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['prefix', 'derived unit'],
+    estimatedTime: 55,
+    templateParameters: { check: 'speed-from-milliseconds', metres: 0.6, milliseconds: 2.5 },
+  },
 ];
 /** Cells this authored slice targets, in the order a reviewer should work through them. */
 export const AUTHORED_SLICE_CELL_IDS = [
@@ -818,4 +960,5 @@ export const AUTHORED_SLICE_CELL_IDS = [
   'math-linear-multi-step-linear',
   'math-linear-linear-word-problem',
   'phys-thermodynamics-heat-transfer',
+  'phys-units-unit-conversion-si',
 ] as const;

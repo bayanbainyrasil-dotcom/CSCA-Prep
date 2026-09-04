@@ -295,6 +295,45 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-prefix',
+    english: 'prefix',
+    russian: 'приставка (кратная или дольная)',
+    simpleExplanation: text(
+      'A letter in front of a unit standing for a power of ten: k is 10³, m is 10⁻³, μ is 10⁻⁶. It belongs to the unit, not to the number.',
+      'Буква перед единицей, обозначающая степень десяти: к — 10³, м — 10⁻³, мк — 10⁻⁶. Она относится к единице, а не к числу.',
+    ),
+    exampleSentence: 'The prefix milli means one thousandth of the base unit.',
+    category: 'unit',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-base-unit',
+    english: 'base unit',
+    russian: 'основная единица',
+    simpleExplanation: text(
+      'One of the seven SI units everything else is built from — the metre, kilogram, second, ampere, kelvin, mole and candela.',
+      'Одна из семи основных единиц СИ, из которых строятся все остальные: метр, килограмм, секунда, ампер, кельвин, моль и кандела.',
+    ),
+    exampleSentence: 'Give your answer in SI base units.',
+    category: 'unit',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-derived-unit',
+    english: 'derived unit',
+    russian: 'производная единица',
+    simpleExplanation: text(
+      'A unit made of base units, such as m/s or N. Converting one means converting every base unit inside it, not just the first.',
+      'Единица, составленная из основных, например м/с или Н. Её перевод требует перевода каждой входящей основной единицы, а не только первой.',
+    ),
+    exampleSentence: 'The newton is a derived unit.',
+    category: 'unit',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -462,6 +501,27 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     limitations: text(
       'The form itself says nothing about accuracy: writing a number in standard form neither adds nor removes significant figures, and an estimate written this way is still an estimate. It also does not apply to zero, which has no such form, and the condition on a is part of the definition — 12 × 10³ is a correct value but not standard form, and is marked wrong where the form is what was asked for.',
       'Сама запись ничего не говорит о точности: перевод в стандартный вид не добавляет и не убирает значащих цифр, и оценка, записанная так, остаётся оценкой. Он также неприменим к нулю, у которого такой формы нет, а условие на a — часть определения: 12 × 10³ верно по значению, но не является стандартным видом и засчитывается как ошибка там, где требовалась именно форма.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
+    id: 'formula-si-prefix',
+    subject: 'physics',
+    topicId: 'phys-units',
+    name: text('A prefix is a power of ten', 'Приставка — это степень десяти'),
+    katex: 'q = a \\times 10^{n}',
+    calculates: text(
+      'The value of a quantity in its base unit, from the number written and the power of ten its prefix stands for.',
+      'Значение величины в основной единице по записанному числу и степени десяти, которую обозначает приставка.',
+    ),
+    variables: [
+      { symbol: 'q', meaning: text('the quantity in its base unit', 'величина в основной единице'), siUnit: null },
+      { symbol: 'a', meaning: text('the number as written, unchanged by the conversion', 'число в исходной записи, не изменяемое переводом'), siUnit: null },
+      { symbol: 'n', meaning: text('the power of ten the prefix stands for', 'степень десяти, которую обозначает приставка'), siUnit: null },
+    ],
+    limitations: text(
+      'This looks like standard form and is not: there n is chosen so that a lies between one and ten, while here n is fixed by the prefix and a is whatever was written. It also covers one unit at a time — a derived unit such as km/h has a prefix on the top and a non-SI unit on the bottom, and both have to be dealt with. A prefix raised to a power, as in mm², carries the power too.',
+      'Похоже на стандартный вид, но это не он: там n подбирают так, чтобы a было от одного до десяти, а здесь n задаётся приставкой, а a — то, что записано. Кроме того, здесь речь об одной единице: у производной единицы вроде км/ч приставка сверху, а несистемная единица снизу, и разобраться нужно с обеими. Приставка, возведённая в степень, как в мм², возводится в неё вместе с числом.',
     ),
     ...draftMeta(),
   }),
@@ -853,6 +913,66 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
     ...draftMeta(),
   }),
   LessonSchema.parse({
+    id: 'lesson-phys-units-unit-conversion-si',
+    topicId: 'phys-units',
+    subject: 'physics',
+    title: text('Prefixes, base units and what a conversion actually changes', 'Приставки, основные единицы и что на самом деле меняет перевод'),
+    summary: text(
+      'Treat a prefix as a power of ten belonging to the unit, convert every base unit inside a derived one, and check the answer’s unit against the units that went into it.',
+      'Считать приставку степенью десяти, относящейся к единице, переводить каждую основную единицу внутри производной и сверять единицу ответа с теми единицами, которые в него вошли.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need to multiply and divide by powers of ten without losing one, and to know which SI units are the base ones. The estimation cell in mathematics covers the first; the second is a list worth having in front of you rather than in memory while you work.',
+        'Нужно уметь умножать и делить на степени десяти, не теряя их, и знать, какие единицы СИ являются основными. Первое разобрано в ячейке про оценку в математике; второе — список, который во время работы лучше держать перед глазами, а не в памяти.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Read a prefix as a power of ten, convert a quantity to its base unit without changing its digits, convert a derived unit by dealing with every base unit in it, and use the unit of an answer as a check on the working that produced it.',
+        'Читать приставку как степень десяти, переводить величину в основную единицу, не меняя её цифр, переводить производную единицу, разобравшись с каждой входящей основной, и использовать единицу ответа как проверку выполненных действий.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'A prefix belongs to the unit, not to the number. Converting therefore moves a power of ten and leaves the digits exactly as they were — which is why a conversion that changes the digits is a signal to stop and look, not a result. The second half of the idea is that a derived unit is several units at once, so converting it means converting each of them; dealing with only the obvious one is the single most common way to be out by a factor of sixty or of a thousand.',
+        'Приставка относится к единице, а не к числу. Поэтому перевод сдвигает степень десяти и оставляет цифры ровно такими, какими они были, — и если при переводе цифры изменились, это повод остановиться и проверить, а не результат. Вторая половина мысли: производная единица — это несколько единиц сразу, и переводить нужно каждую; работа только с очевидной из них — самый частый способ ошибиться в шестьдесят или в тысячу раз.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“Express this in …” asks for the same quantity written differently, so the value does not change and only its form does. “In SI base units” is stricter than “in SI units”: it rules out the litre, the hour and the tonne, all of which are accepted alongside SI but are not base units. “Per” in a unit is a division, so “metres per second” is m/s and never m·s.',
+        '«Express this in …» просит записать ту же величину иначе: значение не меняется, меняется только форма. «In SI base units» строже, чем «in SI units»: это исключает литр, час и тонну, которые допускаются наряду с СИ, но основными единицами не являются. «Per» в названии единицы означает деление, поэтому «metres per second» — это м/с, а не м·с.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'prefix — приставка; base unit — основная единица; derived unit — производная единица.',
+        'prefix — приставка; base unit — основная единица; derived unit — производная единица.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        'A quantity in its base unit is the number as written times the power of ten the prefix stands for: q = a × 10ⁿ. This is not standard form — there the power is chosen to put one digit before the point, here it is fixed by the prefix.',
+        'Величина в основной единице — это записанное число, умноженное на степень десяти, которую обозначает приставка: q = a × 10ⁿ. Это не стандартный вид: там степень подбирают, чтобы до запятой осталась одна цифра, а здесь она задана приставкой.',
+      ), { katex: ['q = a \\times 10^{n}'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'Express 15 mA in amperes, and 90 km/h in metres per second.\n\nThe first is one unit. Milli stands for 10⁻³, so 15 mA is 15 × 10⁻³ A, or 1.5 × 10⁻² A written in standard form. The digits 1 and 5 are still there; nothing about the current changed.\n\nThe second is a derived unit, so both halves need attention. Kilo on the top is 10³ metres, and an hour on the bottom is 3600 seconds. That gives 90 × 1000 ÷ 3600, which is 25 m/s.\n\nCheck the size rather than the arithmetic: metres per second should be a smaller number than kilometres per hour, because a second is a much shorter time than an hour, and 25 is smaller than 90. An answer that had grown would be wrong whatever the working looked like.',
+        'Выразите 15 мА в амперах и 90 км/ч в метрах в секунду.\n\nПервое — одна единица. Милли обозначает 10⁻³, поэтому 15 мА — это 15 × 10⁻³ А, или 1.5 × 10⁻² А в стандартном виде. Цифры 1 и 5 остались на месте; сам ток не изменился.\n\nВторое — производная единица, поэтому внимания требуют обе части. Кило сверху — это 10³ метров, а час снизу — 3600 секунд. Получаем 90 × 1000 ÷ 3600, то есть 25 м/с.\n\nПроверяйте порядок, а не вычисления: метров в секунду должно быть меньше, чем километров в час, потому что секунда намного короче часа, и 25 меньше 90. Ответ, который вырос бы, был бы неверным независимо от того, как выглядят выкладки.',
+      ), { estimatedMinutes: 5 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'Express 350 μs in seconds, then express 5.4 kN in newtons. First: write down what each prefix stands for, before touching the number. Second: apply it and check that the digits are unchanged. Third: say whether the number should have grown or shrunk, and confirm it did. Fourth: write the answer in standard form, and notice that this is a second, separate step.',
+        'Выразите 350 мкс в секундах, затем 5.4 кН в ньютонах. Первое: выпишите, что обозначает каждая приставка, до всяких действий с числом. Второе: примените её и проверьте, что цифры не изменились. Третье: скажите, должно число вырасти или уменьшиться, и убедитесь, что так и произошло. Четвёртое: запишите ответ в стандартном виде и обратите внимание, что это отдельный, второй шаг.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'Express 4.5 GHz in hertz, 18 cm in metres, and 54 km/h in metres per second. For the last one, write the conversion of the top and of the bottom on separate lines before combining them. Then state, for each answer, whether the number grew or shrank and why that is what you expected.',
+        'Выразите 4.5 ГГц в герцах, 18 см в метрах и 54 км/ч в метрах в секунду. В последнем запишите перевод числителя и знаменателя на отдельных строках, прежде чем объединять. Затем для каждого ответа скажите, вырос он или уменьшился и почему именно этого вы и ожидали.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'Every option in this cell tends to carry the right digits, so reading the digits tells you nothing. What separates them is the power of ten, and each wrong one corresponds to a named slip: a prefix read as its neighbour, a conversion applied in the wrong direction, or only half of a derived unit converted. Decide the power of ten first and check the direction against common sense before looking at the options at all — otherwise the option that looks familiar is the one you have just computed wrongly.',
+        'Почти все варианты в этой ячейке содержат верные цифры, поэтому по цифрам ничего не понять. Их различает степень десяти, и каждая неверная соответствует конкретной ошибке: приставку прочитали как соседнюю, перевод выполнили в обратную сторону или перевели только половину производной единицы. Определяйте степень десяти первой и сверяйте направление со здравым смыслом до того, как смотреть на варианты, иначе знакомым покажется именно тот, который вы только что посчитали неверно.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Four conversions in three minutes, two of them derived units. Write the prefix table at the top of the page first; it is not cheating and it is faster than recalling each one under time. The derived ones take about twice as long as the single-unit ones, so leave room for that rather than rushing the last.',
+        'Четыре перевода за три минуты, два из них — производные единицы. Сначала выпишите таблицу приставок сверху страницы: это не списывание и это быстрее, чем вспоминать каждую под таймером. Производные занимают примерно вдвое больше времени, чем одиночные, поэтому заложите этот запас, а не торопитесь на последнем.',
+      ), { estimatedMinutes: 3 }),
+    ],
+    vocabularyIds: ['vocab-prefix', 'vocab-base-unit', 'vocab-derived-unit'],
+    formulaIds: ['formula-si-prefix'],
+    prerequisiteLessonIds: [],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
     id: 'lesson-phys-thermodynamics-heat-transfer',
     topicId: 'phys-thermodynamics',
     subject: 'physics',
@@ -916,6 +1036,7 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 
 /** The blueprint cell each authored lesson teaches toward. */
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
+  'lesson-phys-units-unit-conversion-si': 'phys-units-unit-conversion-si',
   'lesson-math-foundation-estimate-magnitude': 'math-foundation-estimate-magnitude',
   'lesson-math-foundation-fraction-decimal-percent': 'math-foundation-fraction-decimal-percent',
   'lesson-math-foundation-integer-operations': 'math-foundation-integer-operations',
