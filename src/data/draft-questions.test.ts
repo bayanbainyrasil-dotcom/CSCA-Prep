@@ -80,6 +80,10 @@ const INDEPENDENT: Record<string, (p: Record<string, string | number | boolean>)
   'speed-from-milliseconds': (p) => String(Number(p.metres) / (Number(p.milliseconds) / 1000)),
   // The SI definitions, written out here rather than read from the item, so an
   // item that names the wrong unit fails instead of confirming itself.
+  'distance-from-speed-time': (p) => String(Number(p.v) * Number(p.t)),
+  'time-from-distance-speed': (p) => String((Number(p.km) * 1000) / Number(p.v)),
+  'speed-in-ms-from-km-and-minutes': (p) => String((Number(p.km) * 1000) / (Number(p.minutes) * 60)),
+  'distance-km-from-speed-and-minutes': (p) => String((Number(p.v) * Number(p.minutes) * 60) / 1000),
   'si-base-unit-for': (p) => {
     const base: Record<string, string> = {
       length: 'metre',
@@ -234,8 +238,8 @@ describe('authored slice structure', () => {
       // Each item belongs to a named authored slice. The set is pinned so a new
       // slice has to be added deliberately rather than appearing untagged.
       expect(
-        ['authored-slice-1', 'authored-slice-2', 'authored-slice-3', 'authored-slice-4'].some((tag) =>
-          question.tags.includes(tag),
+        ['authored-slice-1', 'authored-slice-2', 'authored-slice-3', 'authored-slice-4', 'authored-slice-5'].some(
+          (tag) => question.tags.includes(tag),
         ),
         question.id,
       ).toBe(true);
@@ -311,12 +315,15 @@ describe('independent recomputation of every answer', () => {
         }
       }
       const parameters = question.templateParameters;
-      for (const divisorKey of ['c', 'denominator', 'divisor', 'rate', 'den1', 'den2', 'm2', 'a', 'seconds', 'milliseconds']) {
+      for (const divisorKey of ['c', 'denominator', 'divisor', 'rate', 'den1', 'den2', 'm2', 'a', 'seconds', 'milliseconds', 'v', 'minutes']) {
         if (!(divisorKey in parameters)) continue;
         const kind = String(parameters.check);
         // `a` is a divisor only where the item divides by it.
         if (divisorKey === 'a' && !['ax-equals-c', 'x-over-a-equals-c'].includes(kind)) continue;
         if (divisorKey === 'c' && kind !== 'a-plus-b-over-c') continue;
+        // `v` and `minutes` divide only where the item solves for time or speed.
+        if (divisorKey === 'v' && kind !== 'time-from-distance-speed') continue;
+        if (divisorKey === 'minutes' && kind !== 'speed-in-ms-from-km-and-minutes') continue;
         expect(Number(parameters[divisorKey]), `${question.id}.${divisorKey}`).not.toBe(0);
       }
       const expected = INDEPENDENT[String(parameters.check)]!(parameters);

@@ -23,6 +23,7 @@ export const pagesEntrypoints = [
   'slice/math-linear-multi-step-linear',
   'slice/math-linear-linear-word-problem',
   'slice/phys-thermodynamics-heat-transfer',
+  'slice/phys-kinematics-constant-speed',
   'slice/phys-units-si-base-derived',
   'slice/phys-units-unit-conversion-si',
   'practice',

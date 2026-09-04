@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { sliceAccess, sliceAudience } from './slice-access';
 import { SLICE_LESSON_CELL_IDS } from '@/data/teaching-slices';
+import { BLUEPRINT_CELL_SEED } from '@/data/blueprint-cells';
+import { DRAFT_QUESTION_SEED } from '@/data/draft-questions';
 
 const KNOWN = Object.values(SLICE_LESSON_CELL_IDS);
 const CELL = 'math-linear-isolate-unknown';
@@ -91,19 +93,24 @@ describe('an unknown cell', () => {
     }
   });
 
-  it('recognises exactly the authored slices and nothing else', () => {
-    expect([...KNOWN].sort()).toEqual([
-      'math-foundation-estimate-magnitude',
-      'math-foundation-fraction-decimal-percent',
-      'math-foundation-integer-operations',
-      'math-linear-isolate-unknown',
-      'math-linear-linear-word-problem',
-      'math-linear-multi-step-linear',
-      'phys-thermodynamics-heat-transfer',
-      'phys-units-si-base-derived',
-      'phys-units-unit-conversion-si',
-    ]);
-    expect(sliceAccess({ cellId: 'phys-thermodynamics-heat-transfer', knownCellIds: KNOWN, audience: 'demo' }).allowed).toBe(true);
+  /**
+   * Not a list to keep in step with the content. A literal here fired every time
+   * a slice was authored and never once caught a defect. What can actually go
+   * wrong is a cell id that does not exist, or two lessons pointing at the same
+   * cell — so those are what is checked.
+   */
+  it('recognises every authored slice, and each one names a real authored cell', () => {
+    expect(KNOWN.length, 'there are authored slices to check').toBeGreaterThan(0);
+    expect(new Set(KNOWN).size, 'two lessons share a cell').toBe(KNOWN.length);
+
+    const blueprintIds = new Set(BLUEPRINT_CELL_SEED.map((cell) => cell.id));
+    const authoredIds = new Set(DRAFT_QUESTION_SEED.map((question) => question.cellId));
+    for (const cellId of KNOWN) {
+      expect(blueprintIds.has(cellId), `${cellId} is not a blueprint cell`).toBe(true);
+      expect(authoredIds.has(cellId), `${cellId} has a lesson but no questions`).toBe(true);
+      expect(sliceAccess({ cellId, knownCellIds: KNOWN, audience: 'demo' }).allowed, cellId).toBe(true);
+    }
+
     expect(sliceAccess({ cellId: '', knownCellIds: KNOWN, audience: 'demo' }).allowed).toBe(false);
   });
 });

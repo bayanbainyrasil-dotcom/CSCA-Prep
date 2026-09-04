@@ -347,6 +347,45 @@ export const SLICE_VOCABULARY: readonly VocabularyEntry[] = Object.freeze([
     ...draftMeta(),
   }),
   VocabularyEntrySchema.parse({
+    id: 'vocab-constant-speed',
+    english: 'constant speed',
+    russian: 'постоянная скорость',
+    simpleExplanation: text(
+      'The speed does not change during the motion, so the same relation holds over the whole journey and no averaging is needed.',
+      'Скорость не меняется в течение движения, поэтому одно и то же соотношение верно для всего пути и усреднять ничего не нужно.',
+    ),
+    exampleSentence: 'The train moves at a constant speed for two minutes.',
+    category: 'physics',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-average-speed',
+    english: 'average speed',
+    russian: 'средняя скорость',
+    simpleExplanation: text(
+      'Total distance divided by total time. At constant speed it equals the speed; when the speed changes it does not equal the speed at any particular moment.',
+      'Весь путь, делённый на всё время. При постоянной скорости совпадает со скоростью; при переменной не равна скорости ни в один конкретный момент.',
+    ),
+    exampleSentence: 'Find the average speed for the whole journey.',
+    category: 'physics',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
+    id: 'vocab-take',
+    english: 'how long does it take',
+    russian: 'сколько времени занимает',
+    simpleExplanation: text(
+      'Asks for a duration, so the answer is a time and needs a time unit. It does not ask when something happens.',
+      'Спрашивает о продолжительности, поэтому ответ — время и требует единицы времени. Это не вопрос о моменте события.',
+    ),
+    exampleSentence: 'How long does the journey take?',
+    category: 'question-command',
+    subject: 'physics',
+    ...draftMeta(),
+  }),
+  VocabularyEntrySchema.parse({
     id: 'vocab-specific-heat-capacity',
     english: 'specific heat capacity',
     russian: 'удельная теплоёмкость',
@@ -557,6 +596,27 @@ export const SLICE_FORMULAS: readonly Formula[] = Object.freeze([
     limitations: text(
       'This is one worked case, not a rule that generalises by pattern. Every other derived unit has to be read off its own defining relation: the joule is a newton metre, the watt a joule per second, the pascal a newton per square metre. Matching a remembered shape is exactly the mistake the distractors in this cell are built from — energy and torque share base units and are not the same quantity.',
       'Это один разобранный случай, а не правило, обобщаемое по виду. Любую другую производную единицу нужно считывать с её собственного определяющего соотношения: джоуль — это ньютон-метр, ватт — джоуль в секунду, паскаль — ньютон на квадратный метр. Подбор по запомнившемуся виду — как раз та ошибка, из которой построены неверные варианты в этой ячейке: энергия и момент силы имеют одинаковые основные единицы и не являются одной величиной.',
+    ),
+    ...draftMeta(),
+  }),
+  FormulaSchema.parse({
+    id: 'formula-constant-speed',
+    subject: 'physics',
+    topicId: 'phys-kinematics',
+    name: text('Distance at constant speed', 'Путь при постоянной скорости'),
+    katex: 's = vt',
+    calculates: text(
+      'The distance covered by something moving at an unchanging speed, or either of the other two quantities once the relation is rearranged.',
+      'Путь, пройденный при неизменной скорости, или любую из двух других величин после преобразования соотношения.',
+    ),
+    variables: [
+      { symbol: 's', meaning: text('distance travelled', 'пройденный путь'), siUnit: 'm' },
+      { symbol: 'v', meaning: text('speed, unchanging over the interval', 'скорость, не меняющаяся на интервале'), siUnit: 'm/s' },
+      { symbol: 't', meaning: text('time taken', 'затраченное время'), siUnit: 's' },
+    ],
+    limitations: text(
+      'Only while the speed does not change. If it does, this gives the distance from the average speed and nothing about any moment within the journey — and a journey with a stop in it has an average speed lower than the speed it moved at. It also relates distance to speed, not displacement to velocity: something that returns to its start has travelled a distance and has zero displacement, and s = vt gives the first.',
+      'Только пока скорость не меняется. Если меняется, соотношение даёт путь по средней скорости и ничего не говорит ни об одном моменте внутри движения, а у поездки с остановкой средняя скорость ниже той, с которой ехали. Кроме того, здесь связаны путь и скорость, а не перемещение и вектор скорости: тело, вернувшееся в исходную точку, прошло путь и имеет нулевое перемещение, и s = vt даёт именно первое.',
     ),
     ...draftMeta(),
   }),
@@ -948,6 +1008,66 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
     ...draftMeta(),
   }),
   LessonSchema.parse({
+    id: 'lesson-phys-kinematics-constant-speed',
+    topicId: 'phys-kinematics',
+    subject: 'physics',
+    title: text('Distance, speed and time when the speed does not change', 'Путь, скорость и время, когда скорость не меняется'),
+    summary: text(
+      'Use s = vt, but convert every quantity to SI units before substituting and check what unit the answer was asked for.',
+      'Применять s = vt, но переводить каждую величину в единицы СИ до подстановки и проверять, в какой единице требуется ответ.',
+    ),
+    sections: [
+      section('prerequisites', 'big-idea', text('Before you start', 'Что нужно знать заранее'), text(
+        'You need to convert between SI prefixes and between minutes and seconds without stopping to think, because the relation itself is one multiplication and everything else in this cell is unit work. The units slices cover exactly that.',
+        'Нужно уметь переводить приставки СИ и минуты в секунды не задумываясь: само соотношение — это одно умножение, а всё остальное в этой ячейке — работа с единицами. Именно это разобрано в срезах про единицы.',
+      )),
+      section('objectives', 'big-idea', text('What you will be able to do', 'Чему вы научитесь'), text(
+        'Substitute into s = vt, rearrange it for time or speed, convert every quantity to SI units before substituting, and give the answer in the unit the question asked for rather than the one the arithmetic produced.',
+        'Подставлять в s = vt, преобразовывать его для времени или скорости, переводить каждую величину в единицы СИ до подстановки и давать ответ в той единице, которую требует вопрос, а не в той, которая получилась при вычислении.',
+      )),
+      section('big-idea', 'big-idea', text('The idea', 'Главная мысль'), text(
+        'The relation is the easy part. At constant speed, distance is speed multiplied by time, and that is the whole physics of this cell. What separates a mark from no mark is unit discipline: a distance in kilometres beside a speed in metres per second, or a time left in minutes, produces an answer that is out by exactly the factor nobody converted. Every wrong option in this cell is that answer.',
+        'Соотношение — самая простая часть. При постоянной скорости путь равен скорости, умноженной на время, и в этом вся физика данной ячейки. Балл от его отсутствия отделяет дисциплина в единицах: путь в километрах рядом со скоростью в метрах в секунду или время, оставленное в минутах, дают ответ, ошибочный ровно в тот множитель, который не перевели. Каждый неверный вариант в этой ячейке — именно такой ответ.',
+      )),
+      section('english', 'english', text('The English', 'Английский язык'), text(
+        '“How long does it take” asks for a duration, not for a moment. “At a constant speed” is the licence to use this relation at all — without it the same numbers give an average and nothing more. “How far” asks for distance, which is not displacement: something that comes back to where it started has travelled a distance and moved nowhere. And read the last few words for the unit the answer is wanted in; it is often not the unit the multiplication produces.',
+        '«How long does it take» спрашивает о продолжительности, а не о моменте. «At a constant speed» — это и есть разрешение применять данное соотношение: без него те же числа дают лишь среднее. «How far» спрашивает о пути, а путь не есть перемещение: тело, вернувшееся в исходную точку, прошло путь и никуда не переместилось. И читайте последние слова, чтобы узнать требуемую единицу ответа: она часто не та, которая получается при умножении.',
+      )),
+      section('vocabulary', 'vocabulary', text('Words', 'Слова'), text(
+        'constant speed — постоянная скорость; average speed — средняя скорость; how long does it take — сколько времени занимает.',
+        'constant speed — постоянная скорость; average speed — средняя скорость; how long does it take — сколько времени занимает.',
+      )),
+      section('formula', 'formula', text('The relation', 'Соотношение'), text(
+        's = vt, with s in metres, v in metres per second and t in seconds. Rearranged, t = s ÷ v and v = s ÷ t. The rearrangement is not the difficulty; substituting a quantity that is not yet in SI units is.',
+        's = vt, где s в метрах, v в метрах в секунду, t в секундах. После преобразования t = s ÷ v и v = s ÷ t. Трудность не в преобразовании, а в подстановке величины, ещё не переведённой в единицы СИ.',
+      ), { katex: ['s = vt', 't = \\frac{s}{v}', 'v = \\frac{s}{t}'] }),
+      section('worked', 'worked-example', text('Worked example', 'Разобранный пример'), text(
+        'A boat moves at a constant 6.0 m/s for 3 minutes. How far does it travel?\n\nThe speed is already in metres per second, so it is the time that needs work: 3 minutes is 180 s. Only now substitute: s = vt = 6.0 × 180 = 1080 m.\n\nThe question did not say which unit it wanted, so metres — the unit the SI quantities produced — is the answer. Had it asked for kilometres, there would be a second conversion after the multiplication, and it is a separate step from the one before it.\n\nCheck the size: at six metres every second, three minutes should be roughly a kilometre. It is. An answer of eighteen metres or of eighteen kilometres would both fail that check instantly, and both are the kind of answer a missed conversion produces.',
+        'Катер движется с постоянной скоростью 6.0 м/с в течение 3 минут. Какой путь он проходит?\n\nСкорость уже в метрах в секунду, значит работы требует время: 3 минуты — это 180 с. И только теперь подставляем: s = vt = 6.0 × 180 = 1080 м.\n\nВопрос не указал единицу, поэтому ответ в метрах — в той единице, которую дали величины СИ. Если бы требовались километры, после умножения был бы ещё один перевод, и это отдельный шаг от предыдущего.\n\nПроверьте порядок: при шести метрах в секунду три минуты должны дать примерно километр. Так и есть. Ответ в восемнадцать метров или в восемнадцать километров провалил бы эту проверку сразу, и оба — как раз то, что даёт пропущенный перевод.',
+      ), { estimatedMinutes: 5 }),
+      section('guided', 'guided-practice', text('Guided practice', 'Практика с подсказками'), text(
+        'A runner covers 2.4 km at a constant 4.0 m/s. How long does the run take, in minutes? First: write each quantity with its unit and mark the one that is not SI. Second: convert it, on its own line. Third: rearrange the relation for the quantity asked for, before substituting anything. Fourth: convert the answer into the unit the question wants, and notice that this is a fifth step rather than part of the fourth.',
+        'Бегун преодолевает 2.4 км с постоянной скоростью 4.0 м/с. Сколько минут занимает пробежка? Первое: выпишите каждую величину с единицей и отметьте ту, что не в СИ. Второе: переведите её, отдельной строкой. Третье: преобразуйте соотношение для искомой величины до всякой подстановки. Четвёртое: переведите ответ в требуемую единицу и заметьте, что это пятый шаг, а не часть четвёртого.',
+      )),
+      section('independent', 'independent-practice', text('On your own', 'Самостоятельно'), text(
+        'A tram travels 9.0 km in 10 minutes at constant speed: what is its speed in m/s? A signal travels at a constant 300 m/s for 0.50 s: how far, in metres? A lift rises at a constant 1.5 m/s for 40 s: how far, in metres? Write the unit beside every number you write down, including the intermediate ones.',
+        'Трамвай проезжает 9.0 км за 10 минут с постоянной скоростью: чему равна его скорость в м/с? Сигнал распространяется с постоянной скоростью 300 м/с в течение 0.50 с: какой путь в метрах? Лифт поднимается с постоянной скоростью 1.5 м/с в течение 40 с: какой путь в метрах? Пишите единицу рядом с каждым числом, включая промежуточные.',
+      )),
+      section('csca', 'csca-style', text('In CSCA style', 'В стиле CSCA'), text(
+        'The options are usually the same digits at three or four different powers of ten, because that is what a missed conversion produces. Reading the digits therefore identifies nothing, and an option matching your arithmetic is not evidence — it is what the item was built to offer. Two habits remove most of the risk: convert everything before substituting anything, and sanity-check the size of the answer against the situation before choosing.',
+        'Варианты обычно представляют собой одни и те же цифры при трёх-четырёх разных степенях десяти, потому что именно это даёт пропущенный перевод. Значит, по цифрам ничего не определить, а совпадение варианта с вашим вычислением — не доказательство, а замысел составителя. Две привычки снимают большую часть риска: переводить всё до любой подстановки и прикидывать порядок ответа по смыслу задачи перед выбором.',
+      )),
+      section('speed', 'speed-round', text('Timed set', 'Набор на время'), text(
+        'Four problems in four minutes, two of them needing a conversion on the way in and one needing another on the way out. Write the units first for all four, then do the arithmetic for all four. Separating the two costs nothing and is where the accuracy comes from.',
+        'Четыре задачи за четыре минуты: в двух нужен перевод на входе, в одной ещё и на выходе. Сначала выпишите единицы для всех четырёх, затем выполните вычисления для всех четырёх. Разделение этих действий ничего не стоит, и именно из него берётся точность.',
+      ), { estimatedMinutes: 4 }),
+    ],
+    vocabularyIds: ['vocab-constant-speed', 'vocab-average-speed', 'vocab-take'],
+    formulaIds: ['formula-constant-speed'],
+    prerequisiteLessonIds: ['lesson-phys-units-unit-conversion-si'],
+    ...draftMeta(),
+  }),
+  LessonSchema.parse({
     id: 'lesson-phys-units-si-base-derived',
     topicId: 'phys-units',
     subject: 'physics',
@@ -1131,6 +1251,7 @@ export const SLICE_LESSONS: readonly Lesson[] = Object.freeze([
 
 /** The blueprint cell each authored lesson teaches toward. */
 export const SLICE_LESSON_CELL_IDS: Record<string, string> = {
+  'lesson-phys-kinematics-constant-speed': 'phys-kinematics-constant-speed',
   'lesson-phys-units-si-base-derived': 'phys-units-si-base-derived',
   'lesson-phys-units-unit-conversion-si': 'phys-units-unit-conversion-si',
   'lesson-math-foundation-estimate-magnitude': 'math-foundation-estimate-magnitude',

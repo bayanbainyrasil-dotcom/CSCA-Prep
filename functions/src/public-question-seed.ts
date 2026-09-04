@@ -96,6 +96,18 @@ const SI_COMMON = {
 };
 
 /**
+ * Constant-speed kinematics. Every item names s = vt, because the difficulty in
+ * this cell is not the relation but keeping the units of the three quantities
+ * consistent before substituting into it.
+ */
+const KINEMATICS_COMMON = {
+  subject: 'physics' as const,
+  language: 'en' as const,
+  formulas: ['s = vt'],
+  tags: ['authored-slice-5'],
+};
+
+/**
  * These items are checked into a public repository together with their answer
  * keys and worked solutions, so their answers are public. They are usable for
  * practice and for the local demo, and they must never back a confidential
@@ -1090,6 +1102,134 @@ export const DRAFT_QUESTION_SEED: DraftQuestion[] = [
     estimatedTime: 50,
     templateParameters: { check: 'base-units-of', quantity: 'energy' },
   },
+  {
+    ...KINEMATICS_COMMON,
+    id: 'phys-kinematics-constant-speed-001',
+    cellId: 'phys-kinematics-constant-speed',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'single-step-calculation',
+    difficulty: 2,
+    question: 'A train moves at a constant 45 m/s for 24 s. How far does it travel in that time?',
+    questionTranslation: 'Поезд движется с постоянной скоростью 45 м/с в течение 24 с. Какой путь он проходит за это время?',
+    options: [
+      { id: 'a', text: '1080 m' },
+      { id: 'b', text: '10800 m' },
+      { id: 'c', text: '1.9 m' },
+      { id: 'd', text: '69 m' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'At constant speed the distance is s = vt. Both quantities are already in SI units, so no conversion is needed: 45 × 24 = 1080 m.',
+    shortSolution: 's = vt = 45 × 24 = 1080 m.',
+    explanation:
+      'Every quantity here is already in base units, which is what makes it a single step. The same relation with a time in minutes would need a conversion first, and that is where the marks usually go.',
+    commonMistakes: [
+      { id: 'power-of-ten', description: 'Carrying an extra power of ten gives 10800 m.', distractorOptionId: 'b' },
+      { id: 'divided', description: 'Dividing the speed by the time gives about 1.9 m.', distractorOptionId: 'c' },
+      { id: 'added', description: 'Adding the two numbers gives 69 m.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['constant speed'],
+    estimatedTime: 45,
+    templateParameters: { check: 'distance-from-speed-time', v: 45, t: 24 },
+  },
+  {
+    ...KINEMATICS_COMMON,
+    id: 'phys-kinematics-constant-speed-002',
+    cellId: 'phys-kinematics-constant-speed',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'single-step-calculation',
+    difficulty: 2,
+    question: 'A cyclist covers 3.6 km at a constant 8.0 m/s. How long does the journey take?',
+    questionTranslation: 'Велосипедист проезжает 3.6 км с постоянной скоростью 8.0 м/с. Сколько времени занимает поездка?',
+    options: [
+      { id: 'a', text: '450 s' },
+      { id: 'b', text: '0.45 s' },
+      { id: 'c', text: '4500 s' },
+      { id: 'd', text: '28800 s' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Rearranging s = vt gives t = s ÷ v, but the distance must be in metres first: 3.6 km is 3600 m. Then 3600 ÷ 8.0 = 450 s.',
+    shortSolution: 't = s ÷ v = 3600 ÷ 8.0 = 450 s.',
+    explanation:
+      'The speed is given in metres per second, so the distance has to be in metres. Mixing a kilometre with a metre-per-second is the single most common way to be out by a thousand here.',
+    commonMistakes: [
+      { id: 'km-not-converted', description: 'Dividing 3.6 by 8.0 without converting gives 0.45 s.', distractorOptionId: 'b' },
+      { id: 'power-of-ten', description: 'A stray power of ten gives 4500 s.', distractorOptionId: 'c' },
+      { id: 'multiplied', description: 'Multiplying rather than dividing gives 28800 s.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['constant speed', 'take'],
+    estimatedTime: 55,
+    templateParameters: { check: 'time-from-distance-speed', km: 3.6, v: 8 },
+  },
+  {
+    ...KINEMATICS_COMMON,
+    id: 'phys-kinematics-constant-speed-003',
+    cellId: 'phys-kinematics-constant-speed',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'word-problem',
+    difficulty: 2,
+    question: 'A ferry crosses a channel 12 km wide in 40 minutes, moving at a constant speed. What is its speed in metres per second?',
+    questionTranslation: 'Паром пересекает пролив шириной 12 км за 40 минут, двигаясь с постоянной скоростью. Чему равна его скорость в метрах в секунду?',
+    options: [
+      { id: 'a', text: '5 m/s' },
+      { id: 'b', text: '300 m/s' },
+      { id: 'c', text: '0.3 m/s' },
+      { id: 'd', text: '0.005 m/s' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'Convert both quantities before dividing: 12 km is 12000 m and 40 minutes is 2400 s. Then v = s ÷ t = 12000 ÷ 2400 = 5 m/s.',
+    shortSolution: 'v = 12000 ÷ 2400 = 5 m/s.',
+    explanation:
+      'Two conversions are needed, not one, and each has its own failure. Writing both on their own lines before dividing costs a few seconds and removes both.',
+    commonMistakes: [
+      { id: 'minutes-as-seconds', description: 'Dividing by 40 instead of 2400 gives 300 m/s.', distractorOptionId: 'b' },
+      { id: 'km-per-minute', description: 'Working in kilometres per minute gives 0.3.', distractorOptionId: 'c' },
+      { id: 'km-not-converted', description: 'Dividing 12 by 2400 gives 0.005 m/s.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['constant speed', 'average speed'],
+    estimatedTime: 65,
+    templateParameters: { check: 'speed-in-ms-from-km-and-minutes', km: 12, minutes: 40 },
+  },
+  {
+    ...KINEMATICS_COMMON,
+    id: 'phys-kinematics-constant-speed-004',
+    cellId: 'phys-kinematics-constant-speed',
+    module: 'Kinematics',
+    topicId: 'phys-kinematics',
+    skill: 'Describe motion',
+    questionType: 'word-problem',
+    difficulty: 2,
+    question: 'A delivery van drives at a constant 20 m/s for 15 minutes without stopping. How far does it travel, in kilometres?',
+    questionTranslation: 'Фургон едет с постоянной скоростью 20 м/с в течение 15 минут без остановок. Какой путь он проходит, в километрах?',
+    options: [
+      { id: 'a', text: '18 km' },
+      { id: 'b', text: '1.2 km' },
+      { id: 'c', text: '0.3 km' },
+      { id: 'd', text: '18000 km' },
+    ],
+    correctAnswer: 'a',
+    solution:
+      'The time must be in seconds: 15 minutes is 900 s. Then s = vt = 20 × 900 = 18000 m, and the answer is asked for in kilometres, so it is 18 km.',
+    shortSolution: 's = 20 × 900 = 18000 m = 18 km.',
+    explanation:
+      'There are two unit steps here and they pull in opposite directions: minutes into seconds before the calculation, metres into kilometres after it. Doing only one of them lands on an option that is present.',
+    commonMistakes: [
+      { id: 'one-minute', description: 'Using 60 s rather than 900 s gives 1.2 km.', distractorOptionId: 'b' },
+      { id: 'minutes-as-seconds', description: 'Using 15 s gives 300 m, or 0.3 km.', distractorOptionId: 'c' },
+      { id: 'metres-reported-as-km', description: 'Giving the answer in metres but labelling it kilometres gives 18000 km.', distractorOptionId: 'd' },
+    ],
+    vocabulary: ['constant speed'],
+    estimatedTime: 65,
+    templateParameters: { check: 'distance-km-from-speed-and-minutes', v: 20, minutes: 15 },
+  },
 ];
 /** Cells this authored slice targets, in the order a reviewer should work through them. */
 export const AUTHORED_SLICE_CELL_IDS = [
@@ -1100,6 +1240,7 @@ export const AUTHORED_SLICE_CELL_IDS = [
   'math-linear-multi-step-linear',
   'math-linear-linear-word-problem',
   'phys-thermodynamics-heat-transfer',
+  'phys-kinematics-constant-speed',
   'phys-units-si-base-derived',
   'phys-units-unit-conversion-si',
 ] as const;
