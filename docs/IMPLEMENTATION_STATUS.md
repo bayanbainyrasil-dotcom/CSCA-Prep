@@ -459,6 +459,55 @@ Not done, and not attempted: moving zod and the domain schemas (22.9 KB gzipped)
 first load. That needs the data layer restructured so nothing on the shell path parses, and
 the regression risk is not worth 23 KB in a session that cannot run a real device test.
 
+## Eighth slice, authored question-first (P2-1, 2026-09-03)
+
+With no cell left holding items and no teaching, an eighth slice had to start from the
+questions. It went to physics, which was the thinner side: one authored cell out of 62.
+
+`phys-units-unit-conversion-si` now has four items — two prefix conversions and two
+single-step calculations, matching both question types and the single difficulty the cell
+asks for. Three meets its `minimumItems`; the fourth exists so the slice's four stages have
+material.
+
+The lesson rests on two claims. A prefix belongs to the unit and not to the number, so a
+conversion moves a power of ten and leaves the digits alone — a conversion that changed the
+digits is a signal to stop rather than a result. And a derived unit is several units at
+once, so converting only the obvious one is how an answer ends up out by sixty or by a
+thousand.
+
+### The invariant that was deliberately not generalised
+
+`units-slice.test.ts` asserts that in a *prefix* item the key carries the same digits as the
+question and so does every distractor, so reading the digits picks nothing and only the
+exponent separates the options. It does not apply that to the compound conversions: their
+distractors come from dividing by 60 or by 3600 instead of by 3.6, which are real slips that
+genuinely produce other digits. Forcing those to match would have meant inventing mistakes
+nobody makes, which is a worse item and a worse test.
+
+Three count assertions broke and are now derived from `AUTHORED_SLICE_CELL_IDS` and the seed
+rather than written down, since what they actually assert is that approval reaches exactly
+the cells that were authored and nothing else.
+
+Eight of 109 cells now have a teaching slice. The public seed holds 26 items — 18
+Mathematics across six cells, 8 Physics across two — all `draft` and unreviewed, and
+coverage still reads 0 approved.
+
+### Checks, each run separately on `699e844`
+
+| Check | Command | Result |
+| --- | --- | --- |
+| Web typecheck | `pnpm typecheck` | passed |
+| Lint | `pnpm lint` | passed, 0 warnings |
+| Web unit tests | `pnpm vitest run` | 806 passed, 66 files |
+| Pages entrypoints | `pnpm test:pages` | 2 passed |
+| Budget script tests | `pnpm test:budget` | 6 passed |
+| Web build | `pnpm build` | built |
+| Functions typecheck | `npx tsc --noEmit` in `functions/` | passed |
+| Functions build | `pnpm build` in `functions/` | passed |
+| Bundle secret scan | `pnpm check:bundle` | passed, 86 files, 52 solution strings absent |
+| First-load budget | `pnpm check:budget` | 189.0 KB gz JS, 19.7 KB gz CSS, within budget |
+| Browser tests | `PLAYWRIGHT_CHROMIUM_PATH=… pnpm test:e2e` | 26 passed, 34 skipped by project design, 0 failed |
+
 ## Every authored item now sits inside a slice (P2-1, 2026-09-03)
 
 `math-foundation-fraction-decimal-percent` and `math-foundation-estimate-magnitude` were the
@@ -643,7 +692,7 @@ viewport profiles rather than Safari.
 - 109-cell prerequisite blueprint, server coverage calculation and fail-closed publication.
 - Blueprint-first administrator editor, import dry runs, review queue, content versioning and
   stale-approval invalidation.
-- 22 original public practice questions covering seven cells, with independently recomputed
+- 26 original public practice questions covering eight cells, with independently recomputed
   answers and full explanation packets, and a teaching slice around every one of them.
 - Private question import that keeps answer keys/solutions out of learner-readable records.
 - AI tutor safety seam: provider abstraction, strict schemas, quotas, shared budget, cache,
@@ -657,10 +706,10 @@ viewport profiles rather than Safari.
 - Blueprint: 109 draft cells — 47 Mathematics, 62 Physics. Four were added on 2026-09-03
   to close required-area gaps; their requirement is itself unconfirmed (see below).
 - Human-verified cells: **0/109**.
-- Public authored questions: 22 across 7 cells, all still awaiting human review — 18 across
-  six Mathematics cells and 4 in `phys-thermodynamics-heat-transfer`, the only Physics
-  content in the bank.
-- Teaching slices: 7, one for each of those cells, all `draft` and unreviewed. A lesson is
+- Public authored questions: 26 across 8 cells, all still awaiting human review — 18 across
+  six Mathematics cells and 8 across two Physics cells
+  (`phys-thermodynamics-heat-transfer`, `phys-units-unit-conversion-si`).
+- Teaching slices: 8, one for each of those cells, all `draft` and unreviewed. A lesson is
   not a question and moves no coverage.
 - Confidential production mock questions: **0**.
 - Production mock coverage: **0**; publication/start correctly refuse with
@@ -677,7 +726,7 @@ public Git history and therefore cannot become confidential mock content even af
 2. Create a real administrator account and verify the admin bootstrap.
 3. Have a qualified human review the 109-cell blueprint against current official CSCA
    sources, recording source date, reviewer and unresolved differences.
-4. Import and human-review the 22 public practice items.
+4. Import and human-review the 26 public practice items.
 5. Author and independently review a never-public private question bank covering every mock
    cell, language, difficulty and question-type requirement.
 6. Finalize privacy/terms for the actual operator, processors and production domain.
@@ -694,7 +743,7 @@ public Git history and therefore cannot become confidential mock content even af
 ### P2 — scale and polish
 
 1. Expand reviewed lessons and questions as complete vertical slices rather than isolated
-   questions. Seven of 109 cells now have one; all seven await human review, and every
+   questions. Eight of 109 cells now have one; all eight await human review, and every
    authored item sits inside a slice.
 2. ~~Add learner-visible reviewed/unreviewed coverage confidence.~~ Done in code; the
    numbers it reports stay all-zero until a deployment and a human review exist.
@@ -710,16 +759,18 @@ blueprint before approving content. Do not invent a reviewer or self-mark genera
 as verified.
 
 **Done in this batch:** learner-visible coverage confidence (audit P2-4), the first-load
-budget and its guard (audit P2-5), and five more vertical slices (audit P2-1) — every
-authored item in the repository now sits inside one.
+budget and its guard (audit P2-5), and six more vertical slices (audit P2-1) — every
+authored item in the repository sits inside one, and the eighth slice was authored
+question-first because no untaught item was left.
 
-**Next code task that can proceed independently:** an eighth slice now means authoring its
-questions first, because no cell is left with items and no teaching. The physics side is the
-thinner one — one cell of 62 — so the next slice should be physics, written question-first:
-items, then the lesson around them, and the item count taken from that cell's own
-`minimumItems` rather than assumed. Everything authored stays `draft`/`pending-review` —
-Claude does not mark its own content verified, and no reviewer, source or review date may be
-invented.
+**Next code task that can proceed independently:** a ninth slice, again question-first and
+again physics, since two authored cells out of 62 is still the thin side.
+`phys-kinematics-constant-speed` and `phys-units-si-base-derived` are both foundational and
+the second is the stated prerequisite of the cell just authored, so it is the natural next
+one. Read the cell's `questionTypes`, `difficultyLevels` and `minimumItems` first and author
+to those rather than to a remembered shape. Everything authored stays
+`draft`/`pending-review` — Claude does not mark its own content verified, and no reviewer,
+source or review date may be invented.
 
 Still blocked in this environment, unchanged: emulator abuse tests (P1-2) need a download
 this sandbox refuses; real-device Safari (P1-4) and every live check need the deployment.
